@@ -1,0 +1,989 @@
+---
+layout:      post
+title:       "LeetCode之链表操作"
+subtitle:    "LeetCode : Linked list"
+author:      "Ashior"
+header-img:  "img/post-bg-ccf.jpg"
+catalog:     true
+tags:
+  - 工作
+  - LeetCode
+  - 算法
+---
+
+
+> 题目信息谷歌一下即可，也可通过 [LeetCode链表](https://leetcode-cn.com/explore/learn/card/linked-list/) 查看
+
+----
+
+## 环形链表
+
+**解题思路**
+
+在非O(1)的内存使用情况下，通过使用Map存储相关的信息。key值用于存储指针，value用于存储下标，通过记录慢指针的下标，结合快指针的判断，确定在哪个位置出现了环。
+
+**源码**
+
+我的代码：
+```cpp
+bool hasCycle(ListNode *head) {
+	map<ListNode*, int> m;
+	ListNode *p1, *p2;
+	p1 = head;
+	p2 = head;
+	int i = 0;
+	int j = 0;
+	m[p1] = i++;
+	while (p2 != NULL) {
+		p1 = p1->next;
+		p2 = p2->next;
+		if (p2 != NULL) {
+			p2 = p2->next;
+		} else {
+			break;
+		}
+		m[p1] = i++;
+		if (m.count(p2) != 0) {
+			cout << m[p2] << endl;
+			return true;
+		}
+	}
+	return false;
+}
+```
+
+高效代码：
+
+```cpp
+bool hasCycle(ListNode *head) {
+	if (head == NULL || head->next == NULL) return false;
+	ListNode* fast = head, * slow = head;
+	while (fast && fast->next) {
+		fast = fast->next->next;
+		slow = slow->next;
+		if (fast == slow) return true;
+	}
+	return false;
+}
+```
+
+
+**源码解析**
+
+我的代码其实完成的更多的工作，即能够准确指出在哪一个地方开始出现了环，当然，就目前而言，仅针对单个环有效，如果出现了2个即以上的环，则需要对代码进行调整。
+
+----
+
+##  环形链表 II
+
+**解题思路**
+
+对于上述代码并不能直接使用，AC的话，后面有些情况过不了，经过排查，发现就是在快指针走完一圈，接近环起点时，由于是走完两步后再判断，所以跳过了环起点，因此，在上述代码中，指针p2没增加一次，均需要判断是否是环起点。
+
+**源码**
+
+我的代码：
+```cpp
+ListNode *detectCycle(ListNode *head) {
+	map<ListNode*, int> m;
+	ListNode *p1, *p2;
+	p1 = head;
+	p2 = head;
+	int i = 0;
+	int j = 0;
+	m[p1] = i++;
+	while (p2 != NULL) {
+		p1 = p1->next;
+		p2 = p2->next;
+		if (m.count(p2) != 0) {
+			return p2;
+		}
+		if (p2 != NULL) {
+			p2 = p2->next;
+		} else {
+			break;
+		}
+		if (m.count(p2) != 0) {
+			return p2;
+		}
+		m[p1] = i++;
+	}
+	return NULL;
+}
+```
+
+高效代码：
+
+```cpp
+ListNode *detectCycle(ListNode *head) {
+	set<ListNode*>s;
+	ListNode*p=head;
+	while(p) {
+		if(s.count(p)) {
+			return p;
+		} else {
+			s.insert(p);
+		}
+		p=p->next;
+	}
+	return NULL;
+}
+```
+
+```cpp
+ListNode *detectCycle(ListNode *head) {
+    if (!head) return nullptr;
+    ListNode* slow = head;
+    ListNode* fast = head;
+    // 看下奇数节点和偶数节点有啥不同
+    // @->@->@->@->@->$
+    //       ^     ^
+    // @->@->@->@->@->@->$
+    //          ^        ^
+    while(fast && fast->next) {
+        slow = slow->next;
+        fast = fast->next->next;
+        if (slow == fast) break;
+    }
+    if (!fast || !fast->next) return nullptr;
+    fast = head;
+    while (slow != fast) {
+        slow = slow->next;
+        fast = fast->next;
+    }
+    return slow;
+}
+```
+
+**源码解析**
+
+用`set`比用`map`好很多，反正最后需要返回的不是下标，而是一个指针即可。
+高效代码则是通过快慢指针判断是否有环，如果有，则快慢指针相遇时，让其中一个指针与头指针一起一步一步地走，相遇时侯就是环的入口点。
+
+----
+
+## 相交链表
+
+**解题思路**
+
+不能使用额外的空间，所以无法使用`set`。保证O(n)的时间复杂度，先遍历出两个链表的长度，然后做差，再逐个比较。
+
+**源码**
+
+我的代码：
+```cpp
+ListNode *getIntersectionNode(ListNode *headA, ListNode *headB) {
+	int count1 = 0;
+	int count2 = 0;
+	ListNode *p1 = headA;
+	ListNode *p2 = headB;
+	while (p1 != NULL) {
+		p1 = p1->next;
+		count1++;
+	}
+	while (p2 != NULL) {
+		p2 = p2->next;
+		count2++;
+	}
+	p1 = headA;
+	p2 = headB;
+	if (count1 - count2 > 0) {
+		for (int i = 0; i < count1 - count2; i++) {
+			p1 = p1->next;
+		}
+	} else {
+		for (int i = 0; i < count2 - count1; i++) {
+			p2 = p2->next;
+		}
+	}
+	while (p1 != NULL) {
+		if (p1 == p2){
+			return p1;
+		}
+		p1 = p1->next;
+		p2 = p2->next;
+	}
+	return nullptr;
+}
+```
+
+----
+
+## 删除链表的倒数第N个节点
+
+**解题思路**
+
+需要实现一趟扫描即完成删除任务。那么依旧是根据差值，构造快慢指针。先让快指针移动N个节点，之后再与慢指针(从头开始)一起移动，当快指针指向最后一个节点时，那么久从慢指针处开始删除倒数第N个节点。
+
+**源码**
+
+我的代码：
+```cpp
+ListNode* removeNthFromEnd(ListNode* head, int n) {
+	ListNode *fast, *slow;
+	fast = head;
+	slow = head;
+	for (int i = 0; i < n; i++) {
+		fast = fast->next;
+	}
+	if (fast == nullptr) {
+		if (n == 1) {
+			return nullptr;
+		} else {
+			slow = slow->next;
+			return slow;
+		}
+	}
+	while(fast->next != NULL) {
+		fast = fast->next;
+		slow = slow->next;
+	}
+	slow->next = slow->next->next;
+	return head;
+}
+```
+
+## 反转链表
+
+**解题思路**
+
+会发现链表的反转基本上就是箭头的方向的反转，即节点前驱和后继互换角色。
+
+
+**源码**
+
+我的代码：
+
+```cpp
+ListNode* reverseList(ListNode* head) {
+	if (head == nullptr || head->next == nullptr) {
+		return head;
+	}
+	ListNode* p1 = head;
+	ListNode* p2 = head->next;
+	ListNode* tmp = head->next;
+	while (p2 != nullptr) {
+		tmp = p2->next;
+		p2->next = p1;
+		p1 = tmp;
+		swap(p1, p2);
+	}
+	head->next = nullptr;
+	return p1;
+}
+```
+
+简洁代码：
+
+```cpp
+ListNode* reverseList(ListNode* head) {
+	ListNode* pre = nullptr;
+	ListNode* cur = head;
+	while (cur) {
+		ListNode* nex = cur->next;
+		cur->next = pre;
+		pre = cur;
+		cur = nex;
+	}
+	return pre;
+}
+```
+
+递归代码：
+
+```cpp
+ListNode* reverseList(ListNode* head) {
+	if (!head) return NULL;
+	if (!head->next) return head;
+	//p为最末非空节点
+	ListNode* p = reverseList(head->next);
+	head->next->next = head;
+	head->next = NULL;
+	return p;
+}
+```
+
+----
+
+## 移除链表元素
+
+**解题思路**
+
+一次遍历，如果出现不同的，就将链表指向下一个值。
+
+**源码**
+
+我的代码：
+
+```cpp
+ListNode* removeElements(ListNode* head, int val) {
+	if (head == nullptr) {
+		return head;
+	}
+	ListNode* p1 = head;
+	ListNode* p2 = head->next;
+	while (p2 != nullptr) {
+		while (p2 != nullptr && p2->val == val) {
+			p2 = p2->next;
+		}
+		if (p2 == nullptr) {
+			p1->next = nullptr;
+			break;
+		}
+		p1->next = p2;
+		p1 = p2;
+		p2 = p2->next;
+	}
+	if (head->val == val) {
+		head = head->next;
+	}
+	return head;
+}
+```
+
+递归代码：
+
+```cpp
+ListNode* removeElements(ListNode* head, int val) {
+	if(head==NULL)
+	   return NULL;
+	head->next=removeElements(head->next,val);
+	if(head->val==val){
+		return head->next;
+	}else{
+		return head;
+	}
+}
+```
+
+**源码分析**
+
+递归代码看起来真的是通俗易懂，一看就会，一写就错。
+
+----
+
+## 奇偶链表
+
+**解题思路**
+
+利用快慢两个指针，每次移动步长为2。
+
+**源码**
+
+我的代码：
+```cpp
+ListNode* oddEvenList(ListNode* head) {
+	if (head == nullptr || head->next == nullptr) {
+		return head;
+	}
+	ListNode* p1 = head;
+	ListNode* p2 = head->next;
+	ListNode* p3 = head->next;
+	while (p2 != nullptr) {
+		if (p2->next == nullptr) {
+			p1->next = p2->next;
+			break;
+		} else {
+			p1->next = p2->next;
+			p1 = p1->next;
+			p2->next = p2->next->next;
+			p2 = p2->next;
+		}
+	}
+	p1->next = p3;
+	return head;
+}
+```
+
+----
+
+## 回文链表
+
+**解题思路**
+
+可以使用栈或者是将链表翻转，然后再比较的方法，判断是否是回文链表。
+看博客，有人提出：使用两个指针，fast和slow指针。
+1. fast指针每次走两步，slow指针每次走一步；
+2. fast指针走到链表末尾的时候，slow指针走到链表的中间位置结点(链表长度n为偶数)或中间位置的前一个结点(链表长度n为奇数)；
+3. slow直接到了中间，就可以将整个链表的后半部分压栈实现逆序，依次和前半部分比较，思路同解法一。
+
+进阶需要满足O(n)的时间复杂度与O(1)的空间复杂度。不使用栈来倒序链表后半部分的元素，而是选择直接本地操作(额外空间复杂度为O(1))，在原链表上将后半部分元素倒置(反转)，比较完后得出结果后，再还原链表，返回结果。
+
+**源码**
+
+我的代码：
+```cpp
+bool isPalindrome(ListNode* head) {
+	if (head == nullptr || head->next == nullptr) {
+		return true;
+	}
+	ListNode* fast = head;
+	ListNode* slow = head;
+	while (fast->next != nullptr && fast->next->next != nullptr) {
+		fast = fast->next->next;
+		slow = slow->next;
+	}
+	// 链表个数为偶数的情况
+	if (fast->next != nullptr) {
+		fast = fast->next;
+	}
+	ListNode* p1 = slow;
+	ListNode* p2 = nullptr;
+	 ListNode* tmp = nullptr;
+	while (p1 != nullptr) {
+		tmp = p1->next;
+		p1->next = p2;
+		p2 = p1;
+		p1 = tmp;
+	}
+	// ListNode* pp = head;
+	// while (pp != nullptr) {
+	//     cout << pp->val << " ";
+	//     pp = pp->next;
+	// }
+	// pp = fast;
+	// while (pp != nullptr) {
+	//     cout << pp->val << " ";
+	//     pp = pp->next;
+	// }
+	while (head != nullptr && fast != nullptr) {
+		if (head->val != fast->val) {
+			return false;
+		}
+		head = head->next;
+		fast = fast->next;
+	}
+	return true;
+}
+```
+
+神仙代码：
+
+```cpp
+bool isPalindrome(ListNode* head) {
+	//空链表表或链表只有一个元素
+	if(!head||!head->next) return true;
+	//快慢指针
+	ListNode *slow=head,*fast=head;
+	//快慢指针迭代找中点
+	for( ; fast&&fast->next ; fast=fast->next->next,slow=slow->next);
+	//back表示后半链表头指针
+	ListNode *cur=slow,*nex=nullptr,*back = nullptr;
+	//反转后半链表   
+	for( ; cur ; nex=cur->next, cur->next=back, back=cur, cur=nex);
+	//front:前半链表头指针
+	for(ListNode* front=head ; front&&back ; front=front->next,back=back->next)
+		//前半链表与后半链表逐元素比较
+		if(back->val!=front->val) return false;
+	return true;
+}
+```
+
+**源码分析**
+
+神仙代码也就是写的十分的简洁，基本逻辑不变，还是同上面的博客一样。
+
+----
+
+## 合并两个有序链表
+
+**解题思路**
+
+抓住有序这个关键点，然后移动指针即可。
+
+**源码**
+
+我的代码：
+```cpp
+ListNode* mergeTwoLists(ListNode* l1, ListNode* l2) {
+	ListNode* head;
+	ListNode* p1 = l1;
+	ListNode* p2 = l2;
+	if (l1 == nullptr) {
+		return l2;
+	} else if (l2 == nullptr) {
+		return l1;
+	} else if (l1->val <= l2->val) {
+		head = l1;
+		p1 = p1->next;
+	} else {
+		head = l2;
+		p2 = p2->next;
+	}
+	ListNode* p = head;
+	while (p1 != nullptr && p2 != nullptr) {
+		if (p1->val <= p2->val) {
+			p->next = p1;
+			p = p1;
+			p1 = p1->next;
+		} else {
+			p->next = p2;
+			p = p2;
+			p2 = p2->next;
+		}
+	}
+	if (p1 != nullptr) {
+		p->next = p1;
+	} else if (p2 != nullptr) {
+		p->next = p2;
+	}
+	return head;
+}
+```
+
+高效代码：
+
+```cpp
+ListNode* mergeTwoLists(ListNode* l1, ListNode* l2) {
+	if (l1 == NULL) {
+		return l2;
+	}
+	else if (l2 == NULL) {
+		return l1;
+	}
+	else if (l1->val < l2->val) {
+		l1->next = mergeTwoLists(l1->next, l2);
+		return l1;
+	}
+	else {
+		l2->next = mergeTwoLists(l1, l2->next);
+		return l2;
+	}
+}
+```
+
+**源码分析**
+
+高效代码太神奇了，直接利用递归完成了操作，完美。
+学不来。。。
+
+----
+
+## 两数相加
+
+**解题思路**
+
+没要求，那就往最简单的方向想，利用栈来解决这个问题。两个链表中的数字都存入栈中，然后依次弹出进行计算。(没看清题目，简直了，高位在链表的末端，低位在链表的前端)
+
+**源码**
+
+我的代码：
+
+```cpp
+/**
+ * Definition for singly-linked list.
+ * struct ListNode {
+ *     int val;
+ *     ListNode *next;
+ *     ListNode(int x) : val(x), next(NULL) {}
+ * };
+ */
+class Solution {
+public:
+    ListNode* addTwoNumbers(ListNode* l1, ListNode* l2) {
+        ListNode* head;
+        ListNode* ln = nullptr;
+        bool flag = false;
+        while (l1 != nullptr && l2 != nullptr) {
+            int i1 = l1->val;
+            int i2 = l2->val;
+            if (false) {
+                if (i1+i2+1 >= 10) {
+                    flag = true;
+                } else {
+                    flag = false;
+                }
+                ln = new ListNode((i1+i2+1)%10);
+                ln->next = head;
+                head = ln;
+            } else {
+                if (i1+i2 >= 10) {
+                    flag = true;
+                } else {
+                    flag = false;
+                }
+                ln = new ListNode((i1+i2)%10);
+                ln->next = head;
+                head = ln;
+            }
+            l1 = l1->next;
+            l2 = l2->next;
+        }
+        while (l1 != nullptr) {
+            if (flag) {
+                if (l1->val + 1 >= 10) {
+                    flag = true;
+                } else {
+                    flag = false;
+                }
+                ln = new ListNode((l1->val+1)%10);
+                ln->next = head;
+                head = ln;
+            } else {
+                ln = new ListNode(l1->val);
+                ln->next = head;
+                head = ln;
+            }
+            l1 = l1->next;
+        }
+        while (l2 != nullptr) {
+            if (flag) {
+                if (l2->val + 1 >= 10) {
+                    flag = true;
+                } else {
+                    flag = false;
+                }
+                ln = new ListNode((l2->val+1)%10);
+                ln->next = head;
+                head = ln;
+            } else {
+                ln = new ListNode(l2->val);
+                ln->next = head;
+                head = ln;
+            }
+            l2 = l2->next;
+        }
+        return head;
+    }
+    // ListNode* addTwoNumbers(ListNode* l1, ListNode* l2) {
+    //     if (l1 == nullptr) {
+    //         return l2;
+    //     } else if (l2 == nullptr) {
+    //         return l1;
+    //     }
+    //     ListNode* head;
+    //     queue<int> s1;
+    //     queue<int> s2;
+    //     ListNode* p = l1;
+    //     while (p != nullptr) {
+    //         s1.push(p->val);
+    //         p = p->next;
+    //     }
+    //     p = l2;
+    //     while (p != nullptr) {
+    //         s2.push(p->val);
+    //         p = p->next;
+    //     }
+    //     bool flag = false;
+    //     ListNode* ln = nullptr;
+    //     while (!s1.empty() && !s2.empty()) {
+    //         int i1 = s1.front();
+    //         int i2 = s2.front();
+    //         s1.pop();
+    //         s2.pop();
+    //         if (!flag) {
+    //             if (i1 + i2 >= 10) {
+    //                 flag = true;
+    //             } else {
+    //                 flag = false;
+    //             }
+    //             ln = new ListNode((i1+i2)%10);
+    //             ln->next = head;
+    //             head = ln;
+    //         } else {
+    //             if (i1 + i2 + 1 >= 10) {
+    //                 flag = true;
+    //             } else {
+    //                 flag = false;
+    //             }
+    //             ln = new ListNode((i1+i2+1)%10);
+    //             ln->next = head;
+    //             head = ln;
+    //         }
+    //     }
+    //     while (!s1.empty()) {
+    //         int i1 = s1.front();
+    //         s1.pop();
+    //         if (!flag) {
+    //             ln = new ListNode(i1);
+    //             ln->next = head;
+    //             head = ln;
+    //         } else {
+    //             if (i1+1 >= 10) {
+    //                 flag = true;
+    //             } else {
+    //                 flag = false;
+    //             }
+    //             ln = new ListNode((i1+1)%10);
+    //             ln->next = head;
+    //             head = ln;
+    //         }
+    //     }
+    //     while (!s2.empty()) {
+    //         int i2 = s2.front();
+    //         s2.pop();
+    //         if (!flag) {
+    //             ln = new ListNode(i2);
+    //             ln->next = head;
+    //             head = ln;
+    //         } else {
+    //             if (i2+1 >= 10) {
+    //                 flag = true;
+    //             } else {
+    //                 flag = false;
+    //             }
+    //             ln = new ListNode((i2+1)%10);
+    //             ln->next = head;
+    //             head = ln;
+    //         }
+    //     }
+    //     return head;
+    // }
+};
+```
+
+高效代码：
+
+```cpp
+ListNode* addTwoNumbers(ListNode* l1, ListNode* l2) {
+	//引入头节点
+	ListNode *pHead = new ListNode(0);
+	ListNode *p1 = l1,*p2 = l2,*p3 = pHead;
+	ListNode *pNext;
+	int sum = 0,temp = 0;
+	while(p1 != NULL || p2 != NULL) {
+		int x = (p1 != NULL) ? p1->val : 0;
+		int y = (p2 != NULL) ? p2->val : 0;
+		sum = x + y + temp;
+		// 保存十位数字
+		temp = sum / 10;
+		// 创建个位数字节点添加到链表中
+		p3->next = new ListNode (sum % 10);
+		p3 = p3->next;
+		if(p1 != NULL)
+			p1 = p1->next;
+		if(p2 != NULL)
+			p2 = p2->next;
+	}
+	// 最后判断是否需要增加1
+	if(temp == 1) {
+		p3->next = new ListNode(1);
+	}
+	return pHead->next;
+}
+```
+
+
+**源码分析**
+
+我的代码老是报错，思路其实问题不大，但是别的人的代码就是能跑通，我的就是不行，就像上次一样，都是一样的代码，逻辑一样，就连写的顺序都一样，结果还是报一个系统错误，很是艹蛋。`Line 100: Char 22: runtime error: member access within misaligned address 0x000000000002 for type 'struct ListNode', which requires 8 byte alignment (solution.cpp)`
+
+不过可以看到，别人的代码十分的简洁，优雅，并没有用到我之前所用的`flag`变量来额外存储是否需要进位。高效代码引入了头结点。通过直接`+temp`操作，省去了标志判断位。最开始的`x,y`也很有灵性，通过判断其是否为`nullptr`来确定数字，这样不必在最后的时候使用`while`循环判断是否需要将剩余的节点添加。
+
+----
+
+## 扁平化多级双向链表
+
+**解题思路**
+
+尝试使用递归解决这个问题，当遇到有分支时，直接进入分支，将节点加入末尾。
+
+**源码**
+
+我的代码：
+
+```cpp
+// Definition for a Node.
+class Node {
+public:
+    int val;
+    Node* prev;
+    Node* next;
+    Node* child;
+
+    Node() {}
+
+    Node(int _val, Node* _prev, Node* _next, Node* _child) {
+        val = _val;
+        prev = _prev;
+        next = _next;
+        child = _child;
+    }
+};
+*/
+void digui(Node* p, Node* h) {
+	if (h == nullptr) {
+		return ;
+	}
+	p->next = h;
+	h->prev = p;
+	p = h;
+	cout << p->val << endl;
+	if (h->child != nullptr) {
+		digui(p, h->child);
+	}
+	digui(p, h->next);
+}
+Node* flatten(Node* head) {
+	Node* n = new Node(0, nullptr, nullptr, nullptr);
+	digui(n, head);
+	return n->next;
+}
+```
+
+大神代码：
+
+```cpp
+Node* findLinkEnd(Node* head) {
+	if (head == NULL) {
+		return head;
+	}
+	while (head->next) {
+		head = head->next;
+	}
+	return head;
+}
+Node* flatten(Node* head) {
+	if (head == NULL) {
+		return head;
+	}
+	Node* p = head;
+	while(p) {
+		if (p->child != NULL) {
+		    // 对每一个孩子都进行扁平化操作
+			Node* m = flatten(p->child);
+			// 将指针指向某一行的最后一个元素
+			Node* e = findLinkEnd(m);
+			// 最后一个元素指向孩子入口的下一个位置
+			e->next = p->next;
+			// 同时修改前驱指针
+			// 之前的并不需要修改，只需要在结点岔口处修改
+			if (p->next != NULL) {
+				p->next->prev = e;
+			}
+			p->next = m;
+			m->prev = p;
+			p->child = NULL;
+			p = e;
+		} else {
+			p = p->next;
+		}
+	}
+	return head;
+}
+```
+
+```cpp
+Node* flatten(Node* head) {
+    stack<Node*> s;
+    Node* pre=NULL;
+    if(head) {
+        s.push(head);
+    }
+    while(!s.empty()) {
+        Node* temp = s.top();
+        s.pop();
+        if(temp->next) {
+            s.push(temp->next);
+        }
+        if(temp->child) {
+            s.push(temp->child);
+            temp->child=NULL;
+        }
+        if(pre) {
+            pre->next=temp;
+            temp->prev=pre;
+        }
+        pre=temp;
+    }
+    return head;
+}
+```
+
+**源码分析**
+
+我的代码出现了重大的bug，为什么循环出现孩子的遍历？因为在找到孩子后，将有孩子的节点的`next`指针指向了孩子。如果将代码的位置进行改变：
+
+```cpp
+if (h->child != nullptr) {
+    digui(p, h->child);
+}
+p->next = h;
+h->prev = p;
+p = h;
+```
+
+会发现在转折的节点处的位置不对，所以还是需要一个指针指向下一个节点，以便递归结束的时候，将其接回。所以问题还是回到了大神的代码处。
+
+----
+
+##  复制带随机指针的链表
+
+**解题思路**
+
+看起来很蒙蔽，查看别人的代码。利用`map`实现。
+
+**源码**
+
+```cpp
+Node* copyRandomList(Node* head) {
+    if (head == nullptr) {
+        return head;
+    }
+    map<Node*, Node*> m;
+    Node* np = head;
+    while (np) {
+        Node* tmp = new Node(np->val);
+        m[np] = tmp;
+        np = np->next;
+    }
+    np = head;
+    while (np) {
+        m[np]->next = m[np->next];
+        m[np]->random = m[np->random];
+        np = np->next;
+    }
+    return m[head];
+}
+```
+
+**源码分析**
+
+注意，在第二个`while`循环中，我们开始给里面存在的指针复制时，充分里面`map`的特性，迅速定位，同时也可以使用`hash_map`。
+
+----
+
+## 旋转链表
+
+**解题思路**
+
+想法就是将链表的长度首先遍历获得，之后再将对应的数字进行取模操作，再一次遍历，将后面待移动的链表接入即可。
+
+**源码**
+
+我的代码：
+
+```cpp
+ListNode* rotateRight(ListNode* head, int k) {
+    // 获取链表长度
+    ListNode* p = head;
+    int count = 0;
+    while (p != nullptr) {
+        p = p->next;
+        count++;
+    }
+    p = head;
+    if (count == 0 || k % count == 0) {
+        return head;
+    }
+    // 通过两个指针，一个指向返回的头部
+    // 一个指向待接入旧头结点的位置
+    ListNode* pp = head;
+    // cout << k%count << endl;
+    for (int i = 0; i < count - (k%count)-1; i++) {
+        pp = pp->next;
+    }
+    // cout << pp->val << " " << p->val << endl;
+    p = pp->next;
+    pp->next = nullptr;
+    pp = p;
+    // cout << pp->val << " " << p->val << endl;
+    while (pp->next != nullptr) {
+        pp = pp->next;
+    }
+    pp->next = head;
+    return p;
+}
+```
+
+**源码分析**
