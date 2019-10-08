@@ -1,5 +1,6 @@
 # 关于我  
-更多关于我的信息请查看[我的博客](https://xinh79.github.io/about/)  
+更多关于我的信息请查看[我的博客](https://xinh79.github.io/about/)
+重构过一次，哭死，所有的contribution都没了。。。
 
 # 你能得到什么
 
