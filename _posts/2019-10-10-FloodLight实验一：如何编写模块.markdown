@@ -415,3 +415,4 @@ sudo mn --controller=remote,ip=127.0.0.1,port=6653 --switch=ovsk,protocols=OpenF
 
 以上就是对官方教程的实验过程。
 
+PS：欢迎在知乎中查看[我的文章](https://zhuanlan.zhihu.com/p/85979977)
