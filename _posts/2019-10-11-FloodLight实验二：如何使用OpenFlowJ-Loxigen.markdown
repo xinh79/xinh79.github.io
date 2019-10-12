@@ -14,13 +14,13 @@ tags:
 
 ## 背景
 
-新的`OpenFlowJ-Loxigen`库支持`Floodlight v1.0`及更高版本。`OpenFlowJ-Loxigen`支持从`1.0`到`1.5`的多个`OpenFlow`版本。通过单个通用的版本无关的API，`Floodlight v1.2`最多支持`1.4`，而`master`分支最多支持`v1.5`。开发人员可以利用API编写与多个和各种OpenFlow版本的交换机兼容的应用程序。可从`OpenFlowJ-Loxigen`库访问所有`OpenFlow`概念和类型。这个想法是每个`OpenFlow`版本都有一个工厂，该**工厂可以构建针对该OpenFlow版本定义的所有类型和消息**。
+新的`OpenFlowJ-Loxigen`库支持`Floodlight v1.0`及更高版本。`OpenFlowJ-Loxigen`支持从`1.0`到`1.5`的多个`OpenFlow`版本。通过单个通用的版本无关的API，`Floodlight v1.2`最多支持`1.4`，而`master`分支最多支持`v1.5`。开发人员可以利用API编写与多个和各种`OpenFlow`版本的交换机兼容的应用程序。可从`OpenFlowJ-Loxigen`库访问所有`OpenFlow`概念和类型。这个想法是每个`OpenFlow`版本都有一个工厂，该**工厂可以构建针对该OpenFlow版本定义的所有类型和消息**。
 
-`OpenFlowJ-Loxigen`还采用了一种经过改进的新方法来创建OpenFlow消息，匹配，动作，FlowMod等。使用构建器可以大大简化许多OpenFlow对象的创建过程，所有构建器都可以从常见的OpenFlow工厂访问。只需设置您的字段并构建。诸如消息长度通配符之类的底层细节的处理在后台进行。您再也不必担心跟踪和正确设置消息长度。编写FlowMod时，所有Match字段都会自动通配符，但您在FlowMod中专门设置的字段除外。还支持屏蔽字段，并且可以使用"匹配"指定屏蔽，如果需要，它将自动设置适当的通配符位。由生成器生成的所有对象都是不可变的，这使代码更安全，并使您的应用程序更易于调试。
+`OpenFlowJ-Loxigen`还采用了一种经过改进的新方法来创建`OpenFlow`消息，匹配，动作，FlowMod等。使用构建器可以大大简化许多`OpenFlow`对象的创建过程，所有构建器都可以从常见的`OpenFlow`工厂访问。只需设置您的字段并构建。诸如消息长度通配符之类的底层细节的处理在后台进行。您再也不必担心跟踪和正确设置消息长度。编写`FlowMod`时，所有Match字段都会自动通配符，但您在`FlowMod`中专门设置的字段除外。还支持屏蔽字段，并且可以使用"匹配"指定屏蔽，如果需要，它将自动设置适当的通配符位。由生成器生成的所有对象都是不可变的，这使代码更安全，并使您的应用程序更易于调试。
 
-连接到Floodlight的所有交换机都包含一个适用于该交换机所使用的OpenFlow版本的工厂。可能有多个交换机，所有交换机都使用不同版本的OpenFlow，其中`OpenFlowJ-Loxigen`处理后台的底层协议差异。从模块和应用程序开发人员的角度来看，该开关只是作为IOFSwitch公开，它具有功能`getOFFactory()`以返回适用于该开关所讲的OpenFlow版本的`OpenFlowJ-Loxigen`工厂。一旦有了正确的工厂，就可以通过通用`API OpenFlowJ-Loxi`公开创建OpenFlow类型和概念。
+连接到`Floodlight`的所有交换机都包含一个适用于该交换机所使用的`OpenFlow`版本的工厂。可能有多个交换机，所有交换机都使用不同版本的`OpenFlow`，其中`OpenFlowJ-Loxigen`处理后台的底层协议差异。从模块和应用程序开发人员的角度来看，该开关只是作为`IOFSwitch`公开，它具有功能`getOFFactory()`以返回适用于该开关所讲的OpenFlow版本的`OpenFlowJ-Loxigen`工厂。一旦有了正确的工厂，就可以通过通用`API OpenFlowJ-Loxi`公开创建OpenFlow类型和概念。
 
-因此，在编写`FlowMod`和其他类型时，您无需切换API。假设您希望构建一个FlowMod并将其发送到交换机。交换机管理器已知的每个交换机都有对相同版本的OpenFlow工厂的引用，该工厂在交换机和控制器之间的初始握手中协商过。只需从您的交换机引用工厂，创建构建器，构建`FlowMod`，然后将其写入交换机即可。无论所有OpenFlow版本如何，都为所有OpenFlow对象的构造公开相同的API。但是，您将需要知道每个OpenFlow版本都可以执行的操作。否则，例如，如果您告诉OF1.0开关执行某些操作，例如添加Group(其OpenFlow版本不支持)，为了更好，OpenFlowJ-Loxigen还引入了其他一些细微的变化。例如，OpenFlowJ-Loxi库分别通过DatapathId，OFPort，IPv4Address和MacAddress定义了许多常见类型，例如交换机数据路径ID，OpenFlow端口以及IP和MAC地址。鼓励您探索`org.projectfloodlight.openflow.types`，在这里您会发现各种各样的通用类型，这些通用类型现在可以在一个位置方便地定义。就像上面的构建器生成的对象一样，所有类型都是不可变的。
+因此，在编写`FlowMod`和其他类型时，您无需切换API。假设您希望构建一个FlowMod并将其发送到交换机。交换机管理器已知的每个交换机都有对相同版本的`OpenFlow`工厂的引用，该工厂在交换机和控制器之间的初始握手中协商过。只需从您的交换机引用工厂，创建构建器，构建`FlowMod`，然后将其写入交换机即可。无论所有OpenFlow版本如何，都为所有`OpenFlow`对象的构造公开相同的API。但是，您将需要知道每个`OpenFlow`版本都可以执行的操作。否则，例如，如果您告诉`OF1.0`开关执行某些操作，例如添加`Group`(其`OpenFlow`版本不支持)，为了更好，`OpenFlowJ-Loxigen`还引入了其他一些细微的变化。例如，`OpenFlowJ-Loxi`库分别通过`DatapathId`，`OFPort`，`IPv4Address`和`MacAddress`定义了许多常见类型，例如交换机数据路径ID，`OpenFlow`端口以及IP和MAC地址。鼓励您探索`org.projectfloodlight.openflow.types`，在这里您会发现各种各样的通用类型，这些通用类型现在可以在一个位置方便地定义。就像上面的构建器生成的对象一样，所有类型都是不可变的。
 
 最后，`OpenFlowJ-Loxigen`是开放源代码，具有一整套自动生成的协议单元测试套件，一个经过集成测试的自动化发布过程，并且被当前的商用BSN系列产品用于生产。
 
