@@ -13,8 +13,6 @@ tags:
 
 > 文章内容部分来自与两位大神[ZhongFuCheng3y](https://github.com/ZhongFuCheng3y/3y)与[Cyc2018](https://github.com/CyC2018/CS-Notes)
 
-[TOC]
-
 ----
 
 ## 基本特征
