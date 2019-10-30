@@ -1,0 +1,994 @@
+---
+layout:      post
+title:       "LeetCode之二分查找"
+subtitle:    "LeetCode : Binary-Search"
+author:      "Ashior"
+header-img:  "img/post-bg-ccf.jpg"
+catalog:     true
+tags:
+  - 工作
+  - LeetCode
+  - 算法
+---
+
+> 题目信息谷歌一下即可，也可通过 [LeetCode二分查找](https://leetcode-cn.com/explore/learn/card/binary-search/208/background/) 查看
+
+----
+
+## 二分查找模板
+
+```cpp
+int binarySearch(vector<int>& nums, int target){
+  if(nums.size() == 0)
+    return -1;
+
+  int left = 0, right = nums.size() - 1;
+  while(left <= right){
+    // Prevent (left + right) overflow
+    int mid = left + (right - left) / 2;
+    if(nums[mid] == target){ return mid; }
+    else if(nums[mid] < target) { left = mid + 1; }
+    else { right = mid - 1; }
+  }
+  return -1;
+}
+```
+
+## 二分查找
+
+**解题思路**
+
+没啥思路，基本操作，记住模板即可。
+
+**源码**
+
+我的代码：
+
+```cpp
+int search(vector<int>& nums, int target) {
+    int left = 0;
+    int right = nums.size()-1;
+    int mid = left + (right - left)/2;
+    while (left <= right) {
+        if (nums[mid] > target) {
+            right = mid-1;
+            mid = left + (right - left)/2;
+        } else if (nums[mid] < target) {
+            left = mid+1;
+            mid = left + (right - left)/2;
+        } else {
+            return mid;
+        }
+    }
+    return -1;
+}
+```
+
+----
+
+## x 的平方根
+
+**解题思路**
+
+二分查找，找到最接近的数字
+
+**源码**
+
+我的代码：
+
+```cpp
+int mySqrt(int x) {
+    int l = 1;
+    int r = x/2+1;
+    int m = 0;
+    while ( l <= r ) {
+        m = l + (r - l)/2;
+        cout << m << endl;
+        if (pow(m, 2) < x) {
+            l = m + 1;
+        } else if (pow(m, 2) > x) {
+            r = m - 1;
+        } else {
+            return m;
+        }
+    }
+    cout << l << " " << m  << " " << r << endl;
+    return r;
+}
+```
+
+高效代码：
+
+```cpp
+int mySqrt(int x) {
+    if (2147395600 <= x) return 46340;
+    int lo, hi, mid;
+    lo = 0;
+    hi = max(4, x / 2);
+    hi = min(hi, 46340);
+    while (1 < hi - lo) {
+        mid = (lo + hi) >> 1;
+        if (mid * mid == x) return mid;
+        else if (mid * mid < x) lo = mid;
+        else hi = mid;
+    }
+    return lo;
+}
+```
+
+----
+
+## 猜数字大小
+
+**源码**
+
+```cpp
+int guessNumber(int n) {
+    int l = 1;
+    int r = n;
+    while ( l <= r ) {
+        int m = l + (r-l)/2;
+        int res = guess(m);
+        if (res == 1) {
+            l = m+1;
+        } else if (res == -1) {
+            r = m-1;
+        } else {
+            return m;
+        }
+    }
+    return -1;
+}
+```
+
+----
+
+## 搜索旋转排序数组
+
+**解题思路**
+
+要求算法时间复杂度必须是 O(log n) 级别。说明只能是二分查找，不能顺序遍历。
+
+这道题让在旋转数组中搜索一个给定值，若存在返回坐标，若不存在返回-1。我们还是考虑二分搜索法，但是这道题的难点在于我们不知道原数组在哪旋转了，我们还是用题目中给的例子来分析，对于数组[0 1 2 4 5 6 7] 共有下列七种旋转方法：
+
+0　　1　　2　　 **4**　　5　　6　　7
+7　　0　　1　　 **2**　　4　　5　　6
+6　　7　　0　　 **1**　　2　　4　　5
+5　　6　　7　　 **0**　　1　　2　　4
+4　　5　　6　　 **7**　　0　　1　　2
+2　　4　　5　 　**6**　　7　　0　　1
+1　　2　　4　　 **5**　　6　　7　　0
+
+二分搜索法的关键在于获得了中间数后，判断下面要搜索左半段还是右半段，我们观察上面加粗的数字都是升序的，由此我们可以观察出规律，如果中间的数小于最右边的数，则右半段是有序的，若中间数大于最右边数，则左半段是有序的，我们只要在有序的半段里用首尾两个数组来判断目标值是否在这一区域内，这样就可以确定保留哪半边了。
+
+**源码**
+
+```cpp
+int search(vector<int>& nums, int target) {
+    int left = 0, right = nums.size() - 1;
+    while (left <= right) {
+        int mid = (left + right) / 2;
+        if (nums[mid] == target) return mid;
+        else if (nums[mid] < nums[right]) {
+            if (nums[mid] < target && nums[right] >= target) left = mid + 1;
+            else right = mid - 1;
+        } else {
+            if (nums[left] <= target && nums[mid] > target) right = mid - 1;
+            else left = mid + 1;
+        }
+    }
+    return -1;
+}
+```
+
+----
+
+## 第一个错误的版本
+
+**源码**
+
+```cpp
+int firstBadVersion(int n) {
+    int l = 0;
+    int r = n;
+    while (l <= r) {
+        int m = l + (r-l)/2;
+        if (isBadVersion(m)) {
+            r = m-1;
+        } else {
+            l = m+1;
+        }
+    }
+    return l;
+}
+```
+
+----
+
+## 寻找峰值
+
+**解题思路**
+
+只要求在一个数组里找出一个峰值元素并返回其下标，可以直接遍历数组查找，为使时间复杂度控制在O(log n)，可以采用二分查找，首先找到中间节点mid，如果大于两边就返回当前下标index，如果左边的结点比mid大，那么继续在左半区间查找，这里面一定存在一个峰值元素，因为nums[-1]为负无穷大；反之就继续在右半区间查找。
+
+**源码**
+
+```cpp
+int findPeakElement(vector<int>& nums) {
+    int n = nums.size();
+    if(n == 1) {
+        return 0;
+    }
+    int left = 0, right = n - 1,mid = 0;
+    while(left <= right) {
+        mid = left + (right - left) / 2;
+        if((mid == 0 || nums[mid] >= nums[mid - 1]) && (mid == n - 1 || nums[mid] >= nums[mid + 1])) {
+            return mid;
+        } else if(mid > 0 && nums[mid - 1] > nums[mid]) {
+            right = mid - 1;
+        } else {
+            left = mid + 1;
+        }
+    }
+    return mid;
+}
+```
+
+```cpp
+int findPeakElement(vector<int>& nums) {
+    int l=0, r=nums.size()-1;
+    while(l < r) {
+        int mid=(l+r)/2;
+        if (nums[mid] > nums[mid+1]) {
+            r=mid;
+        } else {
+            l=mid+1;
+        }
+    }
+    return l;
+}
+```
+
+----
+
+## 寻找旋转排序数组中的最小值
+
+**解题思路**
+
+二分法：旋转后的数组可以分为两个部分，前一部分、后一部分，两个部分均有序，并且前一部分的第一个元素（最小元素） 大于后一部分的最后一个元素（最大元素）。
+搞清楚以上这一点，接下来就很简单了。首先设置left, rigth两个指针，指向首尾两个元素，如果nums[left] < nums[right]，则说明没有旋转，直接返回第一个元素即可。如果大于，则说明发生旋转，令middle = left + (right - left) /2, 并比较nums[middle] 和nums[left]值，如果nums[left] <= nums[middle] 则令 left = middle + 1, 否则令 right = middle, 再比较left和right所指向的元素的值，如此迭代即可。
+
+**源码**
+
+```cpp
+int findMin(vector<int>& nums) {
+    int left = 0, right = nums.size() - 1;
+    if( nums[left] > nums[right]) //发生旋转
+        while( left < right){
+            int middle = left + (right - left) / 2;
+            if( nums[middle] < nums[left] )
+                right = middle;
+            else if( nums[ middle] >= nums[left] )
+                left = middle + 1;
+            if( nums[left] > nums[right] ) //依旧存在旋转
+                continue;
+            else
+                return nums[left];
+        }
+    else//没有发生旋转
+        left = 0;
+    return nums[left];
+}
+```
+
+高效代码：
+
+```cpp
+int findMin(vector<int>& nums) {
+    int l = 0, r = (int) nums.size()-1;
+    while (l+1 < r) {
+        int m = (r-l)/2+l;
+        if (nums[m] > nums[r]) l = m;
+        else r = m;
+    }
+    return min(nums[l], nums[r]);
+}
+```
+
+**源码解析**
+
+结束条件就是当`nums[left] > nums[right]`时，不存在旋转时，就返回`nums[left]`。
+
+
+----
+
+## 在排序数组中查找元素的第一个和最后一个位置
+
+**解题思路**
+
+要求时间复杂度为O(log n)，因此先使用二分法找到相应的target，之后再依次往前/后移动指针，找到第一个和最后一个位置。
+
+**源码**
+
+```cpp
+vector<int> searchRange(vector<int>& nums, int target) {
+    int size = nums.size();
+    vector<int> vec;
+    int l = 0;
+    int r = size-1;
+    int m = l + (r-l)/2;
+    while (l <= r) {
+        m = l + (r-l)/2;
+        if (nums[m] > target) {
+            r = m-1;
+        } else if (nums[m] < target) {
+            l = m+1;
+        } else if (nums[m] == target) {
+            int tmp = m;
+            while(tmp-1 >= 0 && nums[tmp-1] == target) {
+                tmp--;
+            }
+            vec.push_back(tmp);
+            tmp = m;
+            while (tmp+1 <= size-1 && nums[tmp+1] == target) {
+                tmp++;
+            }
+            vec.push_back(tmp);
+            return vec;
+        }
+    }
+    vec.push_back(-1);
+    vec.push_back(-1);
+    return vec;
+}
+```
+
+正确代码：
+
+```cpp
+class Solution {
+public:
+    vector<int> searchRange(vector<int>& nums, int target) {
+        if(nums.empty() || target < nums.front() || target > nums.back()) //特殊情况
+            return {-1, -1};
+        int l = 0, r = nums.size() - 1, mid;
+        int res1 , res2;
+        //二分查找,分别找左右边缘
+        //注意不能找到左边缘再循环遍历到右边缘，因为可能整个数组都是这个数，这样复杂度就是变成n+logn了
+        while(l <= r){
+            mid = (l + r) / 2;
+            if(nums[mid] >= target)
+                r = mid - 1;
+            else
+                l = mid + 1;
+        }
+        if(nums[l] != target)//没有瞒足条件的数组值
+            return{-1, -1};
+        res1 = l;
+        //从左边缘到最后开始继续二分找到右边缘
+        r = nums.size() - 1;
+        while(l <= r){
+            mid = (l + r) / 2;
+            if(nums[mid] <= target)
+                l = mid + 1;
+            else
+                r = mid - 1;
+        }
+        res2 = r;
+        return {res1, res2};
+    }
+};
+```
+
+**源码解析**
+
+我的代码实际上是错误的解答，不能找到目标数后就进行常规遍历，如果全部都是目标数，则算法直接退化成O(n+log n)。应该像下面的代码一样，通过二分法分别找出左右的边缘。
+
+#### 二分查找小结
+
+发现经常使用这种方式的二分查找，因此稍微一个小结：
+
+```cpp
+while(l <= r){
+    mid = (l + r) / 2;
+    if(nums[mid] >= target)
+        r = mid - 1;
+    else
+        l = mid + 1;
+}
+```
+
+1. 目标超过最左边：left和mid为最左边的元素下标
+2. 目标超过最右边：mid和right为最右边的元素下标
+3. 目标在中间：left和mid为比目标大的元素下标，而right为比目标小的元素
+4. **目标被找到：left为目标元素下标（如有多个重复数字，则为靠左），而right为目标数下标减少1。**
+
+```cpp
+while(l <= r){
+    mid = (l + r) / 2;
+    if(nums[mid] <= target)
+        l = mid + 1;
+    else
+        r = mid - 1;
+}
+```
+
+1. 目标超过最左边：left和mid为最左边的元素下标
+2. 目标超过最右边：mid和right为最右边的元素下标
+3. 目标在中间：left为比目标大的元素下标，而right为比目标小的元素
+4. **目标被找到：left为比目标大的元素下标，而right为目标数**
+
+
+----
+
+## 找到 K 个最接近的元素
+
+**解题思路**
+
+整体思路还是对的，但是在看比赛，心不在焉，哈哈哈。
+通过二分法，将左右两个指针不断逼近最接近待比较元素X的位置，然后再左右寻找绝对值相差最小的数。
+
+由于数组有序，所以最后找到的k个元素也一定是有序的，其实就是返回了一个长度为k的子数组，相当于在长度为n的数组中去掉n-k个数字， 而且去掉的顺序肯定是从两头开始去，因为距离x最远的数字肯定在首尾出现。每次比较首尾两个数字跟x的距离，将距离大的那个数字删除，直到剩余的数组长度为k为止。
+
+**源码**
+
+大神的代码：
+```cpp
+class Solution {
+public:
+    vector<int> findClosestElements(vector<int>& arr, int k, int x) {
+        vector<int> resVec(k, 0);
+        //二分法在arr搜索x,不断缩小x可能存在的范围，最终确定两个指针在x存在的最小的范围
+        int left = 0, right = arr.size() - 1, mid, arrSize = arr.size();
+        while (left + 1 < right){
+            mid = (left + right) / 2;
+            if (arr[mid] >= x){
+                right = mid;
+            }
+            else{
+                left = mid;
+            }
+        }
+        //从left，right处寻找与x之差的绝对值较小者
+        for (int i = 0; i < k; ++i){
+            if (left >= 0 && right < arrSize){
+                //取与x之差的绝对值较小者
+                if (abs(arr[left] - x) <= abs(arr[right] - x)){
+                    resVec[i] = arr[left--];
+                }
+                else{
+                    resVec[i] = arr[right++];
+                }
+            }
+            //否则取单边
+            else if (left >= 0){
+                resVec[i] = arr[left--];
+            }
+            else{
+                resVec[i] = arr[right++];
+            }
+        }
+        sort(resVec.begin(), resVec.end());//然后按照升序排序
+        return resVec;
+    }
+};
+```
+
+```cpp
+class Solution {
+public:
+    vector<int> findClosestElements(vector<int>& arr, int k, int x) {
+        vector<int> res = arr;
+        while (res.size() > k) {
+            int first  = 0, last = res.size() - 1;
+            if (x - res.front() <= res.back() - x) {
+                res.pop_back();
+            } else {
+                res.erase(res.begin());
+            }
+        }
+        return res;
+    }
+};
+```
+
+----
+
+## 寻找峰值
+
+**解题思路**
+
+只要求在一个数组里找出一个峰值元素并返回其下标，可以直接遍历数组查找，为使时间复杂度控制在O(log n)，可以采用二分查找，首先找到中间节点mid，如果大于两边就返回当前下标index，如果左边的结点比mid大，那么继续在左半区间查找，这里面一定存在一个峰值元素，因为nums[-1]为负无穷大；反之就继续在右半区间查找
+
+**源码**
+
+```cpp
+class Solution {
+public:
+    int findPeakElement(vector<int>& nums) {
+        int n = nums.size();
+        if(n == 1) {
+            return 0;
+        }
+        int left = 0, right = n - 1,mid = 0;
+        while(left <= right) {
+            mid = left + (right - left) / 2;
+            if((mid == 0 || nums[mid] >= nums[mid - 1]) && (mid == n - 1 || nums[mid] >= nums[mid + 1])) {
+                return mid;
+            } else if(mid > 0 && nums[mid - 1] > nums[mid]) {
+                right = mid - 1;
+            } else {
+                left = mid + 1;
+            }
+        }
+        return mid;
+    }
+};
+```
+
+----
+
+## Pow(x, n)
+
+**解题思路**
+
+**快速幂算法**：它把幂次运算由O(n)的复杂度简化到O(logn)；
+方法一：
+1. 题目明确告知n的范围为Integet的的范围,所有不能for循环一个个乘以
+2. 使用折半计算,每次把n缩小一半
+3. **当n为奇数时,需要少乘一次x的值**
+4. 判断n是正数还是负数。如果是正数，直接返回；如果是负数,返回`1/result`
+
+方法二：
+考虑到n个x相乘式子的对称关系，可以对上述方法进行改进，从而得到一种时间复杂度为O(logn)的方法，递归关系可以表示为`pow(x,n) = pow(x,n/2)*pow(x,n-n/2)`
+
+**源码**
+
+方法一：
+
+```cpp
+double myPow(double x, int n) {
+    double res = 1.0;
+    for (int i = n; i != 0; i /= 2) {
+        if (i % 2 != 0) res *= x;
+        x *= x;
+    }
+    return n < 0 ? 1 / res : res;
+}
+```
+方法二：
+
+```cpp
+double myPow(double x, int n) {
+     if(n==0)  
+        return 1.0;  
+    if(n<0)  
+        return 1.0/pow(x,-n);  
+    double half = pow(x,n>>1);  
+    if(n%2==0)  
+        return half*half;  
+    else  
+        return half*half*x;  
+}
+```
+
+----
+
+## 有效的完全平方数
+
+**解题思路**
+
+方法一：
+任意完全平方数都可以表示成连续的奇数和
+
+方法二：
+可以使用二分法，判断条件为中间数的平方是否等于num值。
+
+**源码**
+
+```cpp
+class Solution {
+public:
+    bool isPerfectSquare(int num) {
+        int i = 1;
+        while(num>0){
+            num -= i;
+            i += 2;
+        }
+        return num == 0;
+    }
+};
+```
+
+```cpp
+class Solution {
+public:
+    bool isPerfectSquare(int num) {
+        long long left = 0,right = num;
+        while(left<=right){
+            long long mid = left+(right-left)/2,t=mid*mid;
+            if(t==num){
+                return true;
+            }else if(t<num){
+                left = mid+1;
+            }else{
+                right = mid-1;
+            }
+        }
+        return false;
+    }
+};
+```
+
+----
+
+## 寻找比目标字母大的最小字母
+
+**解题思路**
+
+受题目《在排序数组中查找元素的第一个和最后一个位置》的启发，完成下面的代码。详情请参见此题目注释。
+
+**源码**
+
+```cpp
+class Solution {
+public:
+    char nextGreatestLetter(vector<char>& letters, char target) {
+        if (target-'a' >= letters[letters.size()-1]-'a' || target-'a' < letters[0]-'a') {
+            return letters[0];
+        }
+        int l = 0;
+        int r = letters.size() - 1;
+        int m = l + (r-l)/2;
+        while (l <= r) {
+            m = l + (r-l)/2;
+            if (letters[m] - 'a' <= target - 'a') {
+                l = m + 1;
+            } else {
+                r = m - 1;
+            }
+        }
+        // cout << l << " " << m << " " << r << endl;
+        if (letters[l]-'a' == target-'a') {
+            return letters[l+1];
+        } else {
+            return letters[l];
+        }
+    }
+};
+```
+
+----
+
+## 寻找旋转排序数组中的最小值
+
+**解题思路**
+
+由于是两段有序，通过中点判断左边有序还是右边有序，然后再进入。
+
+**源码**
+
+我的代码：
+
+```cpp
+class Solution {
+public:
+    int findMin(vector<int>& nums) {
+        if (nums.size() == 0) {
+            return 0;
+        }
+        if (nums.size() == 1) {
+            return nums[0];
+        }
+        if (nums[0] < nums[nums.size()-1]) {
+            return nums[0];
+        }
+        int l = 0;
+        int r = nums.size()-1;
+        int m = l + (r-l)/2;
+        while (l<r) {
+            m = l + (r-l)/2;
+            if (nums[m] > nums[l]) {
+                l = m;
+            } else {
+                r = m;
+            }
+        }
+        return nums[r+1];
+    }
+};
+```
+
+高效代码：
+
+```cpp
+class Solution {public:
+    int findMin(vector<int>& nums) {
+        int left = 0, right = nums.size() - 1;
+        while (left < right) {
+            if (nums[right] > nums[left]) {
+                break;
+            }
+            int mid = left + (right - left) / 2;
+            if (nums[mid] >= nums[left])
+                left = mid + 1;
+            else
+                right = mid;
+        }
+        return nums[left];
+    }
+};
+```
+
+**源码解析**
+
+循环至右边大于左边的时候就可以停止了。但是出于对二分查找的不熟悉，还是习惯性的循环到底。
+
+----
+
+## 寻找旋转排序数组中的最小值 II
+
+**解题思路**
+
+如果用二分查找的话，当中间的值大于最右边的值的时候，那么最小值一定在mid和right中间，当中间值小于最左边值的时候，最小值一定在left和mid中间，只有当right mid 和 left的值相同的时候才无法确定 最小值在哪个区间，**无法确定的时候让right的值自减就好，因为right的一定是大于等于最小值的**。
+
+**源码**
+
+我的代码：
+
+```cpp
+class Solution {
+public:
+    int findMin(vector<int>& nums) {
+        if (nums.size() == 0) {
+            return 0;
+        }
+        if (nums.size() == 1) {
+            return nums[0];
+        }
+        if (nums[0] < nums[nums.size()-1]) {
+            return nums[0];
+        }
+        int l = 0;
+        int r = nums.size()-1;
+        int m = l + (r-l)/2;
+        while (l<r) {
+            m = l + (r-l)/2;
+            if (nums[m] > nums[r]) {
+                l = m+1;
+            } else if (nums[m] < nums[r]) {
+                r = m;
+            } else {
+                r--;
+            }
+        }
+        return nums[l];
+    }
+};
+```
+
+高效代码;
+
+```cpp
+class Solution {public:
+    int findMin(vector<int>& nums) {
+        int left = 0;
+        int right = nums.size()-1;
+        while(left < right)
+        {
+            int mid = left + ((right-left)>>1);
+            if (nums[mid] > nums[right])
+            {
+                left = mid + 1;
+            }
+            else if (nums[mid] < nums[right] || nums[left] > nums[mid])
+            {
+                right = mid;
+            }
+            else
+            {
+                right = right -1;          
+            }
+        }
+        return nums[left];  
+    }
+};
+```
+
+----
+
+## 两个数组的交集 II
+
+**解题思路**
+
+通过map记录出现的次数，然后遍历第二个数组时对map中的value进行减一操作。
+
+**源码**
+
+```cpp
+vector<int> intersect(vector<int>& nums1, vector<int>& nums2) {
+    map<int, int> m;
+    for (int i = 0; i < nums1.size(); i++) {
+        m[nums1[i]]++;
+        // cout << nums1[i] << " " << m[nums1[i]] << endl;
+    }
+    vector<int> vec;
+    for (int i = 0; i < nums2.size(); i++) {
+        if (m.find(nums2[i]) != m.end() && m[nums2[i]] != 0) {
+            vec.push_back(nums2[i]);
+            m[nums2[i]]--;
+        }
+    }
+    return vec;
+}
+```
+
+----
+
+## 两数之和 II - 输入有序数组
+
+**解题思路**
+
+
+
+**源码**
+
+我的代码：看起来很臃肿。
+
+```cpp
+class Solution {
+public:
+    vector<int> twoSum(vector<int>& numbers, int target) {
+        int l = 0;
+        int r = numbers.size() - 1;
+        int m = l + (r-l)/2;
+        while (l <= r) {
+            m = l + (r-l)/2;
+            if (numbers[m] >= target) {
+                r = m-1;
+            } else {
+                l = m+1;
+            }
+        }
+        cout << l << " " << m << " " << r << endl;
+        vector<int> vec;
+        if (r == -1 || r == 0) {
+            for (int i = 0; i < numbers.size(); i++) {
+                for (int j = 1; j < numbers.size(); j++) {
+                    if (numbers[i] + numbers[j] == target) {
+                        vec.push_back(i+1);
+                        vec.push_back(j+1);
+                        return vec;
+                    }
+                }
+            }
+        }
+        for (int i = 0; i < r; i++) {
+            for (int j = 0; j < r; j++) {
+                if (numbers[r-i] + numbers[j] == target) {
+                    vec.push_back(j+1);
+                    vec.push_back(r-i+1);
+                    return vec;
+                }
+            }
+        }
+        return vec;
+    }
+};
+```
+
+高效代码：
+
+```cpp
+class Solution {public:
+    vector<int> twoSum(vector<int>& numbers, int target) {
+        int i = 0, j = numbers.size() - 1;
+        while (i < j) {
+            int sum = numbers[i] + numbers[j];
+            if (sum == target) {
+                return {i + 1, j + 1};
+            } else if (sum > target) {
+                --j;
+            } else if (sum < target) {
+                ++i;
+            }
+        }
+        return {};
+    }
+};
+```
+
+**源码解析**
+
+高效代码偏暴力解决。从左右极端开始相加比较，如果大了，就右边界递减一，如果小了则左边界递增一。
+
+----
+
+## 寻找重复数
+
+**解题思路**
+
+[LeaveMeAlone1995](https://www.cnblogs.com/leaveMeAlone/p/9063790.html)的博客讲解的比较清楚，建议参考。
+
+**源码**
+
+方法一：通过图论中环的有关知识解决
+
+```cpp
+public int findDuplicate(int[] nums) {
+    // Find the intersection point of the two runners.
+    int tortoise = nums[0];
+    int hare = nums[0];
+    do {
+        tortoise = nums[tortoise];
+        hare = nums[nums[hare]];
+    } while (tortoise != hare);
+
+    // Find the "entrance" to the cycle.
+    int ptr1 = nums[0];
+    int ptr2 = tortoise;
+    while (ptr1 != ptr2) {
+        ptr1 = nums[ptr1];
+        ptr2 = nums[ptr2];
+    }
+
+    return ptr1;
+}
+```
+
+方法二：
+
+```cpp
+public int findDuplicate_leetcode3(int[] nums) {
+    if (nums.length == 0 || nums == null)
+        return 0;
+    int low = 1, high = nums.length - 1, mid;
+    while (low < high) {  //这个题不好用low+1<high，因为最后结果的两个值无从比较，是基于count的
+        mid = low + (high - low) / 2;
+        int count = 0;
+        for (int i = 0; i < nums.length; i++) {
+            if (nums[i] <= mid)
+                count++;
+        }
+        if (count > mid)
+            high = mid;
+        else
+            low = mid + 1;
+    }
+    return low;
+}
+```
+
+高效代码：
+
+```cpp
+class Solution {public:
+    int findDuplicate(vector<int>& nums) {
+        int ans;
+        int k = nums[0];
+        int m = nums[0];
+        do{
+            k = nums[k];
+            m = nums[nums[m]];
+        }while(k!=m);
+        int p1=nums[0];
+        int p2=k;
+        while(p1!=p2)
+        {
+            p1=nums[p1];
+            p2=nums[p2];
+        }
+        return p1;
+    }
+};
+```
+
+**源码解析**
+
+方法一：
+如果数组的每一个数的取值都是不重复的，那么可以选取特定的数值来使，不断通过索引值得到数值，再将新的数值作为索引值，循环下去可以得到一个链路。假定数组为[1,2,3,4,5]，设定f(x)，x是索引值，f(x)是值，并将得到的f(x)作为下一个输入，这样形成了一个链路，1->2->3->4->5；但是如果稍微做一下改变原数组为[1,2,3,4,1]，那么链路将变为，1->2->3->4->1…，形成一个环路，这里的重复数字1就是构成环路的关键。本题中就包含这样一个重复数字，所以数组nums一定会存在一个环路，问题变为如何查找环路起点问题，对于这种问题有这样一个算法，叫做弗洛伊德的循环寻找算法。在算法中会有两个指针一个快速指针每次移动两个步骤，一个慢速指针每次移动一个步骤，其中快速指针会提前进入循环并且在慢速指针进入循环后会与其相交。类似于操场跑圈，快速指针和慢速指针同时同宿舍出发，快速指针先到操场开始跑圈，慢速指针后到操场开始跑圈，但是快速指针一定会在某个时刻与慢速指针到达同一位置。
+
+如何求取圆环起点位置（即重复的数字）：设定慢速指针与快速指针相交点距离环起点的距离为k，环周长为n，指针起点到环起点的距离为m，则慢速指针走过的距离为a = m+k+xn ；快速指针走过的距离为2a = m+k+yn，两者做差可以得到a = (y-x)n，是环长度的整数倍，如果将快速指针重置到起点，且将快速指针的移动距离改为1，那么当快速指针移动到圆环起点时，慢速指针移动距离为a+m，因为a是圆环长度的整数倍，所以慢速指针的位置也是在圆环起点，这样两者的相遇点即为圆环起点。
+
+方法二：
+根据题目中的条件，可以知道的是一定会有重复数字且只有一个重复数字，那么必然导致数组数值的不均匀分布（指的不是位置的不均匀，而是数值的取值不均匀），那么可以通过二分法来判别重复取值的数字在哪个部分，取数组的中值，计算大于和小于中值的数量，取数量较多的那份为新的数组，重复进行，最后到不可分时，得到的即为重复数字。
