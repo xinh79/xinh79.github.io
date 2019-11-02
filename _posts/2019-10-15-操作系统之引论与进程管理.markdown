@@ -190,9 +190,9 @@ Linux 的系统调用主要有以下这些：
 
 ![ProcessState](https://cs-notes-1256109796.cos.ap-guangzhou.myqcloud.com/ProcessState.png)
 
-- 就绪状态（ready）：等待被调度
-- 运行状态（running）
-- 阻塞状态（waiting）：等待资源
+- 就绪状态（ready）：等待被调度。已经具备运行条件，但是没有空闲CPU
+- 运行状态（running）：占有CPU，并在CPU上运行
+- 阻塞状态（waiting）：等待某种特定的资源
 
 应该注意以下内容：
 
