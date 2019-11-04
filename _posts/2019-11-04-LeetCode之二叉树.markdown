@@ -1,0 +1,971 @@
+---
+layout:      post
+title:       "LeetCode之二叉树"
+subtitle:    "LeetCode : data-structure-binary-tree"
+author:      "Ashior"
+header-img:  "img/post-bg-ccf.jpg"
+catalog:     true
+tags:
+  - 工作
+  - LeetCode
+  - 算法
+---
+
+> 题目信息谷歌一下即可，也可通过 [LeetCode二叉树](https://leetcode-cn.com/explore/learn/card/data-structure-binary-tree/) 查看
+
+----
+
+## 二叉树的前序遍历
+
+**源码**
+
+```cpp
+/**
+ * Definition for a binary tree node.
+ * struct TreeNode {
+ *     int val;
+ *     TreeNode *left;
+ *     TreeNode *right;
+ *     TreeNode(int x) : val(x), left(NULL), right(NULL) {}
+ * };
+ */
+class Solution {
+public:
+    vector<int> preorderTraversal(TreeNode* root) {
+        vector<int> vec;
+        digui(root, vec);
+        return vec;
+    }
+    void digui(TreeNode* root, vector<int> &vec) {
+        if (root == nullptr) {
+            return ;
+        }
+        vec.push_back(root->val);
+        digui(root->left, vec);
+        digui(root->right, vec);
+    }
+};
+```
+
+----
+
+## 中序遍历二叉树
+
+**源码**
+
+```cpp
+/**
+ * Definition for a binary tree node.
+ * struct TreeNode {
+ *     int val;
+ *     TreeNode *left;
+ *     TreeNode *right;
+ *     TreeNode(int x) : val(x), left(NULL), right(NULL) {}
+ * };
+ */
+class Solution {
+public:
+    void mid_serarch(vector<int>& vec, TreeNode* root) {
+        if (root == NULL) {
+            return ;
+        }
+        mid_serarch(vec, root->left);
+        vec.push_back(root->val);
+        mid_serarch(vec, root->right);
+
+    }
+    vector<int> inorderTraversal(TreeNode* root) {
+        vector<int> vec;
+        if (root == NULL) {
+            return vec;
+        }
+        mid_serarch(vec, root);
+        return vec;
+    }
+};
+```
+
+----
+
+## 二叉树的后序遍历
+
+**源码**
+
+```cpp
+/**
+ * Definition for a binary tree node.
+ * struct TreeNode {
+ *     int val;
+ *     TreeNode *left;
+ *     TreeNode *right;
+ *     TreeNode(int x) : val(x), left(NULL), right(NULL) {}
+ * };
+ */
+class Solution {
+public:
+    vector<int> postorderTraversal(TreeNode* root) {
+        vector<int> vec;
+        digui(root, vec);
+        return vec;
+    }
+    void digui(TreeNode* root, vector<int> &vec) {
+        if (root == nullptr) {
+            return ;
+        }
+        digui(root->left, vec);
+        digui(root->right, vec);
+        vec.push_back(root->val);
+    }
+};
+```
+
+----
+
+## 二叉树的层次遍历
+
+**解题思路**
+
+不使用递归，此问题用队列更容易解决。
+
+**源码**
+
+```cpp
+/**
+ * Definition for a binary tree node.
+ * struct TreeNode {
+ *     int val;
+ *     TreeNode *left;
+ *     TreeNode *right;
+ *     TreeNode(int x) : val(x), left(NULL), right(NULL) {}
+ * };
+ */
+class Solution {
+public:
+    vector<vector<int>> levelOrder(TreeNode* root) {
+        vector<vector<int>> vec;
+        if (root == nullptr) {
+            return vec;
+        }
+        
+        queue<TreeNode*> q;
+        q.push(root);
+        
+        while(!q.empty()) {
+            vector<TreeNode*> v;
+            while (!q.empty()) {
+                v.push_back(q.front());
+                q.pop();
+            }
+            vector<int> vv;
+            for (int i = 0; i < v.size(); i++) {
+                if (v[i]->left != nullptr) {
+                    q.push(v[i]->left);
+                }
+                if (v[i]->right != nullptr) {
+                    q.push(v[i]->right);
+                }
+                vv.push_back(v[i]->val);
+            }
+            vec.push_back(vv);
+        }
+        
+        return vec;
+    }
+};
+```
+
+高效代码：
+
+```cpp
+class Solution {public:
+    vector<vector<int>>ans;
+    vector<vector<int>> levelOrder(TreeNode* root) {
+        TreeNode*t=root;
+        queue<TreeNode*>q;
+        q.push(t);
+        if(!root)return ans;
+           while(!q.empty()){
+            vector<int>v;
+            int len=q.size();
+            for(int i=0;i<len;i++){
+                t=q.front();
+                v.push_back(t->val);
+                if(t->left)q.push(t->left);
+                if(t->right)q.push(t->right);
+                q.pop();
+            }
+            ans.push_back(v);
+        }
+        return ans;
+    }
+};
+```
+
+**源码解析**
+
+不适用递归来解决此问题，使用数据结构中的队列。
+
+----
+
+## 二叉树的最大深度
+
+**源码**
+
+```cpp
+
+/**
+ * Definition for a binary tree node.
+ * struct TreeNode {
+ *     int val;
+ *     TreeNode *left;
+ *     TreeNode *right;
+ *     TreeNode(int x) : val(x), left(NULL), right(NULL) {}
+ * };
+ */
+
+//深度搜索，递归class Solution {public:
+    int maxDepth(TreeNode* root) {
+        if (NULL == root) {
+            return 0;
+        }
+        
+        int r = maxDepth(root->right)+1;
+        int l = maxDepth(root->left)+1;
+        
+        return r>l?r:l;
+    }
+};
+
+//深度搜索，栈循环
+class Solution {
+public:
+    int maxDepth(TreeNode* root) {
+        if (NULL == root) {
+            return 0;
+        }
+        
+        stack<pair<TreeNode*,int>> s;
+        TreeNode* p = root;
+        int maxDepth = 0;
+        int depth = 0;
+        
+        while(!s.empty() || p != NULL) {
+            while(p != NULL) {
+                s.push(pair<TreeNode*, int>(p, ++depth));
+                p = p -> left;
+            }
+            p = s.top().first;
+            depth = s.top().second;
+            if(maxDepth < depth) {
+                maxDepth = depth;
+            }
+            s.pop();
+            p=p->right;
+        }
+        return maxDepth;
+    }
+};
+
+//广度优先：使用队列
+class Solution {
+public:
+    int maxDepth(TreeNode* root) {
+         if(root==NULL) return 0;
+         deque<TreeNode*> q;
+         q.push_back(root);
+         int deep=0;
+         while(!q.empty())
+         {
+             deep++;
+             int num=q.size();
+             for(int i=1;i<=num;i++)
+             {
+                TreeNode* p=q.front();
+                q.pop_front();
+                if(p->left) q.push_back(p->left);
+                if(p->right) q.push_back(p->right);
+             }
+         }
+         return deep;         
+    }
+};
+
+```
+
+----
+
+## 对称二叉树
+
+**解题思路**
+
+按照之前的层次遍历的方法，可以通过数据结构队列，存储树节点，然后逐层判断。
+
+**源码**
+
+```cpp
+/**
+ * Definition for a binary tree node.
+ * struct TreeNode {
+ *     int val;
+ *     TreeNode *left;
+ *     TreeNode *right;
+ *     TreeNode(int x) : val(x), left(NULL), right(NULL) {}
+ * };
+ */
+class Solution {
+public:
+    bool isSymmetric(TreeNode* root) {
+        if (root == nullptr) {
+            return true;
+        }
+        queue<TreeNode*> q;
+        q.push(root);
+        while(!q.empty()) {
+            vector<TreeNode*> v1;
+            vector<TreeNode*> v2;
+            while (!q.empty()) {
+                TreeNode* tmp = q.front();
+                q.pop();
+                v1.push_back(tmp);
+            }
+            for (int i = 0; i < v1.size(); i++) {
+                if (v1[i]->left != nullptr) {
+                    q.push(v1[i]->left);
+                    v2.push_back(v1[i]->left);
+                } else {
+                    v2.push_back(nullptr);
+                }
+                if (v1[i]->right) {
+                    q.push(v1[i]->right);
+                    v2.push_back(v1[i]->right);
+                } else {
+                    v2.push_back(nullptr);
+                }
+            }
+            for (int i = 0, j = v2.size()-1; i < j; i++,j--) {
+                if ((v2[i] != nullptr && v2[j] != nullptr)) {
+                    if (v2[i]->val != v2[j]->val) {
+                        return false;
+                    }
+                } else if (v2[i] == nullptr && v2[j] == nullptr) {
+                    continue;
+                } else {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+};
+```
+
+高效代码：
+
+```cpp
+class Solution {public:
+    bool isSymmetric(TreeNode* root) {
+        return isMirror(root, root);
+    }
+    
+    bool isMirror(TreeNode* node1, TreeNode* node2) {
+        if (node1 == nullptr && node2 == nullptr)
+            return true;
+        if (node1 == nullptr || node2 == nullptr)
+            return false;
+        return (node1->val == node2->val && isMirror(node1->left, node2->right) && isMirror(node1->right, node2->left));
+    }
+};
+```
+
+**源码解析**
+
+递归代码简洁高效。
+
+----
+
+## 路径总和
+
+**源码**
+
+```cpp
+class Solution {
+public:
+    bool hasPathSum(TreeNode* root, int sum) {
+        if(root==NULL){
+            return false;
+        }
+        int t=sum-root->val;
+        if(root->left==NULL&& root->right==NULL){
+            return t==0 ? true :false;
+        }  
+        //递归调用函数，分别判断根结点的左节点和右节点
+        return hasPathSum(root->left,t) || hasPathSum(root->right,t);
+    }
+};
+```
+
+同上面的源码如出一辙：
+
+```cpp
+class Solution {public:
+    bool hasPathSum(TreeNode* root, int sum) {
+        if(root == nullptr) return false;
+        if(root->left == nullptr && root->right == nullptr && root->val == sum) return true;
+        else 
+            return hasPathSum(root->left,sum - root->val) || hasPathSum(root->right,sum - root->val);
+    }
+};
+```
+
+**源码解析**
+
+大神采用了逆向思维的方式，将sum值一直递减。
+
+----
+
+## 从中序与后序遍历序列构造二叉树
+
+**解题思路**
+
+[博客](https://www.jianshu.com/p/76c498c37043)上面的写的不错。
+
+inorder = [9,3,15,20,7]
+postorder = [9,15,7,20,3]因为后序后遍历根节点，后续最后一个节点为整棵树的根节点，可以确定根节点为3;再根据中序得到:
+leftInOrder = [9]RightInOrder = [15, 20 ,7]
+又由于中序和先序的数组大小应该相同的,
+所以,
+LeftPostOrder = [9]
+RightPostOrder = [15, 7, 20]
+至此,划分为子问题:
+leftInOrder = [9]
+LeftPostOrder = [9]
+构建左子树。
+RightPreOrder = [20, 15, 7]
+RightPostOrder = [15, 7, 20]
+构建右子树。
+
+就是如何划分子问题，然后递归的构建左子树和右子树。利用中序遍历序列确定树的形状，后序遍历序列确定每次构造的根节点。
+
+**源码**
+
+```cpp
+/**
+ * Definition for a binary tree node.
+ * struct TreeNode {
+ *     int val;
+ *     TreeNode *left;
+ *     TreeNode *right;
+ *     TreeNode(int x) : val(x), left(NULL), right(NULL) {}
+ * };
+ */
+class Solution {
+public:
+    TreeNode* buildTree(vector<int>& inorder, vector<int>& postorder) {
+        return creat(inorder, 0, inorder.size()-1, postorder, 0, postorder.size()-1);
+    }
+    TreeNode* creat(vector<int>& inorder, int il, int ir, vector<int>& postorder, int pl, int pr){
+        if(il > ir || pl > pr) return NULL;
+        // 创造“根节点”
+        TreeNode* root = new TreeNode(postorder[pr]);
+        for(int i = il; i <= ir; i++){
+            // 如果找到“根节点”，则划分左右子树
+            if(postorder[pr] == inorder[i]){
+                // 将根节点作为划分依据，中序遍历序列好切分
+                // 中序遍历序列直接将遍历找到的i进行操作即可，一分为二
+                root->left = creat(inorder, il, i-1, postorder, pl, pl+i-il-1);
+                // 后序遍历序列
+                root->right = creat(inorder, i+1, ir, postorder, pl+i-il, pr-1);
+                break;
+            }
+        }         
+        return root;
+    }
+};
+```
+
+----
+
+## 从前序与中序遍历序列构造二叉树
+
+**源码**
+
+```cpp
+/**
+ * Definition for a binary tree node.
+ * struct TreeNode {
+ *     int val;
+ *     TreeNode *left;
+ *     TreeNode *right;
+ *     TreeNode(int x) : val(x), left(NULL), right(NULL) {}
+ * };
+ */
+class Solution {
+public:
+    TreeNode* buildTree(vector<int>& preorder, vector<int>& inorder) {
+        return creat(preorder, 0, preorder.size()-1, inorder, 0, inorder.size()-1);
+    }
+    TreeNode* creat(vector<int>& preorder, int pl, int pr, vector<int>& inorder, int il, int ir) {
+        if (pl > pr || il > ir) {
+            return nullptr;
+        }
+        // 找到根节点
+        TreeNode* root = new TreeNode(preorder[pl]);
+        for (int i = il; i <= ir; i++) {
+            if (preorder[pl] == inorder[i]) {
+                root->left = creat(preorder, pl+1, pl+i-il, inorder, il, i-1);
+                root->right = creat(preorder, pl+i-il+1, pr, inorder, i+1, ir);
+                break;
+            }
+        }
+        return root;
+    }
+};
+```
+
+**源码解析**
+
+和上一题一样，主要的问题就是划分左右子树时，需要判断传入的子数组的首尾位置。
+
+----
+
+## 填充每个节点的下一个右侧节点指针
+
+**解题思路**
+
+通过[博客](https://blog.csdn.net/qq_30650153/article/details/82024648)查看完美二叉树、完全二叉树、完满二叉树的基本概念。
+思路还是很清晰的，就是利用队列，进行层次遍历，跟之前的层次遍历没有啥区别。但是唯一感觉不好的地方就是对于完美二叉树这个性质没有利用起来，回头看下大神们的代码如何对这个性质进行利用。
+
+**源码**
+
+我的代码：
+
+```cpp
+/*
+// Definition for a Node.
+class Node {
+public:
+    int val;
+    Node* left;
+    Node* right;
+    Node* next;
+
+    Node() {}
+
+    Node(int _val, Node* _left, Node* _right, Node* _next) {
+        val = _val;
+        left = _left;
+        right = _right;
+        next = _next;
+    }
+};
+*/
+class Solution {
+public:
+    Node* connect(Node* root) {
+        if (root == nullptr) {
+            return nullptr;
+        }
+        queue<Node*> q;
+        q.push(root);
+        while(!q.empty()) {
+            vector<Node*> vec;
+            while (!q.empty()) {
+                Node* tmp = q.front();
+                q.pop();
+                vec.push_back(tmp);
+            }
+            if (vec[0]->left != nullptr) {
+                q.push(vec[0]->left);
+            }
+            if (vec[0]->right != nullptr) {
+                q.push(vec[0]->right);
+            }
+            for (int i = 1; i < vec.size(); i++) {
+                vec[i-1]->next = vec[i];
+                if (vec[i]->left != nullptr) {
+                    q.push(vec[i]->left);
+                }
+                if (vec[i]->right != nullptr) {
+                    q.push(vec[i]->right);
+                }
+            }
+            vec[vec.size()-1]->next = nullptr;
+        }
+        return root;
+    }
+};
+```
+
+高效代码（递归实现）：
+
+```cpp
+/*
+// Definition for a Node.
+class Node {
+public:
+    int val;
+    Node* left;
+    Node* right;
+    Node* next;
+
+    Node() {}
+
+    Node(int _val, Node* _left, Node* _right, Node* _next) {
+        val = _val;
+        left = _left;
+        right = _right;
+        next = _next;
+    }
+};
+*/
+class Solution {
+public:
+    Node* connect(Node* root) {
+        helper(root);
+        return root;
+    }
+    void helper(Node*root)
+    {
+        if(!root) return ;
+        if(root->left) root->left->next=root->right;
+        if(root->right) root->right->next=root->next?root->next->left:NULL;
+        if(root->left) helper(root->left);
+        if(root->right) helper(root->right);
+    }
+};
+```
+
+```cpp
+
+class Solution {public:
+    Node* connect(Node* root) {
+        if (root == NULL)
+            return NULL;
+        
+        if (root->left != NULL) {
+            root->left->next = root->right;
+        }
+        if (root->right != NULL){
+            root->right->next = root->next ? root->next->left:NULL;
+        }
+        Node *left = connect(root->left);
+        Node *right = connect(root->right);
+        root->left = left;
+        root->right = right;
+        return root;
+    }
+};
+```
+
+**源码解析**
+
+对于递归代码，利用了完美二叉树的性质。由于是完美二叉树，所以若节点的左子结点存在的话，其右子节点必定存在，所以左子结点的next指针可以直接指向其右子节点，对于其右子节点的处理方法是，判断其父节点的next是否为空，若不为空，则指向其next指针指向的节点的左子结点，若为空则指向NULL。
+
+----
+
+## 填充每个节点的下一个右侧节点指针 II
+
+**解题思路**
+
+由于没有利用之前完美二叉树的性质，所以直接用第一个代码即可。
+
+----
+
+## 二叉树的最近公共祖先
+
+**解题思路**
+
+在root的左右节点中查找p和q是否存在，如果p和q分别分布于root的左右两个子树中，那么root即为最近公共祖先，否则，对二者同时存在的子树递归上述操作。
+**递归终止条件：**找到节点，使得节点的值等于p的值或q的值。
+
+**源码**
+
+```cpp
+/**
+ * Definition for a binary tree node.
+ * struct TreeNode {
+ *     int val;
+ *     TreeNode *left;
+ *     TreeNode *right;
+ *     TreeNode(int x) : val(x), left(NULL), right(NULL) {}
+ * };
+ */
+class Solution {
+public:
+    TreeNode* lowestCommonAncestor(TreeNode* root, TreeNode* p, TreeNode* q) {
+        if(root == NULL)
+            return NULL;
+        if(root->val == p->val || root->val == q->val)
+            return root;                
+        TreeNode* leftN = lowestCommonAncestor(root->left,p,q);
+        TreeNode* rightN = lowestCommonAncestor(root->right,p,q);
+        if(leftN != NULL && rightN != NULL)
+            return root;
+        return leftN != NULL ? leftN : rightN;
+    }
+};
+```
+
+**源码解析**
+
+
+
+----
+
+## 二叉树的序列化与反序列化
+
+**源码**
+
+我的代码：
+
+```cpp
+/**
+ * Definition for a binary tree node.
+ * struct TreeNode {
+ *     int val;
+ *     TreeNode *left;
+ *     TreeNode *right;
+ *     TreeNode(int x) : val(x), left(NULL), right(NULL) {}
+ * };
+ */
+class Codec {
+public:
+
+    // Encodes a tree to a single string.
+    string serialize(TreeNode* root) {
+        string str;
+        if (root == nullptr) {
+            return str;
+        }
+        str = "[";
+        queue<TreeNode*> q;
+        q.push(root);
+        int num = INT_MIN;
+        while(!q.empty()) {
+            vector<TreeNode*> vec;
+            while (!q.empty()) {
+                TreeNode* tmp = q.front();
+                q.pop();
+                vec.push_back(tmp);
+            }
+            for (int i = 0; i < vec.size(); i++) {
+                if (vec[i] == nullptr) {
+                    str += "null,";
+                } else {
+                    str += (to_string(vec[i]->val) + ",");
+                    q.push(vec[i]->left);
+                    q.push(vec[i]->right);
+                    num = vec[i]->val;
+                }
+            }
+        }
+        // cout << "num: " << num << endl;
+        int index = str.find_last_of(to_string(num));
+        // cout << "index: " << index << endl;
+        // cout << "str: " << str << endl;
+        str = str.substr(0, index+1);
+        str += "]";
+        // cout << "str: " << str << endl;
+        return str;
+    }
+
+    // Decodes your encoded data to tree.
+    TreeNode* deserialize(string data) {
+        if (data.length() == 2 || data.length() == 0) {
+            return nullptr;
+        }
+
+        string tmp;
+        bool f = false;
+        vector<TreeNode*> vec;
+        for (int i = 1; i < data.size()-1; i++) {
+            if (isdigit(data[i])) {
+                tmp += data[i];
+            } else if (data[i] == '-') {
+                f = true;
+            } else if (data[i] == ',') {
+                if (f) {
+                    int ti = -atoi(tmp.data());
+                    // cout << ti << endl;
+                    vec.push_back(new TreeNode(ti));
+                    // cout << -atoi(tmp.data()) << " * ";
+                    f = false;
+                } else {
+                    vec.push_back(new TreeNode(atoi(tmp.data())));
+                    // cout << atoi(tmp.data()) << " * ";
+                }
+                tmp = "";
+            } else {
+                vec.push_back(nullptr);
+                i+=4;
+            }
+        }
+        if (f) {
+            vec.push_back(new TreeNode(-atoi(tmp.data())));
+            f = false;
+        } else {
+            vec.push_back(new TreeNode(atoi(tmp.data())));
+        }
+        
+        vector<int> flag(vec.size(), 0);
+        // cout << flag.size() << endl;
+        
+        int j = 1;
+        for (int i = 0; i < vec.size(); i++) {
+            if (vec[i] != nullptr) {
+                while (j < flag.size() && flag[j] == 1) {
+                    j++;
+                }
+                if (j < flag.size()) {
+                    vec[i]->left = vec[j];
+                    flag[j] = 1;
+                    j++;
+                }
+                if (j < flag.size()) {
+                    vec[i]->right = vec[j];
+                    flag[j] = 1;
+                    j++;
+                }
+            }
+            
+        }
+
+        return vec[0];
+    }
+};
+
+// Your Codec object will be instantiated and called as such:
+// Codec codec;
+// codec.deserialize(codec.serialize(root));
+```
+
+大神代码：
+
+```cpp
+class Codec {public:
+    // 用输入输出流，反序列化到#时返回开始另一边子节点的反序列化
+    // Encodes a tree to a single string.
+    string serialize(TreeNode* root) {
+        ostringstream os;
+        serialize(root, os);
+        return os.str();
+    }
+
+    void serialize(TreeNode* root, ostringstream& os) {
+        if (!root) {
+            os << "# ";
+        } else {
+            os << root->val << " ";
+            serialize(root->left, os);
+            serialize(root->right, os);
+        }
+    }
+    
+    // Decodes your encoded data to tree.
+    TreeNode* deserialize(string data) {
+        istringstream is(data);
+        return deserialize(is);
+    }
+    
+    TreeNode* deserialize(istringstream& is) {
+        string val;
+        is >> val;
+        if(val == "#") {
+            return nullptr;
+        }
+        
+        TreeNode* root = new TreeNode(stoi(val));
+        root->left = deserialize(is);
+        root->right = deserialize(is);
+        return root;
+    }
+};
+```
+
+大神代码2：
+
+```cpp
+
+class Codec {public:
+
+    // Encodes a tree to a single string.
+    string serialize(TreeNode* root) {
+        string res = "[";
+        queue<TreeNode*> que;
+        que.push(root);
+        if (root != NULL) {
+            res += to_string(root->val);
+        } else {
+            res += "null";
+        }
+        res += ",";
+        while (que.size() != 0) {
+            if (que.front() != NULL) {
+                TreeNode* cur = que.front();
+                if (cur->left != NULL) {
+                    que.push(cur->left);
+                    res += to_string(cur->left->val) + ",";
+                } else {
+                    que.push(cur->left);
+                    res += "null,";
+                }
+                if (cur->right != NULL) {
+                    que.push(cur->right);
+                    res += to_string(cur->right->val) + ",";
+                } else {
+                    que.push(cur->right);
+                    res += "null,";
+                }
+            }
+            que.pop();
+        }
+        while (1) {
+            char c= res.back();
+            if (c ==',' || c=='n' || c=='u' || c=='l') 
+                res.pop_back();
+            else break;
+        }
+        res += "]";
+        return res;
+    }
+
+    // Decodes your encoded data to tree.
+    TreeNode* deserialize(string data) {
+        vector<string> res;
+        TreeNode* cur;
+        queue<TreeNode*> que;
+        if (data == "[]") return NULL;
+        data.erase(0,1);
+        data.pop_back();
+        stringstream ss(data);
+        while (getline(ss, data, ',')) res.push_back(data);
+        TreeNode* root = new TreeNode(stoi(res[0]));
+        que.push(root);
+        int j = 1;
+        while (que.size() > 0) {
+            cur = que.front();
+            que.pop();
+            if (j < res.size() && res[j] != "null") {
+                cur->left = new TreeNode(stoi(res[j])); j++;
+                que.push(cur->left);
+            } else {
+                j++;
+                cur->left = NULL;
+            }
+            if (j < res.size() && res[j] != "null") {
+                cur->right = new TreeNode(stoi(res[j])); j++;
+                que.push(cur->right);
+            } else {
+                j++;
+                cur->right = NULL;
+            }
+        }
+        return root;
+    }
+};
+```
+
+**源码解析**
+
+大神代码2中，对于字符串转换成`vector`数组的时候，采用了`stringstream`的方法，值得学习。`string`转换成`int`时使用
+`stoi`方法。
