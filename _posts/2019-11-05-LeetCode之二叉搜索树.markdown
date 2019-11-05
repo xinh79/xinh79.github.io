@@ -1,0 +1,584 @@
+---
+layout:      post
+title:       "LeetCode之二叉搜索树"
+subtitle:    "LeetCode : data-structure-binary-search-tree"
+author:      "Ashior"
+header-img:  "img/post-bg-ccf.jpg"
+catalog:     true
+tags:
+  - 工作
+  - LeetCode
+  - 算法
+---
+
+> 题目信息谷歌一下即可，也可通过 [LeetCode二叉搜索树](https://leetcode-cn.com/explore/learn/card/introduction-to-data-structure-binary-search-tree/) 查看
+
+[TOC]
+
+----
+
+## 验证二叉搜索树
+
+**解题思路**
+
+利用二叉搜索树的性质：通过中序遍历得到一个递增的有序序列。
+
+**源码**
+
+```cpp
+/**
+ * Definition for a binary tree node.
+ * struct TreeNode {
+ *     int val;
+ *     TreeNode *left;
+ *     TreeNode *right;
+ *     TreeNode(int x) : val(x), left(NULL), right(NULL) {}
+ * };
+ */
+class Solution {
+public:
+    void digui(TreeNode* root, vector<int>& vec) {
+        if (root == nullptr) {
+            return ;
+        }
+        digui(root->left, vec);
+        vec.push_back(root->val);
+        digui(root->right, vec);
+    }
+    bool isValidBST(TreeNode* root) {
+        vector<int> vec;
+        digui(root, vec);
+        for (int i = 1; i < vec.size(); i++) {
+            if (vec[i] <= vec[i-1]) {
+                return false;
+            }
+        }
+        return true;
+    }
+};
+```
+
+----
+
+## 二叉搜索树迭代器
+
+**源码**
+
+```cpp
+/**
+ * Definition for binary tree
+ * struct TreeNode {
+ *     int val;
+ *     TreeNode *left;
+ *     TreeNode *right;
+ *     TreeNode(int x) : val(x), left(NULL), right(NULL) {}
+ * };
+ */
+class BSTIterator {
+public:
+    BSTIterator(TreeNode *root) {
+        TreeNode *cur = root;
+        while(cur){
+            st.push(cur);
+            cur = cur->left;
+        }
+    }
+ 
+    /** @return whether we have a next smallest number */
+    bool hasNext() {
+        return !st.empty();
+    }
+ 
+    /** @return the next smallest number */
+    int next() {
+        TreeNode *next = st.top();
+        TreeNode *cur = next->right;
+        st.pop();
+        while(cur){
+            st.push(cur);
+            cur = cur->left;
+        }
+        return next->val;
+    }
+ 
+private:
+    stack<TreeNode *> st;
+};
+ 
+/**
+ * Your BSTIterator will be called like this:
+ * BSTIterator i = BSTIterator(root);
+ * while (i.hasNext()) cout << i.next();
+ */
+```
+
+高效代码：
+
+```cpp
+
+class BSTIterator {
+    TreeNode* cur;
+    stack<TreeNode*> s;
+public:
+    BSTIterator(TreeNode* root) {
+        cur = root;
+        while (!s.empty()) {
+            s.pop();
+        }
+    }
+    
+    /** @return the next smallest number */
+    int next() {
+        if (hasNext()) {
+            while (cur != NULL) {
+                s.push(cur);
+                cur = cur->left;
+            }
+           cur = s.top();
+           s.pop();
+            
+        } else {
+            return -1;
+        }
+        int res = cur->val;
+        cur = cur->right;
+        return res;
+    }
+    
+    /** @return whether we have a next smallest number */
+    bool hasNext() {
+        if (cur != NULL || !s.empty()) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+};
+```
+
+最简洁的代码：
+
+```cpp
+class BSTIterator {private:
+    queue<int> Q;
+public:
+    void fun(TreeNode* root){
+        if(!root) return;
+        fun(root->left);
+        Q.push(root->val);
+        fun(root->right);
+    }
+    
+    BSTIterator(TreeNode* root) {
+        fun(root);
+    }
+    
+    /** @return the next smallest number */
+    int next() {
+        int t = Q.front();
+        Q.pop();
+        return t;
+    }
+    
+    /** @return whether we have a next smallest number */
+    bool hasNext() {
+        return !Q.empty();
+    }
+};
+```
+
+**源码解析**
+
+从理解的难易程度来说，简洁代码通过使用队列，将问题回归到了最初的，利用二叉搜索树的性质，中序遍历获得递增数组的特性，然后对队列进行操作，但是这个不满足内存使用`O(k)`的限制条件，此时的内存为`O(n)`。
+
+严格按照题目的要求来说，正确解应该为第一二种解答方式。在创建游标时，将根节点，以及跟节点的所有左子树依次存入栈中（仅仅存入左节点）。依次压入栈后，最后入栈的即为最小的元素，如果需要，则将最小的元素弹出栈即可。弹出后，如果他有右子树，则势必为剩下的元素中最小的，同时，如果他还有左子树，则依次压入栈中，如果没有，则不执行，最后返回`val`值即可。
+
+----
+
+## Search in a Binary Search Tree
+
+**源码**
+
+我的递归代码：
+
+```cpp
+TreeNode* searchBST(TreeNode* root, int val) {
+    if (root == nullptr) {
+        return nullptr;
+    }
+    if (root->val == val) {
+        return root;
+    }
+    if (root->val > val) {
+        return searchBST(root->left, val);
+    } else {
+        return searchBST(root->right, val);
+    }
+}
+```
+
+迭代实现：
+
+```cpp
+TreeNode* searchBST(TreeNode* root, int val) {
+    while(root!=NULL) {
+        if(val>root->val)
+            root = root->right;
+        else if(val<root->val)
+            root = root->left;
+        else
+            return root;
+    }
+    return NULL;
+}
+```
+
+----
+
+## Insert into a Binary Search Tree
+
+**源码**
+
+我的代码：
+
+```cpp
+TreeNode* insertIntoBST(TreeNode* root, int val) {
+    if (root == nullptr) {
+        return root;
+    }
+    TreeNode* head = root;
+
+    while (root != nullptr) {
+        if (root->val <= val) {
+            if (root->right == nullptr) {
+                root->right = new TreeNode(val);
+                break;
+            } else {
+                root = root->right;
+            }
+        } else {
+            if (root->left == nullptr) {
+                root->left = new TreeNode(val);
+                break;
+            } else {
+                root = root->left;
+            }
+        }
+    }
+    return head;
+}
+```
+
+高效代码：
+
+```cpp
+TreeNode* insertIntoBST(TreeNode* root, int val) {
+    if(root == NULL) return new TreeNode(val);
+    if(root->val>val)
+        if(root->left == NULL) root->left = new TreeNode(val);
+        else insertIntoBST(root->left,val);
+    else if(root->right == NULL) root->right = new TreeNode(val ) ;
+      else insertIntoBST(root->right,val);
+    return root ;
+}
+```
+
+**源码解析**
+
+为什么我用迭代的情况，递归更快，我用递归的时候迭代方法又更快，简直了！！！
+
+----
+
+## Delete Node in a BST
+
+**解题思路**
+
+- 被删除节点没有左子树：返回其右子树
+- 被删除节点节点没有右子树：返回其左子树
+- 被删除节点既有左子树，又有右子树：
+- 1）查找到其右子树的最小值的节点，替换掉被删除的节点，并删除找到的最小节点
+- 2）查找到其左子树的最大值的节点，替换掉被删除的节点，并删除找到的最大节点
+
+**源码**
+
+代码一：
+
+```cpp
+TreeNode* deleteNode(TreeNode* root, int key) {
+    if (!root) return nullptr;
+    if (root->val == key) {
+        if (!root->left) {
+            return root->right;
+        } else {
+            TreeNode* left = root->left;
+            while (left->right) {
+                left = left->right;
+            }
+            swap(left->val, root->val);
+        }
+    }
+    root->left = deleteNode(root->left, key);
+    root->right = deleteNode(root->right, key);
+    return root;
+}
+```
+
+代码二：
+
+先来看一种递归的解法，首先判断根节点是否为空。由于 BST 的左<根<右的性质，使得可以快速定位到要删除的结点，对于当前结点值不等于 key 的情况，根据大小关系对其左右子结点分别调用递归函数。若当前结点就是要删除的结点，先判断若有一个子结点不存在，就将 root 指向另一个结点，如果左右子结点都不存在，那么 root 就赋值为空了，也正确。难点就在于处理左右子结点都存在的情况，需要在右子树找到最小值，即右子树中最左下方的结点，然后将该最小值赋值给 root，**然后再在右子树中调用递归函数来删除这个值最小的结点**，参见代码如下：
+
+```cpp
+class Solution {
+public:
+    TreeNode* deleteNode(TreeNode* root, int key) {
+        if (!root) return NULL;
+        if (root->val > key) {
+            root->left = deleteNode(root->left, key);
+        } else if (root->val < key) {
+            root->right = deleteNode(root->right, key);
+        } else {
+            if (!root->left || !root->right) {
+                root = (root->left) ? root->left : root->right;
+            } else {
+                TreeNode *cur = root->right;
+                while (cur->left) cur = cur->left;
+                root->val = cur->val;
+                root->right = deleteNode(root->right, cur->val);
+            }
+        }
+        return root;
+    }
+};
+```
+
+**源码解析**
+
+代码二更好理解，尤其是在最后倒数第二句调用了删除当前节点值的这个语句。
+
+----
+
+## Kth Largest Element in a Stream
+
+**解题思路**
+
+参考答案，可以使用`priority_queue`。
+
+- `priority_queue`优先队列，其底层是用堆（heap）来实现的。在优先队列中，队首元素一定是当前队列中优先级最高的那一个。
+- 在优先队列中，没有 front() 函数与 back() 函数，而只能通过 top() 函数来访问队首元素（也可称为堆顶元素），也就是优先级最高的元素。
+- 在定义时，可以直接进行定义（如果使用默认的优先级——从大到小）：`priority_queue<int> pq;`。
+
+也可以自定义优先级：
+
+```cpp
+priority_queue<int, vector<int>, less<int> > pq;
+//其中，第二个参数( vector )，是来承载底层数据结构堆的容器;
+//第三个参数( less )，则是一个比较类，less 表示数字大的优先级高，而 greater 表示数字小的优先级高。
+//也就是说，less还是表示从大到小，greater则表示从小到大
+```
+
+因此，对于这道题，我们就定义一个大小始终维持在k的一个这样的priority_queue，让其内部的堆按照从大到小的顺序进行安排，这样top就一定是第k大的数字了。
+对于长度的维持，即在长度超过k时，pop一下即可。
+
+**源码**
+
+```cpp
+class KthLargest {
+public:
+    KthLargest(int k, vector<int>& nums) {
+        kth = k;
+        for (auto a : nums) {
+            pq.push(a);
+            if (pq.size() > k) {
+                pq.pop();
+            }
+        }
+    }
+    
+    int add(int val) {
+        pq.push(val);
+        if (pq.size() > kth) {
+            pq.pop();
+        }
+        return pq.top();
+    }
+private:
+    priority_queue<int, vector<int>, greater<int>> pq;
+    int kth;
+};
+
+/**
+ * Your KthLargest object will be instantiated and called as such:
+ * KthLargest* obj = new KthLargest(k, nums);
+ * int param_1 = obj->add(val);
+ */
+```
+
+----
+
+## 二叉搜索树的最近公共祖先
+
+**解题思路**
+
+这个要和之前的二叉树的最近公共祖先区分出来。
+
+先说明特殊情况，如果p是q的祖先，那么p就是二者的最近公共最先，反之亦然。
+对于一棵二叉搜索树而言：
+
+- 如果p和q的取值分别大于和小于root取值，那么root就是二者的最近公共祖先，（因为二者分别位于root的左右子树中）。
+- 如果p和q的取值均大于root的取值，那么二者的公共祖先在root的右子树中，需要继续递归查找。
+- 如果p和q的取值均小于root的取值，那么二者的公共祖先在root的做子树中，需要继续递归查找。
+
+
+**源码**
+
+```cpp
+TreeNode* lowestCommonAncestor(TreeNode* root, TreeNode* p, TreeNode* q) {
+    if (root == nullptr)
+        return root;
+
+    if (p->val > root->val && q->val > root->val)
+        return lowestCommonAncestor(root->right, p, q);
+    else if (p->val < root->val && q->val < root->val)
+        return lowestCommonAncestor(root->left, p, q);
+    else
+        return root;
+}
+```
+
+----
+
+## 存在重复元素 III
+
+**解题思路**
+
+[博客](https://blog.csdn.net/qq_28114615/article/details/86307198)对存在重复元素的三个题目进行了总结，讲得很好。
+
+**源码**
+
+```cpp
+class Solution {
+public:
+    bool containsNearbyAlmostDuplicate(vector<int>& nums, int k, int t) {
+        //s中存放当前元素的前面k个元素
+        set<long long>s;
+        int len=nums.size();
+        for(int i=0;i<len;i++) {
+            //找到大于等于nums[i]-t的第一个数
+            auto p=s.lower_bound((long long)nums[i]-t);
+            /*如果能找到大于等于nums[i]-t的第一个数，
+              并且找到的数小于等于nums[i]+t，
+              说明在nums[i-k]~nums[i]中有满足条件的数
+              */
+            if(p!=s.end()&&(*p)<=(long long)nums[i]+t)return true;  
+            //插入当前数，作为下一个数的前k个数之一
+            s.insert(nums[i]);  
+            /*如果集合中的元素数量多于k个，说明最左边的元素已经超出了k范围，
+              就将其擦除，从而保证集合中所有元素必定只有nums[i]~nums[i-k+1]，
+              作为下一轮nums[i+1]的前k个数
+              */
+             if(s.size()>k)s.erase(nums[i-k]); 
+        }
+        return false;
+    }
+};
+```
+
+**源码解析**
+
+与II相比，这道题的变化在于扩大了符合条件的nums[j]的范围，只需要保证nums[i]和nums[j]绝对值之差不超过t即可，这就相当于在nums[i]-t~nums[i]+t范围中去找到和nums[i]相等的数，其他的与II相似。
+
+那么，该如何来找符合范围里的数呢？这里就可以考虑set集合中的一个常用函数lower_bound(val)，这个函数的功能是返回大于等于val的第一个数的指针，如果没找到，就返回集合的超尾。在这道题里面，就可以让val等于nums[i]-t，然后在集合中找到大于等于nums[i]-t的第一个数的位置，如果找不到，说明集合中的数都小于nums[i]-t，自然就说明集合中没有符合条件的数了；如果找到了，那么还要判断一下找到的数是否还不超过nums[i]+t，如果超过了那也不行的。
+
+找到符合范围的数之后，那么就应该要确定找到的数的索引范围了。如何确定索引范围呢？前面的数是在集合中找到的，要想确定集合中数的索引范围，那么就只需要一直保持集合中的元素个数为k个。为什么呢？举个例子，当遍历到nums[i]时，集合中的数有k个，这k个就是[i-k,i-1]间的数，这样就保证了在集合中找出的数的索引一定是在[i-k,i-1]间的，这样就肯定符合条件了。
+
+那为什么只考虑i的前面k个而不考虑i的后面k个呢？这是因为即使在i的后面k个元素中存在符合要求的nums[m]，当遍历到nums[m]的时候，m的前面k个元素必定又包含有i，这样还是可以将nums[m]和nums[i]都找出来。又何必浪费时间呢？
+
+因此，当遍历到nums[i]的时候，如果集合中的元素多于k个，就应当删去不可能符合条件的nums[i-k-1]。
+
+还需要注意的是，由于题目并未限定t的大小和正负，因此求差时可能会使数据溢出，因此要用到long long数据类型。
+
+----
+
+## 判断是否是平衡二叉树
+
+**源码**
+
+```cpp
+class Solution {
+public:
+    int digui(TreeNode* root) {
+        if (root == nullptr) {
+            return true;
+        }
+        int l = digui(root->left);
+        int r = digui(root->right);
+        return 1 + (l>r?l:r);
+    }
+    bool isBalanced(TreeNode* root) {
+        if (root == nullptr) {
+            return true;
+        }
+        int l = digui(root->left);
+        int r = digui(root->right);
+        // cout << l << " " << r << endl;
+        if (abs(l-r) <= 1) {
+            return isBalanced(root->left) && isBalanced(root->right);
+        } else {
+            return false;
+        }
+    }
+};
+```
+
+高效代码：
+
+```cpp
+class Solution {public:
+    bool isBalanced(TreeNode* root) {
+        int h=0;
+        return Balanced(root,h);
+    }
+    bool Balanced(TreeNode* root,int &h) {
+        if(root==NULL) {
+            h=0;
+            return true;
+        }
+        if(root->left==NULL&&root->right==NULL) {
+            h=1;
+            return true;
+        }
+        int hl,hr;
+        bool bl=Balanced(root->left,hl);
+        bool br=Balanced(root->right,hr);
+        h=(hl>hr?hl:hr)+1;
+        if(abs(hl-hr)<2)
+            return bl&br;
+        return false;
+    }
+};
+```
+
+**源码解析**
+
+还是自己的第一个源码看起来比较清楚，第二个源码不想花时间去看了。
+
+----
+
+## 将有序数组转换为二叉搜索树
+
+**源码**
+
+```cpp
+TreeNode* sortedArrayToBST(vector<int>& nums) {
+    return genTree(nums, 0, nums.size()-1);
+}
+TreeNode* genTree(vector<int>& nums, int l, int r){
+    if(l > r) return nullptr;
+    int mid = (l + r) / 2;
+    TreeNode *root = new TreeNode(nums[mid]);
+    root->left = genTree(nums, l, mid-1);
+    root->right = genTree(nums, mid+1, r);
+    return root;
+}
+```
+
