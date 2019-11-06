@@ -1,0 +1,824 @@
+---
+layout:      post
+title:       "左程云算法讲解笔记-I"
+subtitle:    "Algorithm"
+author:      "Ashior"
+header-img:  "img/bg-zuo-algorithm.jpg"
+catalog:     true
+tags:
+  - 工作
+  - 算法
+---
+
+> 这些内容是从牛客网左程云大神的算法课程中做记录的笔记，由于内容较多，又附上源码，所以考虑一章一个模块。
+
+[TOC]
+
+----
+
+## `sort`方法内部实现
+
+如果传入的大小小于60，就调用**插入排序**，如果大于60就调用**归并排序**或者**快速排序**，将大小进行切分至小于60，再调用插入排序。如果是系统定义的基础类型，诸如**int**、**double**等则为**快速排序**，如果是自定义的类，则为**归并排序**。
+
+从稳定性出发，基础类型不需要考虑相对位置**【一坨1我们并不关心他的相对位置】**，而使用自己定义的类时，可能需要考虑其相对位置。可以将原始的数据顺序往下传。
+
+----
+
+## [归并排序]求小和问题/查找降序对
+
+```
+4 1 3 5 0 6
+0 0 1 8 0 13
+```
+最后的答案为22。
+
+修改归并排序，首先将数组进行划分，在`merge`的过程中，产生小和。
+
+```java
+package basic_class_01;
+
+public class Code_12_SmallSum {
+
+	public static int smallSum(int[] arr) {
+		if (arr == null || arr.length < 2) {
+			return 0;
+		}
+		return mergeSort(arr, 0, arr.length - 1);
+	}
+
+	public static int mergeSort(int[] arr, int l, int r) {
+		if (l == r) {
+			return 0;
+		}
+		int mid = l + ((r - l) >> 1);
+		return mergeSort(arr, l, mid) + mergeSort(arr, mid + 1, r) + merge(arr, l, mid, r);
+	}
+
+	public static int merge(int[] arr, int l, int m, int r) {
+		int[] help = new int[r - l + 1];
+		int i = 0;
+		int p1 = l;
+		int p2 = m + 1;
+		int res = 0;
+		while (p1 <= m && p2 <= r) {
+			res += arr[p1] < arr[p2] ? (r - p2 + 1) * arr[p1] : 0;
+			help[i++] = arr[p1] < arr[p2] ? arr[p1++] : arr[p2++];
+		}
+		while (p1 <= m) {
+			help[i++] = arr[p1++];
+		}
+		while (p2 <= r) {
+			help[i++] = arr[p2++];
+		}
+		for (i = 0; i < help.length; i++) {
+			arr[l + i] = help[i];
+		}
+		return res;
+	}
+
+	// for test
+	public static int comparator(int[] arr) {
+		if (arr == null || arr.length < 2) {
+			return 0;
+		}
+		int res = 0;
+		for (int i = 1; i < arr.length; i++) {
+			for (int j = 0; j < i; j++) {
+				res += arr[j] < arr[i] ? arr[j] : 0;
+			}
+		}
+		return res;
+	}
+
+	// for test
+	public static int[] generateRandomArray(int maxSize, int maxValue) {
+		int[] arr = new int[(int) ((maxSize + 1) * Math.random())];
+		for (int i = 0; i < arr.length; i++) {
+			arr[i] = (int) ((maxValue + 1) * Math.random()) - (int) (maxValue * Math.random());
+		}
+		return arr;
+	}
+
+	// for test
+	public static int[] copyArray(int[] arr) {
+		if (arr == null) {
+			return null;
+		}
+		int[] res = new int[arr.length];
+		for (int i = 0; i < arr.length; i++) {
+			res[i] = arr[i];
+		}
+		return res;
+	}
+
+	// for test
+	public static boolean isEqual(int[] arr1, int[] arr2) {
+		if ((arr1 == null && arr2 != null) || (arr1 != null && arr2 == null)) {
+			return false;
+		}
+		if (arr1 == null && arr2 == null) {
+			return true;
+		}
+		if (arr1.length != arr2.length) {
+			return false;
+		}
+		for (int i = 0; i < arr1.length; i++) {
+			if (arr1[i] != arr2[i]) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	// for test
+	public static void printArray(int[] arr) {
+		if (arr == null) {
+			return;
+		}
+		for (int i = 0; i < arr.length; i++) {
+			System.out.print(arr[i] + " ");
+		}
+		System.out.println();
+	}
+
+	// for test
+	public static void main(String[] args) {
+		int testTime = 500000;
+		int maxSize = 100;
+		int maxValue = 100;
+		boolean succeed = true;
+		for (int i = 0; i < testTime; i++) {
+			int[] arr1 = generateRandomArray(maxSize, maxValue);
+			int[] arr2 = copyArray(arr1);
+			if (smallSum(arr1) != comparator(arr2)) {
+				succeed = false;
+				printArray(arr1);
+				printArray(arr2);
+				break;
+			}
+		}
+		System.out.println(succeed ? "Nice!" : "Fucking fucked!");
+	}
+
+}
+```
+
+----
+
+## [快速排序]荷兰国旗问题
+
+利用两个划分区域，左边与右边的划分区域，选择最后一个值作为划分边界。小于区的初始下标为-1，大于区的初始下标为`vec.size()-1`（即包含最后一个边界值）。
+
+1. cur<划分值：cur与小于区的下一个位置的元素交换，同时小于区扩大1，cur移动至下一个位置；
+2. cur=划分值：直接`continue`；
+3. cur>划分值：与大于区的下一个位置元素交换，cur保持不动。
+
+结束条件为cur指针等于大于区边界后结束，大于区左边界的值与最后的一个元素交换。最后完成划分。
+
+```java
+package basic_class_01;
+
+public class Code_08_NetherlandsFlag {
+
+	public static int[] partition(int[] arr, int l, int r, int p) {
+		int less = l - 1;
+		int more = r + 1;
+		while (l < more) {
+			if (arr[l] < p) {
+				swap(arr, ++less, l++);
+			} else if (arr[l] > p) {
+				swap(arr, --more, l);
+			} else {
+				l++;
+			}
+		}
+		return new int[] { less + 1, more - 1 };
+	}
+
+	// for test
+	public static void swap(int[] arr, int i, int j) {
+		int tmp = arr[i];
+		arr[i] = arr[j];
+		arr[j] = tmp;
+	}
+
+	// for test
+	public static int[] generateArray() {
+		int[] arr = new int[10];
+		for (int i = 0; i < arr.length; i++) {
+			arr[i] = (int) (Math.random() * 3);
+		}
+		return arr;
+	}
+
+	// for test
+	public static void printArray(int[] arr) {
+		if (arr == null) {
+			return;
+		}
+		for (int i = 0; i < arr.length; i++) {
+			System.out.print(arr[i] + " ");
+		}
+		System.out.println();
+	}
+
+	public static void main(String[] args) {
+		int[] test = generateArray();
+
+		printArray(test);
+		int[] res = partition(test, 0, test.length - 1, 1);
+		printArray(test);
+		System.out.println(res[0]);
+		System.out.println(res[1]);
+
+	}
+}
+```
+
+----
+
+## [堆排序]如何构建大根堆
+
+每次加入节点的时候，都必须往上寻找自己的父节点，然后与当前位置进行比较。根据判断结果，直接在数组中`swap`数组元素。**【此时是无序的】**
+
+转换成有序的堆：
+
+将大根堆的根节点，也即数组表示中的第一个位置的元素与最后一个位置的元素进行交换。交换完成后，最后一个位置的元素不动**【因为已经保证了最大值在最后面】**。根据数组的`size-1`判断数组的大小。
+
+调整完成后，从跟节点开始，分别比较其左右孩子，将比自己更大的最大值的孩子换成根节点，然后把自己下移，依次如此。最后又完成了大根堆。最后重复上一步，循环。
+
+```java
+package basic_class_01;
+
+import java.util.Arrays;
+
+public class Code_03_HeapSort {
+
+	public static void heapSort(int[] arr) {
+		if (arr == null || arr.length < 2) {
+			return;
+		}
+		for (int i = 0; i < arr.length; i++) {
+			heapInsert(arr, i);
+		}
+		int size = arr.length;
+		swap(arr, 0, --size);
+		while (size > 0) {
+			heapify(arr, 0, size);
+			swap(arr, 0, --size);
+		}
+	}
+
+	public static void heapInsert(int[] arr, int index) {
+		while (arr[index] > arr[(index - 1) / 2]) {
+			swap(arr, index, (index - 1) / 2);
+			index = (index - 1) / 2;
+		}
+	}
+
+	public static void heapify(int[] arr, int index, int size) {
+		int left = index * 2 + 1;
+		while (left < size) {
+			int largest = left + 1 < size && arr[left + 1] > arr[left] ? left + 1 : left;
+			largest = arr[largest] > arr[index] ? largest : index;
+			if (largest == index) {
+				break;
+			}
+			swap(arr, largest, index);
+			index = largest;
+			left = index * 2 + 1;
+		}
+	}
+
+	public static void swap(int[] arr, int i, int j) {
+		int tmp = arr[i];
+		arr[i] = arr[j];
+		arr[j] = tmp;
+	}
+
+	// for test
+	public static void comparator(int[] arr) {
+		Arrays.sort(arr);
+	}
+
+	// for test
+	public static int[] generateRandomArray(int maxSize, int maxValue) {
+		int[] arr = new int[(int) ((maxSize + 1) * Math.random())];
+		for (int i = 0; i < arr.length; i++) {
+			arr[i] = (int) ((maxValue + 1) * Math.random()) - (int) (maxValue * Math.random());
+		}
+		return arr;
+	}
+
+	// for test
+	public static int[] copyArray(int[] arr) {
+		if (arr == null) {
+			return null;
+		}
+		int[] res = new int[arr.length];
+		for (int i = 0; i < arr.length; i++) {
+			res[i] = arr[i];
+		}
+		return res;
+	}
+
+	// for test
+	public static boolean isEqual(int[] arr1, int[] arr2) {
+		if ((arr1 == null && arr2 != null) || (arr1 != null && arr2 == null)) {
+			return false;
+		}
+		if (arr1 == null && arr2 == null) {
+			return true;
+		}
+		if (arr1.length != arr2.length) {
+			return false;
+		}
+		for (int i = 0; i < arr1.length; i++) {
+			if (arr1[i] != arr2[i]) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	// for test
+	public static void printArray(int[] arr) {
+		if (arr == null) {
+			return;
+		}
+		for (int i = 0; i < arr.length; i++) {
+			System.out.print(arr[i] + " ");
+		}
+		System.out.println();
+	}
+
+	// for test
+	public static void main(String[] args) {
+		int testTime = 500000;
+		int maxSize = 100;
+		int maxValue = 100;
+		boolean succeed = true;
+		for (int i = 0; i < testTime; i++) {
+			int[] arr1 = generateRandomArray(maxSize, maxValue);
+			int[] arr2 = copyArray(arr1);
+			heapSort(arr1);
+			comparator(arr2);
+			if (!isEqual(arr1, arr2)) {
+				succeed = false;
+				break;
+			}
+		}
+		System.out.println(succeed ? "Nice!" : "Fucking fucked!");
+
+		int[] arr = generateRandomArray(maxSize, maxValue);
+		printArray(arr);
+		heapSort(arr);
+		printArray(arr);
+	}
+
+}
+```
+
+----
+
+## [桶排序]桶排序的实现
+
+例如给定`N亿`个数，每个数的范围为`0-200`之间，则我们创建`201`个桶，将每一个数组放入对应的桶中，最后在倒出。**这是基于数据状况的排序。**
+
+----
+
+## [计数排序]计数排序的实现
+
+基于桶排序，记录出现的次数，最后在倒出即可。
+
+-----
+
+## [阿里]找到最大差值
+
+给定一个无序数组，找出排序后，差值最大的数。时间复杂度要求为`O(n)`。
+**【此时的数据状况不是数据的范围大小，因为数据的范围可以是`long long`类型，所以使用数据的个数】**
+根据数组个数创建桶个数，根据**遍历数组，得到的最小值与最大值**将桶分割。诸如`min=0`，`max=99`，数组个数为9，则我们创建`n+1`个桶，即创建10个桶，然后将每个桶的数据平分，即一号桶存放`0-9`的数据，二号桶存放`10-19`的数据，最后一个桶存放`90-99`的数据。**注意，此时将数据填入后，中间必有一个空桶(鸽巢原理)。**这时找到那个空桶周围相邻的非空桶，然后进行计算即可。因为他们排序后，一定是相邻的。同时，桶里面也**只需要记录进入桶的最大值与最小值**。剩下的数均不需要记录。
+
+非空桶之间也要进行比较。因为空桶的出现只是取消内部的差值。
+
+准备三个额外的数组：
+
+```cpp
+bool flag[] // 是否进来过数
+int maxs[] // 进入的数字的最大值
+int minx[] // 进入的数字的最小值
+```
+
+最后非空桶之间的差值。**【后一个非空桶的最小值减去上一个非空桶中的最大值】**
+
+```java
+package basic_class_01;
+
+import java.util.Arrays;
+
+public class Code_11_MaxGap {
+
+	public static int maxGap(int[] nums) {
+		if (nums == null || nums.length < 2) {
+			return 0;
+		}
+		int len = nums.length;
+		int min = Integer.MAX_VALUE;
+		int max = Integer.MIN_VALUE;
+		for (int i = 0; i < len; i++) {
+			min = Math.min(min, nums[i]);
+			max = Math.max(max, nums[i]);
+		}
+		if (min == max) {
+			return 0;
+		}
+		boolean[] hasNum = new boolean[len + 1];
+		int[] maxs = new int[len + 1];
+		int[] mins = new int[len + 1];
+		int bid = 0;
+		for (int i = 0; i < len; i++) {
+			bid = bucket(nums[i], len, min, max);
+			mins[bid] = hasNum[bid] ? Math.min(mins[bid], nums[i]) : nums[i];
+			maxs[bid] = hasNum[bid] ? Math.max(maxs[bid], nums[i]) : nums[i];
+			hasNum[bid] = true;
+		}
+		int res = 0;
+		int lastMax = maxs[0];
+		int i = 1;
+		for (; i <= len; i++) {
+			if (hasNum[i]) {
+				res = Math.max(res, mins[i] - lastMax);
+				lastMax = maxs[i];
+			}
+		}
+		return res;
+	}
+
+	public static int bucket(long num, long len, long min, long max) {
+		return (int) ((num - min) * len / (max - min));
+	}
+
+	// for test
+	public static int comparator(int[] nums) {
+		if (nums == null || nums.length < 2) {
+			return 0;
+		}
+		Arrays.sort(nums);
+		int gap = Integer.MIN_VALUE;
+		for (int i = 1; i < nums.length; i++) {
+			gap = Math.max(nums[i] - nums[i - 1], gap);
+		}
+		return gap;
+	}
+
+	// for test
+	public static int[] generateRandomArray(int maxSize, int maxValue) {
+		int[] arr = new int[(int) ((maxSize + 1) * Math.random())];
+		for (int i = 0; i < arr.length; i++) {
+			arr[i] = (int) ((maxValue + 1) * Math.random()) - (int) (maxValue * Math.random());
+		}
+		return arr;
+	}
+
+	// for test
+	public static int[] copyArray(int[] arr) {
+		if (arr == null) {
+			return null;
+		}
+		int[] res = new int[arr.length];
+		for (int i = 0; i < arr.length; i++) {
+			res[i] = arr[i];
+		}
+		return res;
+	}
+
+	// for test
+	public static void main(String[] args) {
+		int testTime = 500000;
+		int maxSize = 100;
+		int maxValue = 100;
+		boolean succeed = true;
+		for (int i = 0; i < testTime; i++) {
+			int[] arr1 = generateRandomArray(maxSize, maxValue);
+			int[] arr2 = copyArray(arr1);
+			if (maxGap(arr1) != comparator(arr2)) {
+				succeed = false;
+				break;
+			}
+		}
+		System.out.println(succeed ? "Nice!" : "Fucking fucked!");
+	}
+
+}
+```
+
+----
+
+## 自己实现队列、栈
+
+插入的指针为`end`(加数逻辑)，取数的指针为`start`(拿数逻辑)。他们不断地循环，即，指到最后的时候下一个位置指向0。我们**通过大小`size`来约束是否可以添加或者取出数据**。这样的代码十分的简单。这样通过`size`变量将前后指针解耦。**不需要在考虑前后谁追谁的问题。**
+
+通过变量`size`来解耦两个指针。
+
+----
+
+## 最小栈
+
+一个`data`栈，一个`min`栈，两个栈同步压数，弹出页同步弹出。如果发现更大的，则在min栈中，重复压入栈顶元素。
+
+也可以只记录小于等于的数据，然后压入min栈顶，需要弹出的时候再比较是否相等，如果相等则同步弹出，如果不相等，则只弹出data栈元素。
+
+```java
+package basic_class_03;
+
+import java.util.Stack;
+
+public class Code_02_GetMinStack {
+	public static class MyStack1 {
+		private Stack<Integer> stackData;
+		private Stack<Integer> stackMin;
+
+		public MyStack1() {
+			this.stackData = new Stack<Integer>();
+			this.stackMin = new Stack<Integer>();
+		}
+
+		public void push(int newNum) {
+			if (this.stackMin.isEmpty()) {
+				this.stackMin.push(newNum);
+			} else if (newNum <= this.getmin()) {
+				this.stackMin.push(newNum);
+			}
+			this.stackData.push(newNum);
+		}
+
+		public int pop() {
+			if (this.stackData.isEmpty()) {
+				throw new RuntimeException("Your stack is empty.");
+			}
+			int value = this.stackData.pop();
+			if (value == this.getmin()) {
+				this.stackMin.pop();
+			}
+			return value;
+		}
+
+		public int getmin() {
+			if (this.stackMin.isEmpty()) {
+				throw new RuntimeException("Your stack is empty.");
+			}
+			return this.stackMin.peek();
+		}
+	}
+
+	public static class MyStack2 {
+		private Stack<Integer> stackData;
+		private Stack<Integer> stackMin;
+
+		public MyStack2() {
+			this.stackData = new Stack<Integer>();
+			this.stackMin = new Stack<Integer>();
+		}
+
+		public void push(int newNum) {
+			if (this.stackMin.isEmpty()) {
+				this.stackMin.push(newNum);
+			} else if (newNum < this.getmin()) {
+				this.stackMin.push(newNum);
+			} else {
+				int newMin = this.stackMin.peek();
+				this.stackMin.push(newMin);
+			}
+			this.stackData.push(newNum);
+		}
+
+		public int pop() {
+			if (this.stackData.isEmpty()) {
+				throw new RuntimeException("Your stack is empty.");
+			}
+			this.stackMin.pop();
+			return this.stackData.pop();
+		}
+
+		public int getmin() {
+			if (this.stackMin.isEmpty()) {
+				throw new RuntimeException("Your stack is empty.");
+			}
+			return this.stackMin.peek();
+		}
+	}
+
+	public static void main(String[] args) {
+		MyStack1 stack1 = new MyStack1();
+		stack1.push(3);
+		System.out.println(stack1.getmin());
+		stack1.push(4);
+		System.out.println(stack1.getmin());
+		stack1.push(1);
+		System.out.println(stack1.getmin());
+		System.out.println(stack1.pop());
+		System.out.println(stack1.getmin());
+
+		System.out.println("=============");
+
+		MyStack1 stack2 = new MyStack1();
+		stack2.push(3);
+		System.out.println(stack2.getmin());
+		stack2.push(4);
+		System.out.println(stack2.getmin());
+		stack2.push(1);
+		System.out.println(stack2.getmin());
+		System.out.println(stack2.pop());
+		System.out.println(stack2.getmin());
+	}
+
+}
+```
+
+----
+
+## 队列实现栈/栈实现队列
+
+队列实现栈：
+
+使用两个队列，将队列倒入另外一个队列，另一个队列仅保留一个数据。
+
+栈实现队列：
+
+使用两个栈操作。关键就是满足两个原则：push栈的内容需要一次性压入pop栈中；pop栈不为空的时候，push栈才能将数据倒入。
+
+```java
+package basic_class_03;
+
+public class Code_01_Array_To_Stack_Queue {
+
+	public static class ArrayStack {
+		private Integer[] arr;
+		private Integer size;
+
+		public ArrayStack(int initSize) {
+			if (initSize < 0) {
+				throw new IllegalArgumentException("The init size is less than 0");
+			}
+			arr = new Integer[initSize];
+			size = 0;
+		}
+
+		public Integer peek() {
+			if (size == 0) {
+				return null;
+			}
+			return arr[size - 1];
+		}
+
+		public void push(int obj) {
+			if (size == arr.length) {
+				throw new ArrayIndexOutOfBoundsException("The queue is full");
+			}
+			arr[size++] = obj;
+		}
+
+		public Integer pop() {
+			if (size == 0) {
+				throw new ArrayIndexOutOfBoundsException("The queue is empty");
+			}
+			return arr[--size];
+		}
+	}
+
+	public static class ArrayQueue {
+		private Integer[] arr;
+		private Integer size;
+		private Integer first;
+		private Integer last;
+
+		public ArrayQueue(int initSize) {
+			if (initSize < 0) {
+				throw new IllegalArgumentException("The init size is less than 0");
+			}
+			arr = new Integer[initSize];
+			size = 0;
+			first = 0;
+			last = 0;
+		}
+
+		public Integer peek() {
+			if (size == 0) {
+				return null;
+			}
+			return arr[first];
+		}
+
+		public void push(int obj) {
+			if (size == arr.length) {
+				throw new ArrayIndexOutOfBoundsException("The queue is full");
+			}
+			size++;
+			arr[last] = obj;
+			last = last == arr.length - 1 ? 0 : last + 1;
+		}
+
+		public Integer poll() {
+			if (size == 0) {
+				throw new ArrayIndexOutOfBoundsException("The queue is empty");
+			}
+			size--;
+			int tmp = first;
+			first = first == arr.length - 1 ? 0 : first + 1;
+			return arr[tmp];
+		}
+	}
+
+	public static void main(String[] args) {
+		
+	}
+
+}
+```
+
+----
+
+## 哈希函数
+
+1. 哈希函数输入域是无穷的，输出域为有限的；
+2. same input same output；
+3. difference input maybe same output；【哈希碰撞】
+4. 哈希函数的关键一点就是在S域上，属于基本均匀分布，则说明哈希函数离散性好；【离散性】
+
+----
+
+## 设计RandomPool结构
+
+设计一种结构，在该结构中有如下三个功能：
+`insert(key)`：将某个key加入到该结构，做到不重复加入；
+`delete(key)`：将原本在结构中的某个key移除；
+`getRandom()`：等概率随机返回结构中的任何一个key。
+要求所有的方法的时间复杂度都是`O(1)`。
+解法：
+数据结构中包含两个`map`，一个整型`index`。`map`为对称结构（两边的`key`与`value`值时对调的）。`delete`的时候`index++`，然后再第二个`map`中覆盖值。相当于删除某个数之后，把最后一条记录安到被删除的地方。以保证index区域的连续性，便于等概率返回key值。
+
+e.g. map1<string, int>; map2<int, string>; int index;
+
+```java
+package basic_class_03;
+
+import java.util.HashMap;
+
+public class Code_06_RandomPool {
+
+	public static class Pool<K> {
+		private HashMap<K, Integer> keyIndexMap;
+		private HashMap<Integer, K> indexKeyMap;
+		private int size;
+
+		public Pool() {
+			this.keyIndexMap = new HashMap<K, Integer>();
+			this.indexKeyMap = new HashMap<Integer, K>();
+			this.size = 0;
+		}
+
+		public void insert(K key) {
+			if (!this.keyIndexMap.containsKey(key)) {
+				this.keyIndexMap.put(key, this.size);
+				this.indexKeyMap.put(this.size++, key);
+			}
+		}
+
+		public void delete(K key) {
+			if (this.keyIndexMap.containsKey(key)) {
+				int deleteIndex = this.keyIndexMap.get(key);
+				int lastIndex = --this.size;
+				K lastKey = this.indexKeyMap.get(lastIndex);
+				this.keyIndexMap.put(lastKey, deleteIndex);
+				this.indexKeyMap.put(deleteIndex, lastKey);
+				this.keyIndexMap.remove(key);
+				this.indexKeyMap.remove(lastIndex);
+			}
+		}
+
+		public K getRandom() {
+			if (this.size == 0) {
+				return null;
+			}
+			int randomIndex = (int) (Math.random() * this.size);
+			return this.indexKeyMap.get(randomIndex);
+		}
+
+	}
+
+	public static void main(String[] args) {
+		Pool<String> pool = new Pool<String>();
+		pool.insert("zuo");
+		pool.insert("cheng");
+		pool.insert("yun");
+		System.out.println(pool.getRandom());
+		System.out.println(pool.getRandom());
+		System.out.println(pool.getRandom());
+		System.out.println(pool.getRandom());
+		System.out.println(pool.getRandom());
+		System.out.println(pool.getRandom());
+
+	}
+
+}
+```
