@@ -1,0 +1,700 @@
+---
+layout:      post
+title:       "左程云算法讲解笔记-IV"
+subtitle:    "Algorithm"
+author:      "Ashior"
+header-img:  "img/bg-zuo-algorithm.jpg"
+catalog:     true
+tags:
+  - 工作
+  - 算法
+---
+
+> 这些内容是从牛客网左程云大神的算法课程中做记录的笔记，由于内容较多，又附上源码，所以考虑一章一个模块。
+
+[TOC]
+
+----
+
+## 前缀树
+
+```java
+package basic_class_05;
+
+public class Code_01_TrieTree {
+	//前缀树的数据结构
+	public static class TrieNode {
+		// 表示有多少节点滑过
+		public int path;
+		// 表示有多少字符串以此节点结束
+		public int end;
+		// 表示有多少条边
+		public TrieNode[] map;
+
+		public TrieNode() {
+			path = 0;
+			end = 0;
+			// 初始化成26的大小是因为默认只有小写字母出现
+			// [0-25]：map[0]为1，则表示a有路径，如果为0，则表示a没有路径
+			// 也可以使用map<int, TrieNode>：key表示ASCII码，value表示下一个节点
+			map = new TrieNode[26];
+		}
+	}
+
+	public static class Trie {
+		private TrieNode root;
+
+		public Trie() {
+			root = new TrieNode();
+		}
+
+		public void insert(String word) {
+			if (word == null) {
+				return;
+			}
+			char[] chs = word.toCharArray();
+			TrieNode node = root;
+			// 对应成需要找哪一条路，在map[26]数组中
+			int index = 0;
+			for (int i = 0; i < chs.length; i++) {
+				index = chs[i] - 'a';
+				if (node.map[index] == null) {
+					node.map[index] = new TrieNode();
+				}
+				node = node.map[index];
+				// 经过节点加1
+				node.path++;
+			}
+			// string添加完毕，最后尾部节点加1
+			node.end++;
+		}
+
+		public void delete(String word) {
+			if (search(word)) {
+				char[] chs = word.toCharArray();
+				TrieNode node = root;
+				int index = 0;
+				for (int i = 0; i < chs.length; i++) {
+					index = chs[i] - 'a';
+					if (node.map[index].path-- == 1) {
+						node.map[index] = null;
+						return;
+					}
+					node = node.map[index];
+				}
+				node.end--;
+			}
+		}
+
+		public boolean search(String word) {
+			if (word == null) {
+				return false;
+			}
+			char[] chs = word.toCharArray();
+			TrieNode node = root;
+			int index = 0;
+			for (int i = 0; i < chs.length; i++) {
+				index = chs[i] - 'a';
+				if (node.map[index] == null) {
+					return false;
+				}
+				node = node.map[index];
+			}
+			return node.end != 0;
+		}
+
+		public int prefixNumber(String pre) {
+			if (pre == null) {
+				return 0;
+			}
+			char[] chs = pre.toCharArray();
+			TrieNode node = root;
+			int index = 0;
+			for (int i = 0; i < chs.length; i++) {
+				index = chs[i] - 'a';
+				if (node.map[index] == null) {
+					return 0;
+				}
+				node = node.map[index];
+			}
+			return node.path;
+		}
+	}
+
+	public static void main(String[] args) {
+		Trie trie = new Trie();
+		System.out.println(trie.search("zuo"));
+		trie.insert("zuo");
+		System.out.println(trie.search("zuo"));
+		trie.delete("zuo");
+		System.out.println(trie.search("zuo"));
+		trie.insert("zuo");
+		trie.insert("zuo");
+		trie.delete("zuo");
+		System.out.println(trie.search("zuo"));
+		trie.delete("zuo");
+		System.out.println(trie.search("zuo"));
+		trie.insert("zuoa");
+		trie.insert("zuoac");
+		trie.insert("zuoab");
+		trie.insert("zuoad");
+		trie.delete("zuoa");
+		System.out.println(trie.search("zuoa"));
+		System.out.println(trie.prefixNumber("zuo"));
+
+	}
+
+}
+```
+
+----
+
+## 图的宽度优先搜索
+
+```java
+package basic_class_05;
+
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.Queue;
+
+public class Code_02_BFS {
+
+	public static void bfs(Node node) {
+		if (node == null) {
+			return;
+		}
+		Queue<Node> queue = new LinkedList<>();
+		HashSet<Node> map = new HashSet<>();
+		queue.add(node);
+		map.add(node);
+		while (!queue.isEmpty()) {
+			Node cur = queue.poll();
+			System.out.println(cur.value);
+			for (Node next : cur.nexts) {
+				// 判断是否已经添加过值队列
+				if (!map.contains(next)) {
+					map.add(next);
+					queue.add(next);
+				}
+			}
+		}
+	}
+
+}
+```
+
+----
+
+## 图的深度优先遍历
+
+```java
+package basic_class_05;
+
+import java.util.HashSet;
+import java.util.Stack;
+
+public class Code_03_DFS {
+
+	public static void dfs(Node node) {
+		if (node == null) {
+			return;
+		}
+		Stack<Node> stack = new Stack<>();
+		HashSet<Node> set = new HashSet<>();
+		stack.add(node);
+		set.add(node);
+		System.out.println(node.value);
+		while (!stack.isEmpty()) {
+			Node cur = stack.pop();
+			for (Node next : cur.nexts) {
+				if (!set.contains(next)) {
+					stack.push(cur);
+					stack.push(next);
+					set.add(next);
+					System.out.println(next.value);
+					break;
+				}
+			}
+		}
+	}
+
+}
+```
+
+----
+
+## 图的常见算法
+
+#### 拓扑排序算法
+
+适用范围：要求有向图，且有入度为0的节点，且没有环
+
+首先加入入度为0的节点，然后打印后删除（加入`zeroInQueue`中），删除后，又有入度为0的节点，重复以上步骤。
+
+```java
+package basic_class_05;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Queue;
+
+public class Code_04_TopologySort {
+
+	// directed graph and no loop
+	public static List<Node> sortedTopology(Graph graph) {
+		HashMap<Node, Integer> inMap = new HashMap<>();
+		Queue<Node> zeroInQueue = new LinkedList<>();
+		for (Node node : graph.nodes.values()) {
+			inMap.put(node, node.in);
+			if (node.in == 0) {
+				zeroInQueue.add(node);
+			}
+		}
+		List<Node> result = new ArrayList<>();
+		while (!zeroInQueue.isEmpty()) {
+			Node cur = zeroInQueue.poll();
+			result.add(cur);
+			// 把所有的后代的入度-1
+			for (Node next : cur.nexts) {
+				inMap.put(next, inMap.get(next) - 1);
+				if (inMap.get(next) == 0) {
+					zeroInQueue.add(next);
+				}
+			}
+		}
+		return result;
+	}
+}
+```
+
+#### [使用并查集]Kruskal算法
+
+使用范围：要求无向图
+
+从图中开始选择边权重最小的节点，如果不形成回路，则选择。
+
+使用到了并查集
+
+```java
+package basic_class_05;
+
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.PriorityQueue;
+import java.util.Set;
+
+//undirected graph only
+public class Code_05_Kruskal {
+
+	// Union-Find Set
+	public static class UnionFind {
+		private HashMap<Node, Node> fatherMap;
+		private HashMap<Node, Integer> rankMap;
+
+		public UnionFind() {
+			fatherMap = new HashMap<Node, Node>();
+			rankMap = new HashMap<Node, Integer>();
+		}
+
+		private Node findFather(Node n) {
+			Node father = fatherMap.get(n);
+			if (father != n) {
+				father = findFather(father);
+			}
+			fatherMap.put(n, father);
+			return father;
+		}
+
+		public void makeSets(Collection<Node> nodes) {
+			fatherMap.clear();
+			rankMap.clear();
+			for (Node node : nodes) {
+				fatherMap.put(node, node);
+				rankMap.put(node, 1);
+			}
+		}
+
+		public boolean isSameSet(Node a, Node b) {
+			return findFather(a) == findFather(b);
+		}
+
+		public void union(Node a, Node b) {
+			if (a == null || b == null) {
+				return;
+			}
+			Node aFather = findFather(a);
+			Node bFather = findFather(b);
+			if (aFather != bFather) {
+				int aFrank = rankMap.get(aFather);
+				int bFrank = rankMap.get(bFather);
+				if (aFrank <= bFrank) {
+					fatherMap.put(aFather, bFather);
+					rankMap.put(bFather, aFrank + bFrank);
+				} else {
+					fatherMap.put(bFather, aFather);
+					rankMap.put(aFather, aFrank + bFrank);
+				}
+			}
+		}
+	}
+
+	public static class EdgeComparator implements Comparator<Edge> {
+
+		@Override
+		public int compare(Edge o1, Edge o2) {
+			return o1.weight - o2.weight;
+		}
+
+	}
+
+	public static Set<Edge> kruskalMST(Graph graph) {
+		// 生成一个并查集
+		UnionFind unionFind = new UnionFind();
+		// 所有的点，变成并查集里面的小集合
+		unionFind.makeSets(graph.nodes.values());
+		// 按照边的权重组成一个小根堆
+		PriorityQueue<Edge> priorityQueue = new PriorityQueue<>(new EdgeComparator());
+		// 将边加入至小根堆中
+		for (Edge edge : graph.edges) {
+			priorityQueue.add(edge);
+		}
+		Set<Edge> result = new HashSet<>();
+		while (!priorityQueue.isEmpty()) {
+			Edge edge = priorityQueue.poll();
+			// 如果边的两头(节点)都在一个集合中，则说明有回路
+			// 如果不在一个集合，则说明之前没有添加
+			// 加入之后，将边所引入的两个节点加入至集合中
+			// 所谓连接一起，说明节点们都在一个集合中
+			if (!unionFind.isSameSet(edge.from, edge.to)) {
+				result.add(edge);
+				unionFind.union(edge.from, edge.to);
+			}
+		}
+		return result;
+	}
+}
+```
+
+#### Prim算法
+
+适用范围：要求无向图
+
+任意选一个点，与选择的点相连的节点之间的边，进行考察，选择相连边最小且之前没有出现过的一个点。然后再重新考虑剩下的已经解锁却未添加的边。
+
+```java
+package basic_class_05;
+
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.PriorityQueue;
+import java.util.Set;
+
+// undirected graph only
+public class Code_06_Prim {
+
+	public static class EdgeComparator implements Comparator<Edge> {
+
+		@Override
+		public int compare(Edge o1, Edge o2) {
+			return o1.weight - o2.weight;
+		}
+
+	}
+
+	public static Set<Edge> primMST(Graph graph) {
+		PriorityQueue<Edge> priorityQueue = new PriorityQueue<>(new EdgeComparator());
+		// 这种是一个节点一个节点的添加，而不是按照边添加
+		// 这个问题是已经形成了一个固定的大集合，然后剩下的点一个个添加入集合
+		HashSet<Node> set = new HashSet<>();
+		Set<Edge> result = new HashSet<>();
+		// for循环是为了解决一张图里面有多个不连通的森林
+		// 如果确定已经不存在，则无需考虑
+		for (Node node : graph.nodes.values()) {
+			// 判断待加入的节点是否已经存在
+			if (!set.contains(node)) {
+				set.add(node);
+				// 将新解锁的边加入优先队列中
+				for (Edge edge : node.edges) {
+					priorityQueue.add(edge);
+				}
+				while (!priorityQueue.isEmpty()) {
+					Edge edge = priorityQueue.poll();
+					Node toNode = edge.to;
+					if (!set.contains(toNode)) {
+						set.add(toNode);
+						result.add(edge);
+						for (Edge nextEdge : node.edges) {
+							priorityQueue.add(nextEdge);
+						}
+					}
+				}
+			}
+		}
+		return result;
+	}
+
+}
+```
+
+#### Dijkstra算法
+
+适用范围：没有权值为负数的边
+
+```java
+package basic_class_05;
+
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map.Entry;
+
+// no negative weight
+public class Code_07_Dijkstra {
+
+	public static HashMap<Node, Integer> dijkstra1(Node head) {
+		HashMap<Node, Integer> distanceMap = new HashMap<>();
+		distanceMap.put(head, 0);
+		HashSet<Node> selectedNodes = new HashSet<>();
+
+		Node minNode = getMinDistanceAndUnselectedNode(distanceMap, selectedNodes);
+		while (minNode != null) {
+			int distance = distanceMap.get(minNode);
+			for (Edge edge : minNode.edges) {
+				Node toNode = edge.to;
+				if (!distanceMap.containsKey(toNode)) {
+					distanceMap.put(toNode, distance + edge.weight);
+				}
+				distanceMap.put(edge.to, Math.min(distanceMap.get(toNode), distance + edge.weight));
+			}
+			selectedNodes.add(minNode);
+			minNode = getMinDistanceAndUnselectedNode(distanceMap, selectedNodes);
+		}
+		return distanceMap;
+	}
+
+	public static Node getMinDistanceAndUnselectedNode(HashMap<Node, Integer> distanceMap, HashSet<Node> touchedNodes) {
+		Node minNode = null;
+		int minDistance = Integer.MAX_VALUE;
+		for (Entry<Node, Integer> entry : distanceMap.entrySet()) {
+			Node node = entry.getKey();
+			int distance = entry.getValue();
+			if (!touchedNodes.contains(node) && distance < minDistance) {
+				minNode = node;
+				minDistance = distance;
+			}
+		}
+		return minNode;
+	}
+
+	public static class NodeRecord {
+		public Node node;
+		public int distance;
+
+		public NodeRecord(Node node, int distance) {
+			this.node = node;
+			this.distance = distance;
+		}
+	}
+
+	public static class NodeHeap {
+		private Node[] nodes;
+		private HashMap<Node, Integer> heapIndexMap;
+		private HashMap<Node, Integer> distanceMap;
+		private int size;
+
+		public NodeHeap(int size) {
+			nodes = new Node[size];
+			heapIndexMap = new HashMap<>();
+			distanceMap = new HashMap<>();
+			this.size = 0;
+		}
+
+		public boolean isEmpty() {
+			return size == 0;
+		}
+
+		public void addOrUpdateOrIgnore(Node node, int distance) {
+			if (inHeap(node)) {
+				distanceMap.put(node, Math.min(distanceMap.get(node), distance));
+				insertHeapify(node, heapIndexMap.get(node));
+			}
+			if (!isEntered(node)) {
+				nodes[size] = node;
+				heapIndexMap.put(node, size);
+				distanceMap.put(node, distance);
+				insertHeapify(node, size++);
+			}
+		}
+
+		public NodeRecord pop() {
+			NodeRecord nodeRecord = new NodeRecord(nodes[0], distanceMap.get(nodes[0]));
+			swap(0, size - 1);
+			heapIndexMap.put(nodes[size - 1], -1);
+			distanceMap.remove(nodes[size - 1]);
+			nodes[size - 1] = null;
+			heapify(0, --size);
+			return nodeRecord;
+		}
+
+		private void insertHeapify(Node node, int index) {
+			while (distanceMap.get(nodes[index]) < distanceMap.get(nodes[(index - 1) / 2])) {
+				swap(index, (index - 1) / 2);
+				index = (index - 1) / 2;
+			}
+		}
+
+		private void heapify(int index, int size) {
+			int left = index * 2 + 1;
+			while (left < size) {
+				int smallest = left + 1 < size && distanceMap.get(nodes[left + 1]) < distanceMap.get(nodes[left])
+						? left + 1 : left;
+				smallest = distanceMap.get(nodes[smallest]) < distanceMap.get(nodes[index]) ? smallest : index;
+				if (smallest == index) {
+					break;
+				}
+				swap(smallest, index);
+				index = smallest;
+				left = index * 2 + 1;
+			}
+		}
+
+		private boolean isEntered(Node node) {
+			return heapIndexMap.containsKey(node);
+		}
+
+		private boolean inHeap(Node node) {
+			return isEntered(node) && heapIndexMap.get(node) != -1;
+		}
+
+		private void swap(int index1, int index2) {
+			heapIndexMap.put(nodes[index1], index2);
+			heapIndexMap.put(nodes[index2], index1);
+			Node tmp = nodes[index1];
+			nodes[index1] = nodes[index2];
+			nodes[index2] = tmp;
+		}
+	}
+
+	public static HashMap<Node, Integer> dijkstra2(Node head, int size) {
+		NodeHeap nodeHeap = new NodeHeap(size);
+		nodeHeap.addOrUpdateOrIgnore(head, 0);
+		HashMap<Node, Integer> result = new HashMap<>();
+		while (!nodeHeap.isEmpty()) {
+			NodeRecord record = nodeHeap.pop();
+			Node cur = record.node;
+			int distance = record.distance;
+			for (Edge edge : cur.edges) {
+				nodeHeap.addOrUpdateOrIgnore(edge.to, edge.weight + distance);
+			}
+			result.put(cur, distance);
+		}
+		return result;
+	}
+
+}
+```
+
+----
+
+## 图的数据结构实现
+
+#### Edge
+
+```java
+package basic_class_05;
+
+public class Edge {
+	public int weight;
+	public Node from;
+	public Node to;
+
+	public Edge(int weight, Node from, Node to) {
+		this.weight = weight;
+		this.from = from;
+		this.to = to;
+	}
+
+}
+```
+
+#### Graph
+
+```java
+package basic_class_05;
+
+import java.util.HashMap;
+import java.util.HashSet;
+
+public class Graph {
+	public HashMap<Integer,Node> nodes;
+	public HashSet<Edge> edges;
+
+	public Graph() {
+		nodes = new HashMap<>();
+		edges = new HashSet<>();
+	}
+}
+```
+
+#### GraphGenerator
+
+```java
+package basic_class_05;
+
+public class GraphGenerator {
+
+	public static Graph createGraph(Integer[][] matrix) {
+		Graph graph = new Graph();
+		for (int i = 0; i < matrix.length; i++) {
+			Integer from = matrix[i][0];
+			Integer to = matrix[i][1];
+			Integer weight = matrix[i][2];
+			if (!graph.nodes.containsKey(from)) {
+				graph.nodes.put(from, new Node(from));
+			}
+			if (!graph.nodes.containsKey(to)) {
+				graph.nodes.put(to, new Node(to));
+			}
+			Node fromNode = graph.nodes.get(from);
+			Node toNode = graph.nodes.get(to);
+			Edge newEdge = new Edge(weight, fromNode, toNode);
+			fromNode.nexts.add(toNode);
+			fromNode.out++;
+			toNode.in++;
+			fromNode.edges.add(newEdge);
+			graph.edges.add(newEdge);
+		}
+		return graph;
+	}
+
+}
+```
+
+#### Node
+
+```java
+package basic_class_05;
+
+import java.util.ArrayList;
+
+public class Node {
+	public int value;
+	public int in;
+	public int out;
+	public ArrayList<Node> nexts;
+	public ArrayList<Edge> edges;
+
+	public Node(int value) {
+		this.value = value;
+		in = 0;
+		out = 0;
+		nexts = new ArrayList<>();
+		edges = new ArrayList<>();
+	}
+}
+```
+
