@@ -1,0 +1,737 @@
+---
+layout:      post
+title:       "左程云算法讲解笔记-III"
+subtitle:    "Algorithm"
+author:      "Ashior"
+header-img:  "img/bg-zuo-algorithm.jpg"
+catalog:     true
+tags:
+  - 工作
+  - 算法
+---
+
+> 这些内容是从牛客网左程云大神的算法课程中做记录的笔记，由于内容较多，又附上源码，所以考虑一章一个模块。
+
+[TOC]
+
+----
+
+## [重点]布隆过滤器
+
+黑名单中样本的个数为100亿个，记为n；失误率不能超过0.01%(万分之一，他的失误类型为不在黑名单的样本被认为在黑名单中，但是在黑名单中的样本一定不会误报)，记为p；每个样本的大小为64B，这个信息不回影响布隆过滤器的大小，只和选择哈希函数有关，一般的哈希函数都可以接收64B的输入对象，所以使用布隆过滤器还有一个好处是不用顾忌单个样本的大小，它丝毫不能影响布隆过滤器的大小。
+
+布隆过滤器落地的结构是一个大数组，里面每一位为一个`bit`。
+
+一个`int`是4字节，32位，如果是`long`类型，是8字节，64位。
+```java
+// 可以表示长度为100*32的大小
+int[] arr = new int[100];
+arr[0]; // 0~31
+arr[1]; // 32~43
+// 描黑某一个位：如描黑第6341位
+arr[6341 / 64] // 6341 % 64 -> 1
+```
+
+当URL进来时，经过我们预先准备的k个哈希函数，每一次得到相应的值，`h1(URL)=r1, h2(URL)=r2, ..., hk(URL)=rk`。然后将值模上布隆过滤器数组的大小，得到相应的某一个值，值得范围为`0~m`，肯定落在布隆过滤器上面，然后相应的位置描黑，已经为黑的就不管。
+
+```
+m = -(n*lnp)/((ln2)^2)
+k = ln2*(m/n) ≈ 0.7*(m/n)
+p真实 = (1-e^(-(n*k)/m))^k < p
+```
+
+**面试问题：**
+
+1. 单样本空间量巨大
+2. 黑名单
+3. 要求空间极为苛刻
+4. 是否允许失误
+
+----
+
+## [重点]一致性哈希
+
+问题：初始可能打到环上不均衡。因为机器数量太少了，不保证均衡性。
+解决：虚拟节点技术
+
+```
+m1：v1-1, v1-2, ..., v1-10000
+m2：v2-1, v2-2, ..., v2-10000
+m3：v3-1, v3-2, ..., v3-10000
+```
+
+这个解决方案就是根据问题产生的原因是机器数量太少了，所以提高数量，每个机器所虚拟的节点所管理的数据归相应的机器所属。
+
+----
+
+## 随时找到数据流的中位数
+
+- 题目：有一个源源不断地吐出整数的数据流，假设你有足够的空间来保存吐出的数，请设计一个结构，可以随时取得之前吐出所有数的中位数。
+- 要求：如果该结构已经保存了吐出的N个数，那么任意时刻将一个新数加入到该结构的时间复杂度为`O(logN)`。取得已经吐出的N个整数体的中位数的过程，时间复杂度为`O(1)`。
+
+
+使用`priority_queue`。底层是通过堆实现的。增删查的时间复杂度均为`O(logK)`。
+
+使用两个`priority_queue`，将数据平分的放入优先队列，一个为大根堆，一个为小根堆。那么两个堆顶即为中位数。**保证两个堆之间的size相差不超过1，如果超过1，则将超出的某个值弹出，加入到另外一个堆中，然后再比较数据。**小于大根堆的数，进入大根堆，大于小根堆的数，进入小根堆。利用大小堆堆顶的关系，求解中位数。
+
+```java
+package basic_class_04;
+
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.PriorityQueue;
+
+public class Code_01_MadianQuick {
+
+	public static class MedianHolder {
+		private PriorityQueue<Integer> maxHeap = new PriorityQueue<Integer>(new MaxHeapComparator());
+		private PriorityQueue<Integer> minHeap = new PriorityQueue<Integer>(new MinHeapComparator());
+
+		private void modifyTwoHeapsSize() {
+			if (this.maxHeap.size() == this.minHeap.size() + 2) {
+				this.minHeap.add(this.maxHeap.poll());
+			}
+			if (this.minHeap.size() == this.maxHeap.size() + 2) {
+				this.maxHeap.add(this.minHeap.poll());
+			}
+		}
+
+		public void addNumber(int num) {
+			if (this.maxHeap.isEmpty()) {
+				this.maxHeap.add(num);
+				return;
+			}
+			if (this.maxHeap.peek() >= num) {
+				this.maxHeap.add(num);
+			} else {
+				if (this.minHeap.isEmpty()) {
+					this.minHeap.add(num);
+					return;
+				}
+				if (this.minHeap.peek() > num) {
+					this.maxHeap.add(num);
+				} else {
+					this.minHeap.add(num);
+				}
+			}
+			modifyTwoHeapsSize();
+		}
+
+		public Integer getMedian() {
+			int maxHeapSize = this.maxHeap.size();
+			int minHeapSize = this.minHeap.size();
+			if (maxHeapSize + minHeapSize == 0) {
+				return null;
+			}
+			Integer maxHeapHead = this.maxHeap.peek();
+			Integer minHeapHead = this.minHeap.peek();
+			if (((maxHeapSize + minHeapSize) & 1) == 0) {
+				return (maxHeapHead + minHeapHead) / 2;
+			}
+			return maxHeapSize > minHeapSize ? maxHeapHead : minHeapHead;
+		}
+
+	}
+
+	public static class MaxHeapComparator implements Comparator<Integer> {
+		@Override
+		public int compare(Integer o1, Integer o2) {
+			if (o2 > o1) {
+				return 1;
+			} else {
+				return -1;
+			}
+		}
+	}
+
+	public static class MinHeapComparator implements Comparator<Integer> {
+		@Override
+		public int compare(Integer o1, Integer o2) {
+			if (o2 < o1) {
+				return 1;
+			} else {
+				return -1;
+			}
+		}
+	}
+
+	// for test
+	public static int[] getRandomArray(int maxLen, int maxValue) {
+		int[] res = new int[(int) (Math.random() * maxLen) + 1];
+		for (int i = 0; i != res.length; i++) {
+			res[i] = (int) (Math.random() * maxValue);
+		}
+		return res;
+	}
+
+	// for test, this method is ineffective but absolutely right
+	public static int getMedianOfArray(int[] arr) {
+		int[] newArr = Arrays.copyOf(arr, arr.length);
+		Arrays.sort(newArr);
+		int mid = (newArr.length - 1) / 2;
+		if ((newArr.length & 1) == 0) {
+			return (newArr[mid] + newArr[mid + 1]) / 2;
+		} else {
+			return newArr[mid];
+		}
+	}
+
+	public static void printArray(int[] arr) {
+		for (int i = 0; i != arr.length; i++) {
+			System.out.print(arr[i] + " ");
+		}
+		System.out.println();
+	}
+
+	public static void main(String[] args) {
+		boolean err = false;
+		int testTimes = 200000;
+		for (int i = 0; i != testTimes; i++) {
+			int len = 30;
+			int maxValue = 1000;
+			int[] arr = getRandomArray(len, maxValue);
+			MedianHolder medianHold = new MedianHolder();
+			for (int j = 0; j != arr.length; j++) {
+				medianHold.addNumber(arr[j]);
+			}
+			if (medianHold.getMedian() != getMedianOfArray(arr)) {
+				err = true;
+				printArray(arr);
+				break;
+			}
+		}
+		System.out.println(err ? "Oops..what a fuck!" : "today is a beautiful day^_^");
+
+	}
+
+}
+```
+
+----
+
+## Less Money
+
+一块金条切成两半，是需要花费和长度数值一样的铜板。例如，给定数组`{10, 20, 30}`，代表一共三个人，整块金条长度为`10+20+30=60`。如果先把长度60的金条分成10和50，则花费60，再把长度50的金条分成20和30，花费50，总共花费110。第二种方法就是先把长度为60的金条分成30和30，花费60，再把长度30的金条分成10和20，花费30，一共花费90。输入一个数组，返回分割的最小代价。
+
+本质是一个哈夫曼树问题。
+
+将待分的目标大小设置为叶节点，则整体就转换成如何求非叶节点之和最小的问题。
+
+利用优先队列实现是很方便的，采用贪心策略，将目标数组存入**小根堆**，然后每次从中取出两个数，计算其和(取出的两个数是数组中最小的两个数)。然后再把计算后的和放入小根堆中，重复上述步骤。最后剩下的一个节点即为代价最小和。
+
+```java
+package basic_class_04;
+
+import java.util.Comparator;
+import java.util.PriorityQueue;
+
+public class Code_02_Less_Money {
+
+	public static int lessMoney(int[] arr) {
+		PriorityQueue<Integer> pQ = new PriorityQueue<>();
+		for (int i = 0; i < arr.length; i++) {
+			pQ.add(arr[i]);
+		}
+		int sum = 0;
+		int cur = 0;
+		while (pQ.size() > 1) {
+			cur = pQ.poll() + pQ.poll();
+			sum += cur;
+			pQ.add(cur);
+		}
+		return sum;
+	}
+
+	public static class MinheapComparator implements Comparator<Integer> {
+
+		@Override
+		public int compare(Integer o1, Integer o2) {
+			return o1 - o2;
+		}
+
+	}
+
+	public static class MaxheapComparator implements Comparator<Integer> {
+
+		@Override
+		public int compare(Integer o1, Integer o2) {
+			return o2 - o1;
+		}
+
+	}
+
+	public static void main(String[] args) {
+		// solution
+		int[] arr = { 6, 7, 8, 9 };
+		System.out.println(lessMoney(arr));
+
+		int[] arrForHeap = { 3, 5, 2, 7, 0, 1, 6, 4 };
+
+		// min heap
+		PriorityQueue<Integer> minQ1 = new PriorityQueue<>();
+		for (int i = 0; i < arrForHeap.length; i++) {
+			minQ1.add(arrForHeap[i]);
+		}
+		while (!minQ1.isEmpty()) {
+			System.out.print(minQ1.poll() + " ");
+		}
+		System.out.println();
+
+		// min heap use Comparator
+		PriorityQueue<Integer> minQ2 = new PriorityQueue<>(new MinheapComparator());
+		for (int i = 0; i < arrForHeap.length; i++) {
+			minQ2.add(arrForHeap[i]);
+		}
+		while (!minQ2.isEmpty()) {
+			System.out.print(minQ2.poll() + " ");
+		}
+		System.out.println();
+
+		// max heap use Comparator
+		PriorityQueue<Integer> maxQ = new PriorityQueue<>(new MaxheapComparator());
+		for (int i = 0; i < arrForHeap.length; i++) {
+			maxQ.add(arrForHeap[i]);
+		}
+		while (!maxQ.isEmpty()) {
+			System.out.print(maxQ.poll() + " ");
+		}
+
+	}
+
+}
+```
+
+----
+
+## IPO问题
+
+给定四个参数：`consts[i]`表示`i`号项目的花费；`profits[i]`表示`i`号项目在扣除花费之后的利润；`k`表示你不能并行，只能串行的最多做`k`个项目（由于这个条件，在启动资金允许范围之内，选择利润最多的项目）；`m`表示你初始的资金；
+
+每完成一个项目，马上获得利润，以支持完成下一个项目。最后输出获得的最大钱数。
+
+解题思路：利用两个堆，一个小根堆，存放所有项目，然后选择满足启动资金条件的项目，选择的方式为将小根堆里面满足条件的项目弹出，然后存入大根堆中，大根堆排序的方式为按照收益大小排序。做完之后，**更新初始资金**，此时，小根堆中的某些项目又能够进入大根堆中，依次迭代k次即可。
+
+```java
+package basic_class_04;
+
+import java.util.Comparator;
+import java.util.PriorityQueue;
+
+public class Code_03_IPO {
+	public static class Node {
+		public int p;
+		public int c;
+
+		public Node(int p, int c) {
+			this.p = p;
+			this.c = c;
+		}
+	}
+
+	public static class MinCostComparator implements Comparator<Node> {
+
+		@Override
+		public int compare(Node o1, Node o2) {
+			return o1.c - o2.c;
+		}
+
+	}
+
+	public static class MaxProfitComparator implements Comparator<Node> {
+
+		@Override
+		public int compare(Node o1, Node o2) {
+			return o2.p - o1.p;
+		}
+
+	}
+
+	public static int findMaximizedCapital(int k, int W, int[] Profits, int[] Capital) {
+		Node[] nodes = new Node[Profits.length];
+		for (int i = 0; i < Profits.length; i++) {
+			nodes[i] = new Node(Profits[i], Capital[i]);
+		}
+
+		PriorityQueue<Node> minCostQ = new PriorityQueue<>(new MinCostComparator());
+		PriorityQueue<Node> maxProfitQ = new PriorityQueue<>(new MaxProfitComparator());
+		for (int i = 0; i < nodes.length; i++) {
+			minCostQ.add(nodes[i]);
+		}
+		for (int i = 0; i < k; i++) {
+			while (!minCostQ.isEmpty() && minCostQ.peek().c <= W) {
+				maxProfitQ.add(minCostQ.poll());
+			}
+			if (maxProfitQ.isEmpty()) {
+				return W;
+			}
+			W += maxProfitQ.poll().p;
+		}
+		return W;
+	}
+
+}
+```
+
+----
+
+## 折纸问题
+
+把一段纸条竖着放在桌子上，然后从纸条的下边向上方对折1次，压出折痕后展开。折痕是凹下去的，即折痕凸起的方向指向纸条的背面。如果纸条的下边向上连续对折2次，压出折痕后展开，此时有三条折痕，从上到下依次是下折痕，下折痕和上折痕。给定一个输入参数N，代表纸条都从下边向上方连续对折N次，请从上到下打印出所有折痕的方向。
+
+例如：
+N=1时，打印：down；
+N=2时，打印：down，down，up；
+
+其实这个就是一个**二叉树的中序遍历**。每颗头结点都是下折痕，左子树的头结点都是下折痕，右子树的头结点都是上折痕。
+
+```
+		down
+		/	\
+	down	  up
+	/	\	/	\
+down	up	down up
+```
+
+```java
+package basic_class_04;
+
+public class Code_04_PaperFolding {
+
+	public static void printAllFolds(int N) {
+		// 表示来到第一层，为下折痕的这个节点，也即头结点
+		printProcess(1, N, true);
+	}
+	// i表示当前第几层，N表示总共N层，down表示此是向下
+	public static void printProcess(int i, int N, boolean down) {
+		if (i > N) {
+			return;
+		}
+		printProcess(i + 1, N, true);
+		System.out.println(down ? "down " : "up ");
+		printProcess(i + 1, N, false);
+	}
+
+	public static void main(String[] args) {
+		int N = 4;
+		printAllFolds(N);
+
+	}
+}
+```
+
+----
+
+## [福利函数]较为直观的打印二叉树
+
+```java
+package basic_class_04;
+
+public class Code_06_PrintBinaryTree {
+
+	public static class Node {
+		public int value;
+		public Node left;
+		public Node right;
+
+		public Node(int data) {
+			this.value = data;
+		}
+	}
+
+	public static void printTree(Node head) {
+		System.out.println("Binary Tree:");
+		printInOrder(head, 0, "H", 17);
+		System.out.println();
+	}
+
+	public static void printInOrder(Node head, int height, String to, int len) {
+		if (head == null) {
+			return;
+		}
+		printInOrder(head.right, height + 1, "v", len);
+		String val = to + head.value + to;
+		int lenM = val.length();
+		int lenL = (len - lenM) / 2;
+		int lenR = len - lenM - lenL;
+		val = getSpace(lenL) + val + getSpace(lenR);
+		System.out.println(getSpace(height * len) + val);
+		printInOrder(head.left, height + 1, "^", len);
+	}
+
+	public static String getSpace(int num) {
+		String space = " ";
+		StringBuffer buf = new StringBuffer("");
+		for (int i = 0; i < num; i++) {
+			buf.append(space);
+		}
+		return buf.toString();
+	}
+
+	public static void main(String[] args) {
+		Node head = new Node(1);
+		head.left = new Node(-222222222);
+		head.right = new Node(3);
+		head.left.left = new Node(Integer.MIN_VALUE);
+		head.right.left = new Node(55555555);
+		head.right.right = new Node(66);
+		head.left.left.right = new Node(777);
+		printTree(head);
+
+		head = new Node(1);
+		head.left = new Node(2);
+		head.right = new Node(3);
+		head.left.left = new Node(4);
+		head.right.left = new Node(5);
+		head.right.right = new Node(6);
+		head.left.left.right = new Node(7);
+		printTree(head);
+
+		head = new Node(1);
+		head.left = new Node(1);
+		head.right = new Node(1);
+		head.left.left = new Node(1);
+		head.right.left = new Node(1);
+		head.right.right = new Node(1);
+		head.left.left.right = new Node(1);
+		printTree(head);
+
+	}
+
+}
+```
+
+----
+
+## 查找二叉树后继节点
+
+给定一个node，找到其后继节点。在二叉树（二叉树增加一个指向父节点的parent指针）的中序遍历中，node节点的下一个节点叫做node的后继节点。
+
+```java
+package basic_class_04;
+
+public class Code_07_DescendantNode {
+
+	public static class Node {
+		public int value;
+		public Node left;
+		public Node right;
+		public Node parent;
+
+		public Node(int data) {
+			this.value = data;
+		}
+	}
+
+	public static Node getNextNode(Node node) {
+		if (node == null) {
+			return node;
+		}
+		// node有右节点，就是找右节点的最左边的节点
+		if (node.right != null) {
+			return getLeftMost(node.right);
+		} else {
+			
+			Node parent = node.parent;
+			// 判断当前节点是否为父节点的左孩子
+			while (parent != null && parent.left != node) {
+				node = parent;
+				parent = node.parent;
+			}
+			return parent;
+		}
+	}
+	// 一路向左即可
+	public static Node getLeftMost(Node node) {
+		if (node == null) {
+			return node;
+		}
+		while (node.left != null) {
+			node = node.left;
+		}
+		return node;
+	}
+
+	public static void main(String[] args) {
+		Node head = new Node(6);
+		head.parent = null;
+		head.left = new Node(3);
+		head.left.parent = head;
+		head.left.left = new Node(1);
+		head.left.left.parent = head.left;
+		head.left.left.right = new Node(2);
+		head.left.left.right.parent = head.left.left;
+		head.left.right = new Node(4);
+		head.left.right.parent = head.left;
+		head.left.right.right = new Node(5);
+		head.left.right.right.parent = head.left.right;
+		head.right = new Node(9);
+		head.right.parent = head;
+		head.right.left = new Node(8);
+		head.right.left.parent = head.right;
+		head.right.left.left = new Node(7);
+		head.right.left.left.parent = head.right.left;
+		head.right.right = new Node(10);
+		head.right.right.parent = head.right;
+
+		Node test = head.left.left;
+		System.out.println(test.value + " next: " + getNextNode(test).value);
+		test = head.left.left.right;
+		System.out.println(test.value + " next: " + getNextNode(test).value);
+		test = head.left;
+		System.out.println(test.value + " next: " + getNextNode(test).value);
+		test = head.left.right;
+		System.out.println(test.value + " next: " + getNextNode(test).value);
+		test = head.left.right.right;
+		System.out.println(test.value + " next: " + getNextNode(test).value);
+		test = head;
+		System.out.println(test.value + " next: " + getNextNode(test).value);
+		test = head.right.left.left;
+		System.out.println(test.value + " next: " + getNextNode(test).value);
+		test = head.right.left;
+		System.out.println(test.value + " next: " + getNextNode(test).value);
+		test = head.right;
+		System.out.println(test.value + " next: " + getNextNode(test).value);
+		test = head.right.right; // 10's next is null
+		System.out.println(test.value + " next: " + getNextNode(test));
+	}
+
+}
+```
+
+----
+
+## 在数组中找到一个局部最小的位置
+
+二分法查找即可。
+
+```java
+package basic_class_04;
+
+public class Code_10_FindOneLessValueIndex {
+
+	public static int getLessIndex(int[] arr) {
+		if (arr == null || arr.length == 0) {
+			return -1; // no exist
+		}
+		if (arr.length == 1 || arr[0] < arr[1]) {
+			return 0;
+		}
+		if (arr[arr.length - 1] < arr[arr.length - 2]) {
+			return arr.length - 1;
+		}
+		int left = 1;
+		int right = arr.length - 2;
+		int mid = 0;
+		while (left < right) {
+			mid = (left + right) / 2;
+			if (arr[mid] > arr[mid - 1]) {
+				right = mid - 1;
+			} else if (arr[mid] > arr[mid + 1]) {
+				left = mid + 1;
+			} else {
+				return mid;
+			}
+		}
+		return left;
+	}
+
+	public static void printArray(int[] arr) {
+		for (int i = 0; i != arr.length; i++) {
+			System.out.print(arr[i] + " ");
+		}
+		System.out.println();
+	}
+
+	public static void main(String[] args) {
+		int[] arr = { 6, 5, 3, 4, 6, 7, 8 };
+		printArray(arr);
+		int index = getLessIndex(arr);
+		System.out.println("index: " + index + ", value: " + arr[index]);
+
+	}
+
+}
+```
+
+----
+
+## 认识并查集
+
+[博客](https://www.cnblogs.com/MrSaver/p/9607552.html)
+
+节点的数据结构为`{val, parent}`，而实现是采用`map`实现，通过`map<node, node>`表示`key`的父亲节点是`value`。以代表点来表示一个集合。
+
+时间复杂度：
+
+```java
+package basic_class_04;
+
+import java.util.HashMap;
+import java.util.List;
+
+public class Code_09_UnionFind {
+
+	public static class Node {
+		// whatever you like
+	}
+
+	public static class DisjointSets {
+		// 表示key的父亲节点是value
+		public HashMap<Node, Node> fatherMap;
+		// 如果key是集合的代表节点，value则表示集合的元素个数
+		// 如果key不是集合的代表节点，value则无效
+		public HashMap<Node, Integer> rankMap;
+
+		public DisjointSets() {
+			fatherMap = new HashMap<Node, Node>();
+			rankMap = new HashMap<Node, Integer>();
+		}
+		// 对于使用并查集，前提是必须给出全部的数据
+		// 然后以每一个节点自成一个集合的方式，初始化map
+		public void makeSets(List<Node> nodes) {
+			fatherMap.clear();
+			rankMap.clear();
+			for (Node node : nodes) {
+				fatherMap.put(node, node);
+				rankMap.put(node, 1);
+			}
+		}
+		// 将整个集合打平
+		// 将node节点指向父节点，这个父节点为结合的代表节点
+		public Node findFather(Node n) {
+			Node father = fatherMap.get(n);
+			if (father != n) {
+				father = findFather(father);
+			}
+			fatherMap.put(n, father);
+			return father;
+		}
+
+		public void union(Node a, Node b) {
+			if (a == null || b == null) {
+				return;
+			}
+			Node aFather = findFather(a);
+			Node bFather = findFather(b);
+			if (aFather != bFather) {
+				int aFrank = rankMap.get(aFather);
+				int bFrank = rankMap.get(bFather);
+				if (aFrank <= bFrank) {
+					fatherMap.put(aFather, bFather);
+					rankMap.put(bFather, aFrank + bFrank);
+				} else {
+					fatherMap.put(bFather, aFather);
+					rankMap.put(aFather, aFrank + bFrank);
+				}
+			}
+		}
+
+	}
+
+	public static void main(String[] args) {
+
+	}
+
+}
+```
+
