@@ -1,0 +1,742 @@
+---
+layout:      post
+title:       "LeetCode之队列和栈"
+subtitle:    "LeetCode : queue and stack"
+author:      "Ashior"
+header-img:  "img/post-bg-ccf.jpg"
+catalog:     true
+tags:
+  - 工作
+  - LeetCode
+  - 算法
+---
+
+> 题目信息谷歌一下即可，也可通过 [LeetCode队列和栈](https://leetcode-cn.com/explore/learn/card/queue-stack/) 查看
+
+----
+
+## 01矩阵
+
+**解题思路**
+
+方法1，找邻域，确定与0的距离。
+第一次循环，遍历所有点，如果当前点为0，跳过；
+否则，找其邻域4个点是否有0，如果有，跳过；如果没有，将该点的值+1；
+第二次循环，如果当前点小于等于1，跳过；
+否则，找其邻域4个点是否有1，如果有，跳过；如果没有，将该点的值+1；
+依次类推。在循环中，对跳过点计数，如果所有点都被跳过，则说明已完成，结束。
+方法2，
+这道题给了我们一个只有0和1的矩阵，让我们求每一个1到离其最近的0的距离，
+其实也就是求一个距离场，而求距离场那么BFS将是不二之选。
+刚看到此题时，我以为这跟之前那道 Shortest Distance from All Buildings 是一样的，
+从每一个0开始遍历，不停的更新每一个1的距离，但是这样写下来TLE了。
+后来我又改变思路，从每一个1开始BFS，找到最近的0，结果还是TLE，气死人。
+后来逛论坛发现思路是对的，就是写法上可以进一步优化，
+我们可以首先遍历一次矩阵，将值为0的点都存入queue，
+将值为1的点改为INT_MAX。
+之前像什么遍历迷宫啊，起点只有一个，而这道题所有为0的点都是起点。
+然后开始BFS遍历，从queue中取出一个数字，遍历其周围四个点，
+如果越界或者周围点的值小于等于当前值加1，则直接跳过。
+因为周围点的距离更小的话，就没有更新的必要，
+否则将周围点的值更新为当前值加1，然后把周围点的坐标加入queue。
+
+**源码**
+
+```cpp
+vector<vector<int>> updateMatrix(vector<vector<int>>& matrix) {
+   int m = matrix.size(), n = matrix[0].size();
+   vector<vector<int>> dirs{{0,-1},{-1,0},{0,1},{1,0}};
+   queue<pair<int, int>> q;
+   //如果对应矩阵中的数据为0，则将其放入队列中
+   for (int i = 0; i < m; ++i) {
+       for (int j = 0; j < n; ++j) {
+           if (matrix[i][j] == 0) q.push({i, j});
+           else matrix[i][j] = INT_MAX;
+       }
+   }
+   while (!q.empty()) {
+       auto t = q.front(); q.pop();
+       for (auto dir : dirs) {
+           int x = t.first + dir[0], y = t.second + dir[1];
+           if (x < 0 || x >= m || y < 0 || y >= n ||
+           matrix[x][y] <= matrix[t.first][t.second]) continue;
+           matrix[x][y] = matrix[t.first][t.second] + 1;
+           q.push({x, y});
+       }
+   }
+   return matrix;
+}
+```
+
+**源码分析**
+
+
+
+----
+
+## 打开转盘锁
+
+**解题思路**
+
+题目要求给出最小的旋转次数，应该就是用BFS(广度优先搜索)解题了。初始字符串为 0000 那么第二步就是1000 9000 0100 0900 0010 0090 0001 0009 共八个字符串，也就是说每一步的字符串拨动密码扩展到下一步时可以得到八个新字符串。把它想象成图的形式：很明显相当于每个节点后有八个节点，用 BFS 每次走一个节点，直到达到目标节点，即是最短路径。
+另外需要注意：每次到要判断节点是否为给出的死亡数字，并且把已遍历的节点也加入死亡数字/visited以防止重复。这样只能将原数组形式的死亡数字/visited转为哈希表以减少查找操作的复杂度。用队列暂存下一步需要遍历的节点。
+
+**源码**
+
+```cpp
+int openLock(vector<string>& deadends, string target) {
+    queue<string> q;
+    string start = "0000";
+    // 存放死锁情况
+    unordered_set<string> hash_dead;
+    // 存放访问过的情况
+    unordered_set<string> visited;
+    visited.insert(start);
+    // hash_dead.insert(start);
+    q.push(start);
+    visited.insert(start);
+    for (string itm : deadends) {
+        hash_dead.insert(itm);
+    }
+    if (hash_dead.find(start) != hash_dead.end()) return -1;
+    if (start.compare(target) == 0) {
+        return 0;
+    }
+
+    int res = 0;
+
+    while (!q.empty()) {
+        // 注意，为了防止q的size大小变化，提前将值确认
+        // 因此采用递减的方式循环
+        for (int i = q.size(); i > 0; i--) {
+            string s = q.front();
+            q.pop();
+            if (s.compare(target) == 0) return res;
+            string ss = s;
+            for (int j = 0; j < 4; j++) {
+                s[j] = (s[j] - '0' + 1) % 10 + '0';
+                if (visited.find(s) == visited.end() && hash_dead.find(s)== hash_dead.end()) {
+                    visited.insert(s);
+                    q.push(s);
+                }
+                s = ss;				
+                s[j]= (s[j] - '0' + 9) % 10 + '0';
+                if (visited.find(s) == visited.end() && hash_dead.find(s) == hash_dead.end()) {
+                    visited.insert(s);
+                    q.push(s);
+                }
+                s = ss;
+            }
+        }
+        res++;
+    }
+    return -1;
+}
+```
+
+大神代码：
+
+```cpp
+int openLock(vector<string>& deadends, string target) {
+    queue<string> q;
+    string start = "0000";
+    unordered_set<string> hash_dead;
+    unordered_set<string> visited;
+    visited.insert(start);
+    for (string itm : deadends) hash_dead.insert(itm);
+    if (hash_dead.find(start) != hash_dead.end()) return -1;
+    int res = 0;
+    q.push(start);
+    while (!q.empty()) {
+        for (int i = q.size(); i > 0; i--) {
+            string top = q.front(); q.pop();
+            if (top.compare(target) == 0) return res;
+            string back = top;
+            for (int j = 0; j < 4; j++) {
+                top[j] = (top[j] - '0' + 1) % 10 + '0';
+                if (visited.find(top) == visited.end() && hash_dead.find(top)== hash_dead.end()) {
+                    visited.insert(top);
+                    q.push(top);
+                }				
+                top[j]= (top[j] - '0' + 8) % 10 + '0';
+                if (visited.find(top) == visited.end() && hash_dead.find(top) == hash_dead.end()) {
+                    visited.insert(top);
+                    q.push(top);
+                }
+                top = back;
+            }
+        }
+        res++;
+    }
+    return -1;
+}
+```
+
+**源码分析**
+
+这道题是典型的BFS解题模式，首先从"0000"，开始遍历，把它放到辅助队列q中，每次去除队列中元素的字符串，对其每一位都做加减1处理，然后放入新的队列。遍历完队列的所有元素我们把计数器加1，如果遇到target就返回计数器，如果直到队列为空都没有遇到target，那么返回-1。在处理过程中我们需要一个visited的hashset来保存已经访问过的节点，防止重复访问。
+
+----
+
+## 
+
+**解题思路**
+
+1. 采用深度优先搜索，递归查询
+2. 不可以重复遍历，所以增加visited数组，存储访问状态
+3. 在二层循环中遍历整个二维数组
+
+**源码**
+
+```cpp
+void isLandDFS(vector<vector<char>>& grid, vector<vector<bool>>& visited, int i, int j) {
+	if (i < 0 || i >= grid.size()) return;
+	if (j < 0 || j >= grid[0].size()) return;
+	if (grid[i][j] != '1' || visited[i][j]) return;
+	visited[i][j] = true;
+	isLandDFS(grid, visited, i+1, j);
+	isLandDFS(grid, visited, i-1, j);
+	isLandDFS(grid, visited, i, j+1);
+	isLandDFS(grid, visited, i, j-1);
+}
+
+void numIslandsDFS(vector<vector<char> > &grid, vector<vector<bool>> &visited, int x, int y) {
+	if (x < 0 || x >= grid.size()) return;
+	if (y < 0 || y >= grid[0].size()) return;
+	if (grid[x][y] != '1' || visited[x][y]) return;
+	visited[x][y] = true;
+	numIslandsDFS(grid, visited, x - 1, y);
+	numIslandsDFS(grid, visited, x + 1, y);
+	numIslandsDFS(grid, visited, x, y - 1);
+	numIslandsDFS(grid, visited, x, y + 1);
+}
+
+int numIslands(vector<vector<char>>& grid) {
+	if (grid.size() == 0 || grid[0].size() == 0) {
+		return 0;
+	}
+	int m = grid.size(), n = grid[0].size();
+	vector<vector<bool> > visited(m, vector<bool>(n, false));
+	int count = 0;
+	for (int i = 0; i < grid.size(); i++) {
+		for (int j = 0; j < grid[i].size(); j++) {
+			if (visited[i][j] == false && grid[i][j] == '1') {
+				isLandDFS(grid, visited, i, j);
+				// numIslandsDFS(grid, visited, i, j);
+				count++;
+			}
+		}
+	}
+	return count;
+}
+```
+
+**源码分析**
+
+
+
+----
+
+## 二叉树的中序遍历
+
+**解题思路**
+
+
+
+**源码**
+
+```cpp
+void mid_serarch(vector<int>& vec, TreeNode* root) {
+    if (root == NULL) {
+        return ;
+    }
+    mid_serarch(vec, root->left);
+    vec.push_back(root->val);
+    mid_serarch(vec, root->right);
+
+}
+vector<int> inorderTraversal(TreeNode* root) {
+    vector<int> vec;
+    if (root == NULL) {
+        return vec;
+    }
+    mid_serarch(vec, root);
+    return vec;
+}
+```
+
+**源码分析**
+
+
+
+----
+
+## 
+
+**解题思路**
+
+
+
+**源码**
+
+```cpp
+class Solution {
+public:
+	UndirectedGraphNode *cloneGraph(UndirectedGraphNode *node) {
+        // 如果是个空值，则返回NULL
+		if (!node) return NULL;
+        // 当前unorder_map中已经存在直接返回
+		if (hash.count(node)) return hash[node];
+        // 值不为空，且没有被访问过，即在hash中不存在
+        // 我们将其创建，进行深拷贝
+		hash[node] = new UndirectedGraphNode(node->label);
+        // 接收到的值，我们对其邻居进行遍历，对每一个邻居进行递归操作
+		for (auto val : node->neighbors)
+        // 邻居节点为一个vector数组，所以我们将得到的值存入数组中
+			hash[node]->neighbors.push_back(cloneGraph(val));
+        // 最后返回
+		return hash[node];
+	}
+ 
+private:
+	unordered_map<UndirectedGraphNode *, UndirectedGraphNode *>hash;
+};
+```
+
+```cpp
+class Solution {
+public:
+    UndirectedGraphNode* DFS(UndirectedGraphNode* node, unordered_map<UndirectedGraphNode *, UndirectedGraphNode *>hash) {
+        if (!node) {
+            return null;
+        }
+        if (hash.empty()) {
+            return node;
+        }
+    }
+	UndirectedGraphNode *cloneGraph(UndirectedGraphNode *node) {
+        unordered_map<UndirectedGraphNode *, UndirectedGraphNode *>hash;
+        return DFS(node, hash);
+    }
+}
+```
+
+**源码分析**
+
+
+
+----
+
+## 每日温度
+
+**解题思路**
+
+第一次想到使用一个辅助变量最大值下标，想在O(n)的时间内得出数组，实际上，在判断是否递增时十分的麻烦，行不通。
+
+从后向前遍历比较好一点，因为两者都是需要记录下一系列信息，但是从前向后遍历的话还需要返回去进行修改结果，但是从后向前遍历的话只需要修改当前的结果即可。
+
+创建一个辅助的栈，其中存放当前循环中小的温度，如果比他更大则出栈，出栈后去top值，减去当前的i值(最好是手绘一次，加以理解)
+
+**源码**
+
+```cpp
+vector<int> dailyTemperatures(vector<int>& T) {
+    vector<int> vec(T.size(), 0);
+    if (T.size() == 0 || T.size() == 1) {
+        return vec;
+    }
+    stack<int> s;
+    for (int i = T.size() - 1; i >= 0; i--) {
+        while (!s.empty() && T[s.top()] >= T[i]) {
+            s.pop();
+        }
+        if (s.empty()) {
+            vec[i] = 0;
+        } else {
+            vec[i] = s.top() - i;
+        }
+        s.push(i);
+    }
+}
+```
+
+**源码分析**
+
+
+
+----
+
+## 目标和
+
+**解题思路**
+
+1. 把他理解成一个完全二叉树，然后进行深度遍历每一个分差的路口即为+/-操作，通过i来判断是否已经到达叶子节点，即为数组最后一个元素的位置。(不过耗时十分严重，毕竟是递归)
+2. 更多方法与思路请参考以下博客，十分巧妙，强烈推荐：使用了动态规划，好好复习吧，每次都是死在动态规划上[博客](https://blog.csdn.net/obrcnh/article/details/78569495)
+
+**源码**
+
+```cpp
+void DFS(int i, vector<int>& nums, int S, int sum, int& count) {
+    if (i == nums.size()) {
+        if (sum == S) {
+            count++;
+            cout << "count:" << count << " i:" << i << endl;
+        }
+        return ;
+    }
+    sum += nums[i];
+    cout << "sum:" << sum << " i:" << i << endl; 
+    DFS(i+1, nums, S, sum, count);
+    sum -= nums[i];
+    sum -= nums[i];
+    cout << "sum:" << sum << " i:" << i << endl; 
+    DFS(i+1, nums, S, sum, count);
+}
+
+int findTargetSumWays(vector<int>& nums, int S) {
+    if (nums.empty()) {
+        return 0;
+    }
+    int count = 0;
+    DFS(0, nums, S, 0, count);
+    return count;
+}
+```
+
+**源码分析**
+
+
+
+----
+
+## 逆波兰表达式求值
+
+**解题思路**
+
+根据逆波兰式的特性，当碰到运算符时，将两个数字出栈并计算后再压栈即可。
+
+**源码**
+
+```cpp
+int evalRPN(vector<string>& tokens) {
+    stack<string> s;
+    for (int i = 0; i < tokens.size(); i++) {
+        if (tokens[i].compare("+") == 0) {
+            int a = stoi(s.top());
+            s.pop();
+            int b = stoi(s.top());
+            s.pop();
+            s.push(to_string(a+b));
+        } else if (tokens[i].compare("-") == 0) {
+            int a = stoi(s.top());
+            s.pop();
+            int b = stoi(s.top());
+            s.pop();
+            s.push(to_string(b-a));
+        } else if (tokens[i].compare("*") == 0) {
+            int a = stoi(s.top());
+            s.pop();
+            int b = stoi(s.top());
+            s.pop();
+            s.push(to_string(a*b));
+        } else if (tokens[i].compare("/") == 0) {
+            int a = stoi(s.top());
+            s.pop();
+            int b = stoi(s.top());
+            s.pop();
+            s.push(to_string(b/a));
+        } else {
+            s.push(tokens[i]);
+        }
+    }
+    return stoi(s.top());
+}
+```
+
+**源码分析**
+
+
+
+----
+
+## 最小栈
+
+**解题思路**
+
+为啥不能使用一个变量min来记录最小值？因为执行pop操作时，可能将最小值pop出栈，而min值未改变。
+
+正确示范：使用两个栈，第一个栈为普通的栈，第二个栈为最小栈，每当有元素来时，判断其是否小于等于最小栈中的top元素，如果是，则将其入栈，等于的条件是用于判断相等的元素，如果有多个重复最小元素时，也可以入栈
+
+**源码**
+
+```cpp
+class MinStack {
+public:
+    /** initialize your data structure here. */
+    stack<int> allStack;
+	stack<int> minSta; 
+	void push(int x) {
+		if (allStack.empty()) { 
+			allStack.push(x); 
+			minSta.push(x); 
+		} else { 
+			allStack.push(x); 
+			if (x <= minSta.top()) minSta.push(x);
+		}
+	} 
+	void pop() { 
+		if (allStack.top() == minSta.top()) { 
+			minSta.pop(); 
+		} 
+		allStack.pop(); 
+	} 
+	int top() { 
+		return allStack.top(); 
+	} 
+	int getMin() {
+		return minSta.top();
+	}
+};
+```
+
+**源码分析**
+
+
+
+----
+
+## 字符串解码
+
+**解题思路**
+
+整个就是思路就是用栈解决。
+
+**源码**
+
+```cpp
+string decodeString(string s) {
+    string str;
+    if (s.length() == 0) {
+        return str;
+    }
+    // s = "2[a3[cb]b]3[cd]ef", 返回 "abcabccdcdcdef".
+    stack<string> stas;
+    stack<string> stan;
+    string num;
+    string cha;
+    string sss;
+    for (int i = 0; i < s.length(); i++) {
+    	if (s[i] == '[') {
+    		stan.push(num);
+    		// 增加这个，用于判断是否需要层数 
+    		stan.push("[");
+    		num.clear(); 
+		} else if (s[i] == ']') {
+			while (stan.top() != "[") {
+				string tmp = stan.top();
+				sss.insert(0, tmp);
+				stan.pop(); 
+			}
+			stan.pop();
+			int j = stoi(stan.top());
+			stan.pop();
+			// 创建一个临时变量，不然对sss进行递增操作会导致倍数增长 
+			string stmp = sss;
+			for (int m = 0; m < j-1; m++) {
+				sss += stmp;
+			}
+			stan.push(sss);
+			sss.clear();
+		} else if (isdigit(s[i]) != 0) {
+			num += s[i];
+		} else if (isalpha(s[i]) != 0) {
+			stringstream stream;
+			stream << s[i];
+			stan.push(stream.str());
+		}
+		show(stan);
+	}
+	// 防止最后还有普通的字符 
+    while (!stan.empty()) {
+    	string tmp = stan.top();
+    	str = tmp + str;
+    	stan.pop();
+	}
+	return str;
+}
+```
+
+**源码分析**
+
+
+
+----
+
+## 有效括号
+
+**解题思路**
+
+括号的匹配肯定是从最里面开始，然后一对括号必须是连在一起的所以左括号入栈，判断右括号的条件再出栈。
+
+**源码**
+
+```cpp
+bool isValid(string s) {
+    if (s.length() % 2 != 0) {
+        return false;
+    }
+    stack<char> sta;
+    for (int i = 0; i < s.length(); i++) {
+        if (sta.empty()) {
+            sta.push(s[i]);
+        }
+        if (s[i] == ')' && sta.top() == '(') {
+            sta.pop();
+        } else if (s[i] == '}' && sta.top() == '{') {
+            sta.pop();
+        } else if (s[i] == ']' && sta.top() == '[') {
+            sta.pop();
+        } else {
+            sta.push(s[i]);
+        }
+    }
+    if (sta.size() != 0) {
+        return false;
+    } else {
+        return true;
+    }
+}
+```
+
+**源码分析**
+
+
+
+----
+
+## 钥匙和房间
+
+**解题思路**
+
+
+
+**源码**
+
+```cpp
+bool canVisitAllRooms(vector<vector<int>>& rooms) {
+	if (rooms.size() == 0 || rooms.size() == 1) {
+		return true;
+	}
+	vector<bool> visited(rooms.size(), false);
+	visited[0] = true;
+	set<int> s;
+	queue<int> q;
+	s.insert(0);
+	for (int i = 0; i < rooms[0].size(); i++) {
+		if (s.find(rooms[0][i]) == s.end()) {
+			q.push(rooms[0][i]);
+		}
+	}
+	while (!q.empty()) {
+		int num = q.front();
+		q.pop();
+		s.insert(num);
+		for (int i = 0; i < rooms[num].size(); i++) {
+			if (s.find(rooms[num][i]) == s.end()) {
+				q.push(rooms[num][i]);
+			}
+		}
+	}
+	if (s.size() == rooms.size()) {
+		cout << "true" << endl;
+		return true;
+	} else {
+		cout << "false" << endl;
+		return false;
+	}
+}
+```
+
+**源码分析**
+
+
+
+----
+
+## 完全平方数
+
+**解题思路**
+
+动态规划解决，主要是找到状态转移方程：
+
+```cpp
+f(n) = 1 + min{
+  f(n-1^2), f(n-2^2), f(n-3^2), f(n-4^2), ... , f(n-k^2) //(k为满足k^2<=n的最大的k)
+}
+```
+
+**源码**
+
+```cpp
+int numSquares(int n) {
+    //n+1大小，f[0]为0
+    vector<int> f(n+1, 0);
+    //从f[1]开始计算
+    for(int i = 1; i <= n; ++i) {
+        int minVal = INT_MAX;
+        for(int j = 1; j*j <= i ; ++j) {
+            minVal = min(minVal, f[i - j*j]);
+        }
+        f[i] = minVal + 1;
+    }
+    return f[n];
+}
+```
+
+**源码分析**
+
+
+
+----
+
+## 图像渲染
+
+**解题思路**
+
+
+
+**源码**
+
+```cpp
+void DFS(vector<vector<int>>& image, vector<vector<bool>>& visited, int sr, int sc, int oldC, int newC) {
+    cout << sr << " " << sc << endl;
+	if (sr >= image.size() || sc >= image[0].size() || sr < 0 || sc < 0) {
+        return ;
+    }
+    if (image[sr][sc] == oldC && visited[sr][sc]) {
+    	visited[sr][sc] = false;
+        image[sr][sc] = newC;
+        DFS(image, visited, sr + 1, sc, oldC, newC);
+		DFS(image, visited, sr, sc + 1, oldC, newC);
+		DFS(image, visited, sr - 1, sc, oldC, newC);
+		DFS(image, visited, sr, sc - 1, oldC, newC);
+    } else {
+    	return ;
+	} 
+    
+}
+
+vector<vector<int>> floodFill(vector<vector<int>>& image, int sr, int sc, int newColor) {
+    if (image.size() == 0 || image[0].size() == 0) {
+        return image;
+    }
+    if (sr > image.size() || sc > image[0].size() || sr < 0 || sc < 0) {
+        return image;
+    }
+    int oldC = image[sr][sc];
+    vector<vector<bool>> visited(image.size(), vector<bool>(image[0].size(), true));
+	
+    DFS(image, visited, sr, sc, oldC, newColor);
+    return image;
+}
+```
