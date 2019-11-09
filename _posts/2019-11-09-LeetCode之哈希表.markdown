@@ -1,0 +1,1014 @@
+---
+layout:      post
+title:       "LeetCode之哈希表"
+subtitle:    "LeetCode : Hash Table"
+author:      "Ashior"
+header-img:  "img/post-bg-ccf.jpg"
+catalog:     true
+tags:
+  - 工作
+  - LeetCode
+  - 算法
+---
+
+> 题目信息谷歌一下即可，也可通过 [LeetCode哈希表](https://leetcode-cn.com/explore/learn/card/hash-table//) 查看
+
+----
+
+## 存在重复元素
+
+**解题思路**
+
+利用集合`set`去重。
+
+**源码**
+
+我的代码：
+
+```cpp
+bool containsDuplicate(vector<int>& nums) {
+    set<int> s;
+    for (int i = 0; i < nums.size(); i++) {
+        if (s.count(nums[i]) > 0) {
+            return true;
+        }
+        s.insert(nums[i]);
+    }
+    return false;
+}
+```
+
+高效代码：
+
+```cpp
+
+bool containsDuplicate(vector<int>& nums) {
+    if(nums.size()<=1)
+    return false;
+    sort(nums.begin(),nums.end());
+    for(int i=0;i<nums.size()-1;i++){
+        if(nums[i]==nums[i+1])
+        return true;
+    }
+    return false;
+}
+```
+
+**源码解析**
+
+看到别人通过`sort`排序，速度会快很多。
+
+----
+
+## 只出现一次的数字
+
+**解题思路**
+
+不能使用额外的空间。记得可以使用按位操作。通过异或操作，将相同的元素变为0，不断的叠加即可，剩下的叠加结果即为那个只出现过一次的数字。
+
+**源码**
+
+我的代码：
+
+```cpp
+int singleNumber(vector<int>& nums) {
+    int i = 0;
+    for ( ; i < nums.size()-1; i++) {
+        nums[i+1] = (nums[i+1] ^ nums[i]);
+    }
+    return nums[i];
+}
+```
+
+简洁代码：
+
+```cpp
+
+int singleNumber(vector<int>& nums) {
+    int res=0;
+    for(auto &i : nums) {
+        res ^= i;
+    }
+    return res;
+}
+```
+
+**源码解析**
+
+简洁代码确实很简洁，看起来更高级=。=
+
+----
+
+## 两个数组的交集
+
+**解题思路**
+
+本质就是一个数组查重的问题，使用集合去重即可，如果发现存在的，则把他存入数组。
+
+**源码**
+
+我的代码：
+
+```cpp
+vector<int> intersection(vector<int>& nums1, vector<int>& nums2) {
+    set<int> s1;
+    set<int> s2;
+    vector<int> vec;
+    for (int i = 0; i < nums1.size(); i++) {
+        if (s1.count(nums1[i]) == 0) {
+            s1.insert(nums1[i]);
+        }
+    }
+    for (int i = 0; i < nums2.size(); i++) {
+        if (s2.count(nums2[i]) == 0) {
+            s2.insert(nums2[i]);
+        }
+    }
+    for (auto a : s1) {
+        if (s2.count(a) > 0) {
+            vec.push_back(a);
+        }
+    }
+    return vec;
+}
+```
+
+高效代码：
+
+```cpp
+vector<int> intersection(vector<int>& nums1, vector<int>& nums2)  {
+    unordered_set<int> hashset1,hashset2;
+    hashset1.insert(nums1.begin(), nums1.end());
+    hashset2.insert(nums2.begin(), nums2.end());
+    vector<int > res;
+    for (auto it : hashset2)  {
+        if (hashset1.count(it) > 0)
+            res.push_back(it);
+    }
+    return res;
+}
+```
+
+**源码解析**
+
+下面的代码看起来更专业，而且初始化的集合的时候十分方便不会出错。
+
+----
+
+## 快乐数
+
+**解题思路**
+
+初步设想，将每一次的结果存入`set`中，如果出现重复的，表明会陷入死循环。否则继续查找，知道是否出现相加结果为`1`。
+
+**源码**
+
+我的代码：
+
+```cpp
+bool isHappy(int n) {
+    set<int> s;
+    int res = n;
+    s.insert(res);
+    while (true) {
+        int tmp = res;
+        int i = 0;
+        while (tmp != 0) {
+            i += pow(tmp%10, 2);
+            tmp = tmp / 10;
+        }
+        res = i;
+        if (res == 1) {
+            return true;
+        } else if (s.count(res) > 0) {
+            return false;
+        }
+        s.insert(res);
+    }
+}
+```
+
+高效代码：
+
+```cpp
+class Solution {
+public:
+    int bitSquareSum(int n) {
+        int sum = 0;
+        while(n > 0) {
+            int bit = n % 10;
+            sum += bit * bit;
+            n = n / 10;
+        }
+        return sum;
+    }
+    
+    bool isHappy(int n) {
+        int slow = n, fast = bitSquareSum(n);
+        while(slow != fast) {
+            slow = bitSquareSum(slow);
+            fast = bitSquareSum(fast);
+            fast = bitSquareSum(fast);
+        }
+        return slow == 1;
+    }
+};
+```
+
+特点代码：
+
+```cpp
+bool isHappy(int n) {
+    while (n != 1 && n != 4) {
+        int sum = 0;
+        while (n) {
+            sum += (n % 10) * (n % 10);
+            n /= 10;
+        }
+        n = sum;
+    }
+    return n == 1;
+}
+```
+
+
+**源码解析**
+
+用下面的这种方式更快。跟之前那道[Linked List Cycle](https://xinh79.github.io/2019/10/06/LeetCode-Linked-list/)检测环的方法类似，不同的是这道题环一定存在，不过有的环不符合题意，只有最后`slow`停在了1的位置，才表明是一个快乐数。而且这里每次慢指针走一步，快指针走两步，不是简单的指向`next`，而是要调用子函数计算各位上数字的平方和，当快慢指针相等时，跳出循环，并且判断慢指针是否为1即可。
+
+其实关于非快乐数有个特点，循环的数字中必定会有4，这里就不做证明了，我也不会证明，就是利用这个性质，就可以不用set了
+
+----
+
+## 两数之和
+
+
+**解题思路**
+
+稍微看了一眼答案，利用快慢指针解决。排序后，首尾依次相加，如果比目标值更大就尾往前移动一位，如果比目标值更小，则前部就往后移动一位。
+
+**源码**
+
+我的代码：
+
+```cpp
+class Solution {
+public:
+    static bool cmp(pair<int, int> p1, pair<int, int> p2) {
+        return !(p1.first > p2.first);
+    }
+    vector<int> twoSum(vector<int>& nums, int target) {
+        vector<pair<int, int>> vec;
+        for (int i = 0; i < nums.size(); i++) {
+            vec.push_back(make_pair(nums[i], i));
+        }
+        sort(vec.begin(), vec.end(), cmp);
+        // for (int i = 0; i < vec.size(); i++) {
+        //     cout << vec[i].first << " ";
+        // }
+        // cout << endl;
+        
+        int fast = nums.size() - 1;
+        int slow = 0;
+        // 注意，如果初始化了vector的个数，则默认将其值初始化
+        // 此时 res[0] = 0; res[1] = 0;
+        vector<int> res;
+        while (slow < fast) {
+            if (vec[slow].first + vec[fast].first == target) {
+                res.push_back(vec[slow].second);
+                res.push_back(vec[fast].second);
+                return res;
+            } else if (vec[slow].first + vec[fast].first > target) {
+                fast--;
+            } else {
+                slow++;
+            }
+        }
+        return res;
+    }
+};
+```
+
+高效代码：
+
+```cpp
+
+vector<int> twoSum(vector<int>& nums, int target) {
+    unordered_map<int,int> hash;
+    for(int i=0;i<nums.size();i++){
+        int t = target - nums[i];
+        if(hash.count(t)) return vector<int> ({hash[t],i});
+        hash[nums[i]] = i;
+    }
+    return vector<int>();
+}
+```
+
+**源码解析**
+
+惊为天人，这特么才叫算法啊！一次遍历，通过`unordered_map`存储数组的值与下标，遍历数组的时候，**做减法**，得出一个潜在数组，判断这个数字是否存在于`map`中，如果不存在，则将此次遍历的数组值及下标存入`map`。如果存在，则直接返回。完美，一气呵成。
+
+----
+
+## 同构字符串
+
+**解题思路**
+
+同时遍历两个字符串，将每个字符存入`set`中，如果是第一次出现，则存入集合中，并且记录其第一次出现的位置，如果不是第一次出现，则比较上一次出现的位置是否相同。
+
+**源码**
+
+我的代码：
+
+```cpp
+bool isIsomorphic(string s, string t) {
+    map<char, int> s1;
+    map<char, int> s2;
+    char* cs = s.data();
+    char* ct = t.data();
+    for (int i = 0; i < s.size(); i++) {
+        if (s1.count(cs[i]) > 0 && s2.count(ct[i]) > 0) {
+            // 如果上一次出现的位置相等
+            if (s1[cs[i]]  == s2[ct[i]]) {
+                s1[cs[i]] = i;
+                s2[ct[i]] = i;
+            } else {
+                return false;
+            }
+        // 如果是同时为新出现的字符时，只要记录新字符位置即可
+        } else if (s1.count(cs[i]) == 0 && s2.count(ct[i]) == 0) {
+            s1[cs[i]] = i;
+            s2[ct[i]] = i;
+        } else {
+            return false;
+        }
+    }
+    return true;
+}
+```
+
+高效代码1：
+
+```cpp
+bool isIsomorphic(string s, string t) {
+    int m1[256] = {0}, m2[256] = {0}, n = s.size();
+    for (int i = 0; i < n; ++i) {
+        if (m1[s[i]] != m2[t[i]]) return false;
+        m1[s[i]] = i + 1;
+        m2[t[i]] = i + 1;
+    }
+    return true;
+}
+```
+
+高效代码2：
+
+```cpp
+bool isIsomorphic(string s, string t) {
+    for (int i = 0; i < s.size(); i++) {
+        if (s.find(s[i]) != t.find(t[i])) {
+            return false;
+        }
+    }
+    return true;
+}
+```
+
+**源码解析**
+
+高效代码1：神仙代码，利用`char`的大小，构建一个数组，里面记录着字符串中每一个字符，只有当两个数组在相同的位置同步增长时，那才是同构的字符串。
+
+高效代码2：充分利用STL函数，根据`find`函数返回值，判断是否一致。理由同上，不需要考虑所谓的各种特殊情况，其实就是**判断两个字符串的变化是否同步**即可。
+
+----
+
+##  两个列表的最小索引总和
+
+**解题思路**
+
+通过`map`实现即可。存储`string`作为索引，下标作为`value`值。循环判断。
+
+**源码**
+
+我的代码：
+
+```cpp
+vector<string> findRestaurant(vector<string>& list1, vector<string>& list2) {
+    map<string, int> m;
+    for (int i = 0; i < list1.size(); i++) {
+        m[list1[i]] = i;
+    }
+    vector<string> vec;
+    int count = INT_MAX;
+    for (int i = 0; i < list2.size(); i++) {
+        if (m.count(list2[i]) > 0 && m[list2[i]] + i < count) {
+            count = m[list2[i]] + i;
+            vec.clear();
+            vec.push_back(list2[i]);
+        } else if (m.count(list2[i]) > 0 && m[list2[i]] + i == count) {
+            vec.push_back(list2[i]);
+        }
+    }
+    return vec;
+}
+```
+
+----
+
+## 
+
+**解题思路**
+
+利用`map`存储结果，之后再按照字符串的顺序依次检索，碰到第一个为`1`的即为要找的元素，返回。
+
+**源码**
+
+我的代码：
+
+```cpp
+int firstUniqChar(string s) {
+    map<char, int> m;
+    const char* cp = s.data();
+    for (int i = 0; i < s.size(); i++) {
+        m[cp[i]]++;
+    }
+    for (int i = 0; i < s.size(); i++) {
+        if (m[cp[i]] == 1) {
+            return i;
+        }
+    }
+    return -1;
+}
+```
+
+高效代码：
+
+```cpp
+
+int firstUniqChar(string s) {
+    int len = s.length();
+    if(len < 1){
+        return -1;
+    }
+    vector<int> answer(26,0);
+    for(int i = 0;i < len;i++){
+        answer[s[i] - 'a']++;
+    }
+    for(int i = 0;i < len;i++){
+        if(answer[s[i] - 'a'] == 1){
+            return i;
+        }
+    }
+    return -1;
+}
+```
+
+**源码解析**
+
+利用26个字母的特性，然后存入数组。
+
+----
+
+## 两个数组的交集 II
+
+**解题思路**
+
+为了保证元素出现的次数一致，使用`map`保存结果。`key`保存对应的数字，`value`保存出现的次数。
+
+**源码**
+
+我的代码：
+
+```cpp
+vector<int> intersect(vector<int>& nums1, vector<int>& nums2) {
+    map<int, int> m;
+    for (int i = 0; i < nums1.size(); i++) {
+        m[nums1[i]]++;
+    }
+    vector<int> vec;
+    for (int i = 0; i < nums2.size(); i++) {
+        if (m[nums2[i]] - 1 >= 0) {
+            m[nums2[i]]--;
+            vec.push_back(nums2[i]);
+        }
+    }
+    return vec;
+}
+```
+
+**源码解析**
+
+我的代码一次过，太舒服了。
+
+----
+
+## 存在重复元素 II
+
+**解题思路**
+
+通过`map`的`key`值存储数组中的数字，`value`存储出现的下标。每当遇到已经存在的值时，则比较是否在大于所给定的`k`值。
+
+**源码**
+
+我的代码：
+
+```cpp
+bool containsNearbyDuplicate(vector<int>& nums, int k) {
+    map<int, int> m;
+    for (int i = 0; i < nums.size(); i++) {
+        if (m.count(nums[i]) == 0) {
+            m[nums[i]] = i;
+        } else if (i - m[nums[i]] <= k) {
+            return true;
+        } else {
+            m[nums[i]] = i;
+        }
+    }
+    return false;
+}
+```
+
+暴力代码：
+
+```cpp
+bool containsNearbyDuplicate(vector<int>& nums, int k) {
+    if(k==35000) return false;
+    //不可以改变原容器
+    for(int i=0; i<nums.size(); i++) {
+        for(int j=i+1; j<=i+k&&j<nums.size(); j++) {
+            if(nums[j]==nums[i])
+                return true;
+        }
+    }
+    return false;
+}
+```
+
+**源码解析**
+
+不是说暴力代码不好，在这个时候暴力不需要使用额外的空间，而且在领扣上面执行的速度也更快。
+
+----
+
+## 字母异位词分组
+
+**解题思路**
+
+将字符串重新排列后，在比较是否一致即可。但是这需要对字符串进行排序。由于只有26个小写字母，所以我们采用数组的形式，记录各个值出现的次数，**再将其转换成字符串**进行比较即可。
+
+**源码**
+
+我的代码：
+
+```cpp
+vector<vector<string>> groupAnagrams(vector<string>& strs) {
+    vector<vector<string>> vec;
+    map<string, int> m;
+    for (int i = 0; i < strs.size(); i++) {
+        const char* cp = strs[i].data();
+        vector<int> vstr(26, 0);
+        string str = "";
+        for (int j = 0; j < strs[i].size(); j++) {
+            vstr[strs[i][j]-'a']++;
+        }
+        for (int j = 0; j < 26; j++) {
+            str += to_string(vstr[j]);
+        }
+        if (m.count(str) == 0) {
+            m[str] = vec.size() + 1;
+            vector<string> vvv;
+            vvv.push_back(strs[i]);
+            vec.push_back(vvv);
+        } else {
+            vec[m[str]-1].push_back(strs[i]);
+        }
+    }
+    return vec;
+}
+```
+
+高效代码：
+
+```cpp
+
+vector<vector<string>> groupAnagrams(vector<string>& strs) {
+    unordered_map<string, vector<string>> dicts;
+    vector<vector<string>> ret;
+    for (auto str:strs) {
+        string tmp = str;
+        sort(tmp.begin(), tmp.end());
+        dicts[tmp].emplace_back(str);
+    }
+    for (const auto& d:dicts)
+        ret.emplace_back(d.second);
+    return ret;
+}
+```
+
+```cpp
+class Solution {
+public:
+    vector<vector<string>> groupAnagrams(vector<string>& strs) {
+        vector<vector<string>> res;
+        unordered_map<string, vector<string>> m;
+        for (string str : strs) {
+            vector<int> cnt(26, 0);
+            string t = "";
+            for (char c : str) ++cnt[c - 'a'];
+            for (int d : cnt) t += to_string(d) + "/";
+            m[t].push_back(str);
+        }
+        for (auto a : m) {
+            res.push_back(a.second);
+        }
+        return res;
+    }
+};
+```
+
+
+神级代码：
+
+```cpp
+
+class Solution {public:
+vector<vector<string>> groupAnagrams(vector<string>& strs) {
+    int c[26] = {2, 3, 5, 7, 11, 13, 17, 19,
+                    23, 29, 31, 37, 41, 43, 47, 53,
+                    59, 61, 67, 71, 73, 79, 83, 89,
+                    97, 101};
+
+    unordered_map<double, vector<string>> mm;
+    for (const auto& s:strs) {
+        double tmp = 1;
+        for (auto x:s) tmp *= c[x-'a'];
+        mm[tmp].push_back(s);
+    }
+
+    vector<vector<string>> ret;
+    for (const auto& p:mm) {
+        ret.push_back(p.second);
+    }
+    return ret;
+}
+};
+
+```
+
+**源码解析**
+
+别人的代码就是清晰。不过依旧是先排序，后丢入`map`中。看完后发现我这个就是多余的。。。
+
+神级代码：
+// 质数乘积取代排序（思路来自评论）：
+// 在美版leetcode上看到大神的思路，用**质数表示26个字母**，把字符串的各个字母相乘，这样可保证字母异位词的
+// 乘积必定是相等的。其余步骤就是用map存储，和别人的一致了。（这个用质数表示真的很骚啊！！!）
+
+----
+
+## 有效的数独
+
+**解题思路**
+
+每一行、列、块均做哈希，丢入`set`中。这样问题就转换成如何对二维数组进行切块。暴利破解。
+
+**源码**
+
+```cpp
+class Solution {
+public:
+    bool block(vector<vector<char>>& board, int a, int b) {
+        set<char> s;
+        for (int i = a ; i < a+3; i++) {
+            for (int j = b ; j < b+3; j++) {
+                if (board[i][j] != '.') {
+                    if (s.count(board[i][j]) == 0) {
+                        s.insert(board[i][j]);
+                    } else {
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
+    }
+    bool isValidSudoku(vector<vector<char>>& board) {
+        for (int i = 0; i < board.size(); i++) {
+            set<char> s1;
+            set<char> s2; 
+            for (int j = 0; j < board[i].size(); j++) {
+                if (board[i][j] != '.') {
+                    if (s1.count(board[i][j]) == 0) {
+                        s1.insert(board[i][j]);
+                    } else {
+                        return false;
+                    }
+                }
+                if (board[j][i] != '.') {
+                    if (s2.count(board[j][i]) == 0) {
+                        s2.insert(board[j][i]);
+                    } else {
+                        return false;
+                    }
+                }
+            }
+        }
+        for (int i = 0; i < board.size(); i += 3) {
+            for (int j = 0; j < board[i].size(); j += 3) {
+                if (!block(board, i, j)) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+};
+```
+
+优雅的代码：
+
+```cpp
+class Solution {public:
+    bool isValidSudoku(vector<vector<char>>& board) {
+        bool row[9][9] = {false};
+        bool col[9][9] = {false};
+        bool box[9][9] = {false};
+        for(int i = 0; i < 9; i++) {
+            for(int j = 0; j < 9; j++) {
+                char num = board[i][j];
+                if(num == '.') {
+                    continue;
+                }
+                int n = num - '1';
+                // 标识块号
+                int k = (i / 3) * 3 + j / 3;
+                if(row[i][n] == 1 || col[j][n] == 1 || box[k][n] == 1) {
+                    return false;
+                }
+                row[i][n] = 1;
+                col[j][n] = 1;
+                box[k][n] = 1;
+            }
+        }
+        return true;
+    }
+};
+```
+
+**源码解析**
+
+暴力代码没啥解释的。但是他使用的技巧是将行索引和列索引组合来标识此元素属于哪个块。
+
+----
+
+## 寻找重复的子树
+
+**解题思路**
+
+请参见源码解析，我这题是参考别人的代码。
+
+**源码**
+
+```cpp
+class Solution {
+public:
+
+    //先序遍历的顺序序列化root这个子树
+    string seriTree(TreeNode* root, vector<TreeNode*>& vec, map<string, int>& m) {
+        string str;
+        if (root == nullptr) {
+            return "#";
+        }
+        //对root进行序列化
+        str += to_string(root->val) + " " + seriTree(root->left, vec, m) + " " + seriTree(root->right, vec, m);
+        //这个序列只出现过一次，说明重复了，（如果出现了多次，说明多次重复，但是只要记录一次）
+        if (m[str] == 1) {
+            vec.push_back(root);
+        }
+        m[str]++;
+        return str;
+    }
+    vector<TreeNode*> findDuplicateSubtrees(TreeNode* root) {
+        vector<TreeNode*> vec;
+        // 为什么不用set，明明只要记录一次
+        // 因为可能多次出现，但是我们只能记录一次
+        // 通过map可以记录出现的次数
+        map<string, int> m;
+        seriTree(root, vec, m);
+        return vec;
+    }
+};
+```
+
+DFS代码：
+
+```cpp
+
+class Solution {public:
+    vector<TreeNode*> ans;
+    unordered_map<string,int> map;
+    
+    string dfs(TreeNode* root){
+        if(!root) return "";
+        string s = to_string(root->val) + "," + dfs(root->left) + "," + dfs(root->right);
+        if(map[s]++ == 1) ans.push_back(root);
+        return s;
+    }
+    
+    vector<TreeNode*> findDuplicateSubtrees(TreeNode* root) {
+        dfs(root);
+        return ans;
+    }
+};
+```
+
+**源码解析**
+
+两份代码原理是一样的，请注意，在`DFS`中，字符串`s`的连接情况不能改变，不能只连接`val`值，这样会导致出现相同的`val`值时的错误。
+
+这道题的难点就在于如何判断两个子树是否相等、如何避免重复记录节点。对于判断两个子树是否相等，我们可以写一个递归函数，首先判断两个树的根节点，然后递归判断两个数的左子节点、右子节点。但是对于避免重复就不好处理了。之前 LeetCode 二叉树的序列化与反序列化，这道题告诉我们，我们可以将二叉树扁平化为字符串，如果某两个树的序列化字符串相等，则它们的结构一定相等。如果我们建立字符串的hash表，这样就能同时处理两个问题。
+
+----
+
+## 宝石与石头
+
+**解题思路**
+
+就是一个查重的过程。将宝石存入`set`中，然后在将手中的石头依次比较即可。
+
+**源码**
+
+```cpp
+int numJewelsInStones(string J, string S) {
+    if (J.length() == 0 || S.length() == 0) {
+        return 0;
+    }
+    set<char> s1;
+    const char* cp1 = J.data();
+    const char* cp2 = S.data();
+    for (int i = 0; i < J.size(); i++) {
+        s1.insert(cp1[i]);
+    }
+    int count = 0;
+    for (int i = 0; i < S.size(); i++) {
+        if (s1.count(cp2[i]) != 0) {
+            count++;
+        }
+    }
+    cout << endl;
+    return count;
+}
+```
+
+```cpp
+
+int numJewelsInStones(string J, string S) {
+    char isExist[256];
+    int cnt = 0;
+    memset(isExist, 0, 256);
+    for (int i = 0; i < J.size(); ++i) {
+        isExist[J[i]] = 1;
+    }
+    for (int i = 0; i < S.size(); ++i) {
+        cnt += isExist[S[i]];
+    }
+    return cnt;
+}
+```
+
+**源码解析**
+
+`memset`函数作用是在一段内存块中填充某个给定的值，它是对较大的结构体或数组进行清零操作的一种最快方法。`memset`函数按字节对内存块进行初始化，所以不能用它将`int`数组初始化为`0`和`-1`之外的其他值（除非该值高字节和低字节相同）。
+
+----
+
+## 
+
+**解题思路**
+
+
+采用滑动窗口的思想，同时，为了减少判断现有子串儿内是否含有子串儿右侧的字符，采用使用一个`bool[256]`的数组来存放每个字符在子串儿内是否出现过，这样查找时间复杂度为`O(n)`。
+
+**源码**
+
+我的代码：
+
+```cpp
+int lengthOfLongestSubstring(string s) {
+    int i = 0;
+    int j = -1;
+    int n = s.size();
+    int visited[256];
+    memset(visited, 0, 256*sizeof(int));
+    int ans = 0;
+    while (i < n) {
+        // 需要把右边的指针拿进来做判断
+        if (j + 1 < n && visited[s[j+1]] == 0 ) {
+            j++;
+            visited[s[j]] = 1;
+        } else {
+            visited[s[i++]] = 0;
+        }
+        // 需要判断j的情况，不然会越界
+        ans = max(ans, j - i + 1);
+    }
+    return ans;
+}
+```
+
+滑动窗口：
+
+```cpp
+
+int lengthOfLongestSubstring(string s) {
+    int max = 0;//记录最大长度
+    int start = 0;//记录活动窗口起始点
+    int wLength = 0;//滑动窗口的宽度
+    int left = 0;//可变记录点
+    for (wLength = 0; wLength < s.size(); wLength++) {
+            for (left = start; left < wLength; left++) {
+            //从窗口的起始点开始进行比对，若有相同的字符则将起始点重新设置
+                    if (s[left] == s[wLength]) {
+                            start = left + 1;
+                            break;
+                    }
+            }
+            max = (max > wLength - start + 1) ? max : wLength - start + 1;
+    }
+    return max;
+}
+```
+
+----
+
+## 四数相加 II
+
+**解题思路**
+
+看别人的思路：因为本题只求可能的方案的数量，并不要求返回具体的数字组合，所以可以将四数之和转换为两个两数之和的和为零。我们可以将AB数组的所有组合的和保存起来，由于可能存在不同组合和的结果相同，所以采用map存储，然后求CD的和，在map中找打它的负数，方案数累加。
+
+**源码**
+
+```cpp
+int fourSumCount(vector<int>& A, vector<int>& B, vector<int>& C, vector<int>& D) {
+    map<int, int> m;
+    for (int i = 0; i < A.size(); i++) {
+        for (int j = 0; j < B.size(); j++) {
+            m[A[i] + B[j]]++;
+        }
+    }
+    int ans = 0;
+    for (int i = 0; i < C.size(); i++) {
+        for (int j = 0; j < D.size(); j++) {
+            if (m.count(-C[i]-D[j]) != 0) {
+                ans += m[-C[i]-D[j]];
+            }
+        }
+    }
+    return ans;
+}
+```
+
+**源码解析**
+
+
+----
+
+## 
+
+**解题思路**
+
+我的代码充分利用了数据结构`vector`，同时对`sort`函数的比较规则重新编写，达到了一个可以排序`map`的目的。很庆幸，没有超时。
+
+**源码**
+
+我的代码：
+
+```cpp
+class Solution {
+public:
+    static bool cmp(pair<int, int> p1, pair<int, int> p2) {
+        return (p1.second > p2.second);
+    }
+    vector<int> topKFrequent(vector<int>& nums, int k) {
+        vector<pair<int, int>> vec;
+        map<int, int> m;
+        for (int i = 0; i < nums.size(); i++) {
+            m[nums[i]]++;
+        }
+        for (auto a : m) {
+            vec.push_back(make_pair(a.first, a.second));
+        }
+        sort(vec.begin(), vec.end(), cmp);
+        vector<int> v;
+        for (int i = 0; i < k; i++) {
+            v.push_back(vec[i].first);
+        }
+        return v;
+    }
+};
+```
+
+**源码解析**
+
+看了其他人的代码，感觉也很一般啊，还是用的方法吧。
