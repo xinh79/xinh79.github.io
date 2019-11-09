@@ -1,7 +1,7 @@
 ---
 layout:      post
 title:       "LeetCode之N叉数"
-subtitle:    "LeetCode : /n-ary-tree"
+subtitle:    "LeetCode : N-ary-tree"
 author:      "Ashior"
 header-img:  "img/post-bg-ccf.jpg"
 catalog:     true
