@@ -1,0 +1,210 @@
+---
+layout:      post
+title:       "C++高级教程-前导篇"
+subtitle:    "C++"
+author:      "Ashior"
+header-img:  "img/ReadNotes/bg-Cpp-STL.jpg"
+catalog:     true
+tags:
+  - C++
+  - 学习笔记
+---
+
+> 这些内容是从C++大神——侯捷的教学视频中的部分笔记，但是整个过程由于讲的深浅不一，所以笔记不好记录，而且大多都是需要图片配合，所以先将这篇随笔上传吧，之后将会根据《STL源码剖析》与《Effect C++》更新相关的读书笔记。
+
+[TOC]
+
+----
+
+## 基础摘要
+
+#### 基础
+
+Header中的防御式申明
+
+complex.h
+
+```cpp
+#ifndef __COMPLEX__
+#define __COMPLEX__
+// forward declarations前置声明
+// To do...
+// class declarations类-声明
+// To do...
+// class definition类-定义
+// To do...
+#endif
+```
+
+一个变量经过两个阶段：初始化和赋值
+
+初值列，初始列：
+
+```cpp
+class complex {
+public:
+  complex (double r = 0, double i = 0): re (r), im (i) { }
+}
+```
+
+**相同class的各个objects互为friends**
+
+```cpp
+int func(const complex& param) { return param.re + param.im; } 
+```
+
+Big Three：拷贝构造(copy ctor)，拷贝赋值(copy op=)，析构函数
+
+系统默认的拷贝构造函数为浅拷贝。
+
+拷贝构造：
+
+```cpp
+inline
+String::String(const String& str)
+{
+	m_data = new char[ strlen(str.m_data) + 1 ];
+	strcpy(m_data, str.m_data);
+} 
+```
+
+拷贝赋值：
+
+```cpp
+inline
+String& String::operator=(const String& str)
+{
+	// 检查自我赋值
+	if (this == &str)
+		return *this;
+	delete[] m_data;
+	m_data = new char[ strlen(str.m_data) + 1 ];
+	strcpy(m_data, str.m_data);
+	return *this;
+}
+```
+
+**stack(栈)/heap(堆)**
+
+**stack**是存在于某作用域(scope)的一块内存空间(memory space)。例如当你调用函数，函数本身即会形成一个stack用来放置它所接收的参数，以及返回地址。
+
+在函数本题(function body)内声明的任何变量，其所使用的内存块都取自上述stack。
+
+**heap**或说是**system heap**，是指由操作系统提供的一块global内存空间，程序可动态分配(dynamic allocated)从中获得若干区块(blocks)。
+
+在堆上创建后没有deleted就会产生内存泄露(memory leak)。
+
+new：先分配memory，再调用ctor
+
+```cpp
+Complex* pc = new Complex(1,2);
+// 编译器转化为
+Complex *pc;
+// 分配内存。operator new这个特殊函数其内部调用malloc(n)
+void* mem = operator new(sizeof(Complex));
+// 转型
+pc = static_cast<Complex*>(mem);
+// 构造函数
+pc->Complex::Complex(1,2);
+```
+
+delete：先调用dtor，再释放memory
+
+```cpp
+Complex* pc = new Complex(1,2);
+// ...
+delete pc;
+// 析构函数
+Complex::~Complex(pc);
+// 释放内存。operator delete函数其内部调用free(ps)
+operator delete(pc);
+```
+
+array new一定要搭配array delete
+
+```cpp
+String* p = new String[3];
+delete[] p; // 唤起3次dtor
+
+String* p = new String[3];
+delete p; // 唤起1次dtor
+```
+
+在类中声明了静态变量，应该在类外定义此变量。
+
+composition(复合)，表示has-a；
+delegation(委托)，Handle/Body，表示composition by reference；
+inheritance(继承)，表示is-a；
+
+父类的dtor必须是virtual，否则出现undefined behavior。
+
+**转换函数**
+
+比如将一个分数转换为一个double类型：
+
+```cpp
+class Fraction {
+public:
+	explict Fraction(int num, int den=1) : m_numerator(num), m_denominator(den) { }
+	//...
+	operator double() const { return (double)(m_numerator/m_denominator) }
+private:
+	int m_numerator;
+	int m_denominator;
+}
+Fraction f(3, 5);
+// 调用operator double()将f转换为double值0.6
+double d = 4 + f;
+// 如果增加了explict关键字的构造函数，会转换失败，提示无法从double转换成Fraction
+// explict关键字是告诉编译器不要暗度陈仓，使用其他函数，就用构造函数
+```
+
+**中途介绍了特化，偏特化，仿函数等，注意补充书本知识**
+
+**模板参数可变化**
+
+```cpp
+// 最后一个常数后，不是多常数，所以有一个零参数的函数
+void print() {}
+
+template<typename T, typename... Types>
+void print(const T& firstArg, const Types&... args) {
+	cout << firstArg << endl;
+	print(args...);
+}
+
+```
+
+**reference用途**
+
+以下被视为`same signature`，所以二者不能同时存在，但是可以在`[]`处添加`const`，此种情况是可以并存的，因为两者的`signature`已经不同。
+
+```cpp
+double imag(const double& im) [] {...}
+double imag(const double& im) [] {...} // ambiguity
+```
+
+**虚函数/虚指针**
+
+无论有多少个虚指针，在类中都是占用4个字节(一个指针指向另外一个地址)。
+
+#### 容器
+
+**squence containers**
+
+array，vector，deque，list(双向环链表)，forward_list(单向链表)
+
+**associative containers**
+
+set/multiset、map/multimap
+
+底层为红黑树实现
+
+
+**unordered containers**
+
+unordered set/multiset、unordered map/multimap
+
+底层有哈希表实现
+
+**【教程提前结束，更多的内容将会在本人阅读《STL源码剖析》时，同步更新学习笔记】**
