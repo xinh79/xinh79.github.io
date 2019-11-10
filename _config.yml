@@ -108,10 +108,13 @@ page-mathjax: false
 # Friends
 friends: [
     {
-        title: "这是我的荒原",
-        href: "https://xinh79.github.io/404.html"
+        title: "个人简历",
+        href: "https://xinh79.github.io/my_CV.html"
     },{
         title: "可以放你的主页哦~",
         href: "https://xinh79.github.io"
+    },{
+        title: "这是我的荒原",
+        href: "https://xinh79.github.io/404.html"
     }
 ]
