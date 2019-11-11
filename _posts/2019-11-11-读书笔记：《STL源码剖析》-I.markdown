@@ -1,0 +1,188 @@
+---
+layout:      post
+title:       "读书笔记：《STL源码剖析》-I"
+subtitle:    "The Annotated STL Sources(using SGI STL)"
+author:      "Ashior"
+header-img:  "img/ReadNotes/bg-Cpp-STL.jpg"
+catalog:     true
+tags:
+  - C++
+  - STL
+  - 读书笔记
+---
+
+> 此篇章为《STL源码剖析》的读书笔记。对应于[C++高级教程-前导篇](https://xinh79.github.io/2019/11/09/C++%E6%95%99%E7%A8%8B-%E4%BE%AF%E6%8D%B7/) 在需要作出解释的地方，我会添加相应的注释，结合视频学习，与笔者的知识储备。如果有任何错误，或者疑虑，请发送邮件至`ashior@qq.com`。
+
+[TOC]
+
+----
+
+## 导论
+
+#### STL六大组件
+
+1. 容器(containers)：各种数据结构，如`vector`，`list`，`deque`，`set`，`map`，用来存放数据。
+2. 算法(algorithms)：各种常见的算法如`sort`，`search`，`copy`，`erase`等。
+3. 迭代器(iterators)：一种将`operator*`，`operator->`，`operator++`，`operator--`等指针相关操作予以重载的`class template`。
+4. 仿函数(functors)：一种重载了`operator()`的`class`或`class template`。一般函数指针可以视为狭义的仿函数。
+5. 配接器(adapters)：用来修饰容器或者仿函数或迭代器接口的东西。诸如`queue`和`stack`，其实只能算是一种容器配接器，因为他们的底部完全借助`deque`。
+6. 配置器(allocators)：实现了动态空间配置、空间管理、空间释放的`class template`。
+
+![1-1](https://pic3.zhimg.com/80/v2-a6b208633e2107a3fc19480ca47f2236_hd.jpg)
+
+#### 阅读前的知识储备
+
+**临时对象的产生与运用**
+
+**静态常量整数成员在class内部直接初始化**
+
+in-class static constant **integer** initialization
+
+如果class内含有const static integerdata member，我们可以在class之内，直接给予初值。所谓的**integer**泛指所有整数型别，不单指`int`。
+
+**注意：**static类型的数据在声明之后，应该在类外进行定义(初始化)。
+
+**increment/decrement/dereference 操作符**
+
+`increment/decrement`：迭代器必须能够移动(`operator++`)
+
+`dereference`：取值操作(`operator*`)
+
+**前闭后开区间表示法[)**
+
+任何一个STL算法， 都需要获得由一对迭代器(泛型指针)所标示的区间，用意标示操作范围。以`[first, last)`表示。
+
+![1-2](https://pic1.zhimg.com/80/v2-f760e794f5a704dbc5ab76b0ae3ed62c_hd.jpg)
+
+**function call操作符(operator())**
+
+e.g.
+
+```cpp
+#include <iostream>
+using namespace std;
+
+// 由于将operator()重载，因此plus成了一个仿函数
+template<class T>
+struct plus {
+	T operator() (const T& x, const T& y) const { return x + y; }
+}
+
+// 由于将operator()重载，因此minus成了一个仿函数
+template<class T>
+struct minus {
+	T operator() (const T& x, const T& y) const { return x - y; }
+}
+
+int main()
+{
+	// 以下产生仿函数
+	plus<int> plusobj;
+	minus<int> minusobj;
+	
+	// 以下使用仿函数，就像使用一般函数一样
+	cout << plusobj(3, 5) << endl;  // 8
+	cout << minusobj(3, 5) << endl; // -2
+	
+	// 以下直接产生仿函数的临时对象(第一对小括号)，并调用之(第二队小括号)
+	cout << plus<int>()(43, 50) << endl;  // 93
+	cout << minus<int>()(43, 50) << endk; // -7
+}
+
+```
+
+上述的`plus<T>`和`minus<T>`已经非常接近STL的实现，唯一的差别在于它缺乏“可配接能力”。在以后的章节，我们会继续探讨。
+
+**注意：**此篇对应于原书第一章，内容为看懂书籍的前置条件，阅读本书之前，最好是有相关的C++基础，同时对上述的内容能够有一定的了解，方便后续学习。
+
+----
+
+## 空间配置器(allocator)
+
+为什么不说allocator是内存配置器而说它是空间配置器呢？因为空间不一定是内存，空间也可以是磁盘或其他辅助存储介质。
+
+#### 空间配置器的标准接口
+
+在[网站](http://www.cplusplus.com/reference/memory/allocator/) 中给出了allocator的介绍，下图为部分截图，阐述其原型设计。
+
+![2-1](https://pic2.zhimg.com/80/v2-00d2ed8942f56815490ba4a37a0b2221_hd.jpg)
+
+#### SGI特殊的空间配置器
+
+SGI STL 的配置器与众不同，也与标准规范不同，其名称是alloc而非allocator，而且不接受任何参数。换句话说，如果你要在程序中明白采用SGI配置器，则不能采用标准写法：
+
+```cpp
+vector<int, std::allocator<int> iv; // in VC or CB
+vector<int, std::alloc> iv;         // in GCC
+```
+
+SGI STL 的每一个容器都已经指定其缺省的空间配置器为alloc。例如下面的vector声明：
+
+```cpp
+template <class T, class Alloc = alloc> //缺省使用alloc为配置器
+class vector { ... };
+```
+
+使用临时对象分配/释放内存。
+
+```cpp
+// 分配512bits
+int* p = allocator<int>().allocator(512, (int*)0);
+// 释放512bits
+allocator<int>().deallocate(p, 512);
+```
+
+allocator只时基层内存配置/释放行为(也就是`::operator new`和`::operator delete`)的一层薄薄的包装。**而实际上前者也是调用C语言的`malloc()`，这每次调用都会产生额外的空间，后者调用C语言的`free()`**。一般而言，我们使用C++内存配置操作和释放操作为：
+
+```cpp
+class Foo { ... };
+Foo *pf = new Foo;   // 配置内存，然后构造对象
+delete pf;           // 将对象析构，然后释放内存
+```
+
+其中new算式内含两阶段操作：1.调用`::operator new`配置内存；2.调用`Foo::Foo()`构造对象内容。
+delete算式也包含两阶段操作：1.调用`~Foo::Foo()`将对象析构；2.调用`::operator delete`释放内存。
+
+为了细化分工，STL allocator将两阶段操作区分开来。内存配置操作由`alloc::allocate()`负责，内存释放操作由`alloc::deallocate()`负责；对象构造操作由`::construct`负责，对象析构操作由`::destroy()`负责。
+
+**construct()和destroy()**
+
+![2-2](https://pic1.zhimg.com/80/v2-d65aea2ad2546c5318c2d240cd90fa10_hd.jpg)
+
+`construct()`接受一个指针p和一个初值value，该函数的用途就是将初值设定到指针所指的空间上。
+
+`destroy()`第一个版本接受一个指针，准备将指针所指之物析构掉，直接调用该对象的析构函数。第二个版本为接收一个区间`[first, last)`，将区间范围内的所有对象析构掉。
+
+`trivial destructor`表示对象的析构函数都无关痛痒，如果区间一大，析构这些函数又无关痛痒，所以十分消耗资源。因为通过`value_type()`获得迭代器所指对象的型别，再利用`__type_traits<T>`判断该型别的析构函数是否无关痛痒。具体如何判断以后再说。
+
+考虑到小型区块所可能造成的内存破碎问题，SGI设计了双层级配置器，第一级配置器直接使用`malloc()`和`free()`，第二级配置器则视情况采用不用的策略(需求区块是否大于128bytes)。
+
+![2-3](https://pic1.zhimg.com/80/v2-d2d8d234d851d049766fabecd02b1f50_hd.jpg)
+
+![2-4](https://pic2.zhimg.com/80/v2-35d3720442687636529c385a4a0d0b7d_hd.jpg)
+
+第一级适配器以`malloc()`，`free()`，`reaclloc()`等C函数执行实际的内存配置、释放、重配置操作。第二级配置器多了一些机制，避免太多小额区块造成内存的碎片。
+
+![2-5](https://pic3.zhimg.com/80/v2-bc75ebdf576814ef6c4bbbd25b4d7b4a_hd.jpg)
+
+SGI第二级配置器的做法是，如果区块够大，超过128字节时，就移交第一级配置器处理。当区块小于128字节时，则以内存池(memory pool)管理，此法又称为次层配置(sub-allocation)：每次配置一大块内存，并维护对应的自由链表(free-list)。下次若再有相同大小的内存需求，就直接从free-lists中拔出。如果没有，则向系统要一大块内存，然后做切割，此时切割出来的小内存块，不带cookie。如果客户端释放小额区块，就由配置器回收。为方便管理，任何小额区块的内存需求量上调至8的倍数，并维护16个free-lists，各自管理大小分别为8,16,24...128字节。
+
+![2-6](https://pic2.zhimg.com/80/v2-93d317e09e01df6bcb963838fa60a88d_hd.jpg)
+
+在G4.9中编译器使用的是不作任何优化的空间配置器，如果需要制定，则需要指明第二参数：
+
+```cpp
+vector<string, __gnu_cxx::__pool_alloc<string>> vec;
+```
+
+如果free-list中没有可用的区块，将区块大小上调至8的倍数边界，然后调用`refill()`，准备为free-list重新填充空间。`refill()`之后介绍。
+
+空间的释放，大于128字节就调用第一级配置器，小于128字节就找出对应的free list，将区块回收。
+
+![2-7](https://pic4.zhimg.com/80/v2-d3f07bb1aca202e16ac6cb7dca59b173_hd.jpg)
+
+`refill()`重新填充空间，新的空间将取自内存池(经由`chunk_alloc()`完成)。内存池实际操练结果如下图：
+
+![2-8](https://pic2.zhimg.com/80/v2-d453960c4d8bdc4606cc374a53738295_hd.jpg)
+
+![2-9](https://pic4.zhimg.com/80/v2-22d8fc5e26fc9cdc8386f3dd277bccc3_hd.jpg)
