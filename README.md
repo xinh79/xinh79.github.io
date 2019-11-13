@@ -4,11 +4,11 @@
 
 更多关于我的信息请查看[我的博客](https://xinh79.github.io/about/)
 
-![home_page](https://github.com/xinh79/xinh79.github.io/tree/master/img/home_page.png)
+![home_page](https://raw.githubusercontent.com/xinh79/xinh79.github.io/master/img/home_page.png)
 
 我的[个人简历](https://xinh79.github.io/my_CV.html)
 
-![my_CV](https://github.com/xinh79/xinh79.github.io/tree/master/img/my_CV.png)
+![my_CV](https://raw.githubusercontent.com/xinh79/xinh79.github.io/master/img/my_CV.png)
 
 # 你能得到什么
 
