@@ -1,0 +1,189 @@
+---
+layout:      post
+title:       "读书笔记：《STL源码剖析》-II"
+subtitle:    "The Annotated STL Sources(using SGI STL)"
+author:      "Ashior"
+header-img:  "img/ReadNotes/bg-Cpp-STL.jpg"
+catalog:     true
+tags:
+  - C++
+  - STL
+  - 读书笔记
+---
+
+> 此篇章为《STL源码剖析》的读书笔记。对应于[读书笔记：《STL源码剖析》-I](https://xinh79.github.io/2019/11/11/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0-STL%E6%BA%90%E7%A0%81%E5%89%96%E6%9E%90-I/) 在需要作出解释的地方，我会添加相应的注释，结合视频学习，与笔者的知识储备。如果有任何错误，或者疑虑，请发送邮件至`ashior@qq.com`。
+
+[TOC]
+
+----
+
+## 迭代器
+
+STL中心思想在于将数据容器（containers）和算法（algorithms）分开，彼此独立设计，最后再以迭代器撮合在一起。
+
+#### iterator是一种智能指针
+
+迭代器是一种行为类似于指针的对象。最重要的操作就是内容提领（deference）和成员访问（member access），因此，迭代器最重要的编程工作就是对`operator*`和`operator->`进行重载工作。`auto_ptr`用来包装原生指针（native pointer）的对象，声名狼藉的内存泄露（memory leak）问题可藉此获得解决。`auto_ptr`用法如下，和原生指针一模一样：
+
+```cpp
+void fun {
+	auto_ptr<string> ps(new string("yellow"));
+	cout << *ps << endl;
+	cout << ps->size() << endk;
+} // 离开不需要delete，auto_ptr会自动释放内存
+```
+
+**偏特化：**针对任何template参数更进一步的条件限制所设计出来的一个特化版本。
+
+```cpp
+template<typename T>
+class C {...};  // 这个泛化版本允许（接受）T为任何型别
+
+template<typename T>
+class C<T*> {...};
+// 这个特化版本仅适用于“T为原生指针”的情况
+// “T为原生指针”便是“T为任何型别”的一个更进一步的条件限制
+```
+
+#### traits
+
+萃取迭代器的特性，除了value type，还有四种不同的迭代器类型：
+
+**difference type**：表示两个迭代器之间的距离、**pointer**、**reference**、**iterator catagoly**：分类
+
+**由于指针是一种退化的类型，不能直接萃取出来**所以引入`iterator_traits<I>`。
+
+结合偏特化可以区分`pointer to (const) T`，原生指针`int*`虽然不是一种class type，亦可以通过traits取出value type。同样的，当迭代器是一个`pointer-to-const`时，我们可以通过偏特化萃取出其value type，而不是const value type。
+
+![3-1](https://pic3.zhimg.com/80/v2-a5fc7217f9feb577975cef909997fa3e_hd.jpg)
+
+```cpp
+template<class T>
+struct iterator_traits<T*> {
+	typedef T value_type;
+};
+template<class T>
+struct iterator_traits<const T*> {
+	typedef T value_type; // 注意是T而不是const T
+};
+```
+
+value type的主要目的是用来声明变量，而声明一个**无法被赋值**的变量没有什么用处，所以iterator不在加上const。
+
+设计适当的相应型别（associated types），是**迭代器的责任**。设计适当的迭代器，则是**容器的责任**，唯容器本身知道什么样的迭代器来遍历自己，并执行迭代器该有的各种行为。
+
+----
+
+## 序列式容器
+
+![4-1](https://pic4.zhimg.com/80/v2-27ec0a586ad6de844c3b143d62508033_hd.jpg)
+
+这里的衍生关系并非派生，而是内含关系（复合）。
+
+**注意**：在C++11中，slist改名为forward_list，而hash_set等四个改名为unordered_set等四个。
+
+#### vector
+
+vector的实现技术关键在于其对大小的控制以及重新配置时的数据移动效率。
+
+vector所采用的数据结构非常简单：线性连续空间。它以两个迭代器start和finish分别指向配置得来的连续空间中目前已被使用的范围，并以迭代器end_of_storage指向整块连续空间(含备用空间)的尾端：
+
+```cpp
+template <c1ass T, class Alloc = alloc>
+class vector {
+...
+protected:
+	iterator start;          //表示目前使用空间的头
+	iterator finish;         //表示目前使用空间的尾
+	iterator end_of_storage; //表示目前可用空间的尾
+...
+}
+```
+
+为了降低空间配置时的速度成本，vector实际配置的代销可能比客户端需求量更大一些，这便是容量（capacity）的观念。
+
+![4-2](https://pic3.zhimg.com/80/v2-d206294fbf5501789ffa7b11d62ddc4a_hd.jpg)
+
+容量的扩充必须经历重新配置、元素移动、释放原空间等过程。
+
+所谓动态增加大小，并不是原空间之后接续新空间（因为无法保证原空间之后尚有可供配置的空间），而是以原大小的**两倍**另外配置一块较大空间，然后将原内容拷贝过来，然后才开始在原内容之后构造新元素，并释放原空间。
+
+注意：因为这个特性，一旦引起空间重新配置，指向原vector的所有迭代器就都失效了。
+
+#### list
+
+相较于vector的连续线性空间，list就相对复杂，它的好处是每次插入或删除一个元素，就配置和释放一个元素空间。因此，list对于空间的运用有绝对的精准，一点也不浪费。同样，list的插入（insert）和接合（splice）都不会造成原有list迭代器失效。
+
+![4-3](https://pic4.zhimg.com/80/v2-60ad0e6ebdceaec8ca9b6d93e9e4a8c7_hd.jpg)
+
+**list迭代器**：list不能像vector一样，使用普通指针作为迭代器，因为节点不保证在存储空间中连续存在。同样，使用`operator++`操作应该指向下一个节点，即，为`next`指针所指向的节点。因此，此时的迭代器必须是class。
+
+![4-4](https://pic4.zhimg.com/80/v2-18577a74e9a7d1979df9908794d43843_hd.jpg)
+
+**list数据结构**：环状双向链表。环状链表只需要一个标记，即可完全表示整个链表。只要刻意在环状链表的尾端加上一个空白节点，这样就符合“前闭后开”区间。
+
+#### array/forward_list
+
+直接分配一个数组，没有ctor和dtor，主要是为了复合标准库的要求，以便能够使用标准库中的算法。
+
+单向链表同理。
+
+#### deque 
+
+vector是单向开口连续线性空间，deque则是一种双向开口连续线性空间。
+
+![4-5](https://pic4.zhimg.com/80/v2-c81a1a7e6d172cdabdd39ce83598460f_hd.jpg)
+
+下图是map和node-buffer（节点-缓冲区）之间的关系
+
+![4-6](https://pic1.zhimg.com/80/v2-b2000de76609ed46f8f1379eaaaa1d2c_hd.jpg)
+
+**迭代器**：下图是deque的中控器、缓冲区、迭代器的相互关系
+
+![4-7](https://pic3.zhimg.com/80/v2-3ef392e6da4d9a25e34feda8a1684b5e_hd.jpg)
+
+每次cur指针执行移动操作时，都需要判断是否移动到边界，如果移动到末尾，则需要将指针移动到相邻的下一个缓冲区的首部。让用户觉得这是一个连续的空间。
+
+由于迭代器是一个内，其中包含有cur、first、last、node四个指针，而node则是指向主控器的指针，所以通过node指针，可以获得下一个“连续空间”的主控器节点位置，然后通过这个指针所指向的位置，即为下一个缓冲区的首部。
+
+**deque的中控器**：deque是有一段一段的定量连续空间构成。一旦有必要在deque的前端或尾端增加新空间，便配置一段定量连续空间，串接在整个deque的头端或尾端。deque的最大人物，便是在这些分段的定量连续空间上，维护其整体连续的假象，并提供随机存取的接口。避开了“重新配置、复制、释放”的轮回，代价则是复杂的迭代器架构。
+
+注意：主控器容量不够时，同vector一样，两倍成长。copy到新地址的中端，以方便左右增长。
+
+deque采用map作为主控，这里的map是指一小块连续的空间，其中每一个元素都是指针，指向另一段较大的连续线性空间，称为缓冲区。
+
+![4-8](https://pic3.zhimg.com/80/v2-afd7f2ae972052f9a5489c9c804d588a_hd.jpg)
+
+当要往前面添加元素，需要扩充的时候，**主控器左边**再开辟一个空间，往外连接即可。
+
+一个deque对象包含四个成员变量，_M_map指向主控器，_M_map_size表示中控器的大小，能够容纳多少个指针，_M_start表示deque的迭代器，所有元素的起始位置，_M_finish表示deque的迭代器，所有元素的终止位置。
+
+**deque的insert操作**：首先判断插入的地方是头或者尾，如果都不是则在调用一个名为`insert_aux`的辅助函数。此辅助函数通过判断当前的插入位置更靠近头端或者尾端。
+
+**deque的+=操作**：首先判断是否在同一级缓冲区区域，如果不在，在确定应该夸几个缓冲区，然后到相应的缓冲区后，再移动。
+
+#### stack/queue
+
+以deque为底部结构并封闭其头端开口，便轻易的形成了一个stack。由于stack由底部容器完成其所有的工作，而具有这种“修改某物接口，形成另一种风貌”之性质者，成为adapter（配接器），所以，stack往往不被归类为container（容器），而被称为container adapter。
+
+queue同理。stack和queue都可以选择list或deque作为底层结构。
+
+#### priority queue/heap
+
+heap，一个隐式表述，implicit representation。
+
+priority queue允许用户以任何次序将任何元素推入容器内，但取出时，一定是从优先权最高（也就是数值最高）的元素开始取。binary max heap正是具有这样的特性，适合作为priority queue的底层机制。
+
+binary heap是一个complete binary tree（完全二叉树），也就是说，整颗binary tree除了最底层的叶子节点之外，是填满的，而最底层的叶子节点由左至右又不得有空隙。
+
+max-heap的最大值在根节点，总是位于底层array或vector的起头处：min-heap的最小值在根节点，亦总是位于底层array或vector的起头处。
+
+
+**push_heap算法**：执行上溯（percolate up）过程：将新节点拿来与父节点比较，如果其键值比父节点大，就父子对换位置。如此一直上溯，直到不需要对换或到根节点位置。
+
+![4-9](https://pic4.zhimg.com/80/v2-a1554365f0498c1ea0c2185253fbba63_hd.jpg)
+
+**pop_heap算法**：执行下溯（percolate down）过程：将空间节点和其较大子节点“对调”，并持续下放，直到叶节点为止。然后将前述被割舍之元素值设置给这个“已到达叶层的空洞节点”，再对它执行一次上溯（percolate up）过程。
+
+![4-10](https://pic1.zhimg.com/80/v2-c5c844bba3c4b4a24ae80d35e8ac48c8_hd.jpg)
+
