@@ -55,7 +55,7 @@ class C<T*> {...};
 
 结合偏特化可以区分`pointer to (const) T`，原生指针`int*`虽然不是一种class type，亦可以通过traits取出value type。同样的，当迭代器是一个`pointer-to-const`时，我们可以通过偏特化萃取出其value type，而不是const value type。
 
-![3-1](https://pic3.zhimg.com/80/v2-a5fc7217f9feb577975cef909997fa3e_hd.jpg)
+![3-1](https://pic2.zhimg.com/80/v2-a5fc7217f9feb577975cef909997fa3e_hd.jpg)
 
 ```cpp
 template<class T>
@@ -140,7 +140,7 @@ vector是单向开口连续线性空间，deque则是一种双向开口连续线
 
 **迭代器**：下图是deque的中控器、缓冲区、迭代器的相互关系
 
-![4-7](https://pic3.zhimg.com/80/v2-3ef392e6da4d9a25e34feda8a1684b5e_hd.jpg)
+![4-7](https://pic2.zhimg.com/80/v2-3ef392e6da4d9a25e34feda8a1684b5e_hd.jpg)
 
 每次cur指针执行移动操作时，都需要判断是否移动到边界，如果移动到末尾，则需要将指针移动到相邻的下一个缓冲区的首部。让用户觉得这是一个连续的空间。
 
@@ -152,7 +152,7 @@ vector是单向开口连续线性空间，deque则是一种双向开口连续线
 
 deque采用map作为主控，这里的map是指一小块连续的空间，其中每一个元素都是指针，指向另一段较大的连续线性空间，称为缓冲区。
 
-![4-8](https://pic3.zhimg.com/80/v2-afd7f2ae972052f9a5489c9c804d588a_hd.jpg)
+![4-8](https://pic4.zhimg.com/80/v2-afd7f2ae972052f9a5489c9c804d588a_hd.jpg)
 
 当要往前面添加元素，需要扩充的时候，**主控器左边**再开辟一个空间，往外连接即可。
 
