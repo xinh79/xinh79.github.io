@@ -90,11 +90,11 @@ fill_n(inserter(iv, iv.begin()), 5, 7);
 
 #### copy
 
-![6-2]()
+![6-2](https://pic2.zhimg.com/80/v2-6ad3ef4cf107f7efd07032307241452d_hd.jpg)
 
 copy算法是一一进行元素赋值操作，如果输出区间的起点位于输入区间内，copy算法便可能会在输入区间的某些元素尚未被复制之前，就覆盖其值，导致错误结果。
 
-![6-3]()
+![6-3](https://pic4.zhimg.com/80/v2-b3b354af7fd81c5f3a3f72e0cbbad5af_hd.jpg)
 
 如果copy算法根据接收的迭代器的特性决定调用`memmove()`来执行任务，就不会造成上述错误，因为`memmove()`会先将整个输入区间的内容复制下来，没有被覆盖的危险。
 
@@ -106,7 +106,7 @@ copy更改的是`[result, result+(last-first))`中的迭代器所指对象，而
 
 将区间`[first, last)`内的每一个元素，以逆行的方向复制到以result-1为起点，方向亦为逆行的区间上。
 
-![6-4]()
+![6-4](https://pic4.zhimg.com/80/v2-90251075ae97c5e6659002fcae70646b_hd.jpg)
 
 ----
 
@@ -122,7 +122,7 @@ unordered_set与unordered_multiset底层以hashtable为实现机制，其内的�
 
 由于S1，S2内的每一个元素都不需要唯一，因此，如果某个值在S1中出现n次，在S2中出现m次，那么该值在输出区间中会出现max(m,n)次，其中n个来自S1，其余的来自S2。同样，此方法提供两个两个版本，一个是使用`operator<`进行比较，第二个版本是采用仿函数comp进行比较。set_union是一种稳定的操作。
 
-![6-5a]()
+![6-5a](https://pic1.zhimg.com/80/v2-fb519cd2dcd67bab4261c0ac527594b0_hd.jpg)
 
 #### set_intersection
 
@@ -130,7 +130,7 @@ unordered_set与unordered_multiset底层以hashtable为实现机制，其内的�
 
 由于S1，S2内的每一个元素都不需要唯一，因此，如果某个值在S1中出现n次，在S2中出现m次，那么该值在输出区间中会出现min(m,n)次，并且全部来自于S1。同样，此方法提供两个两个版本，一个是使用`operator<`进行比较，第二个版本是采用仿函数comp进行比较。set_union是一种稳定的操作。
 
-![6-5b]()
+![6-5b](https://pic1.zhimg.com/80/v2-a8776cf95b1142ad30dcb70d9766a618_hd.jpg)
 
 #### set_difference
 
@@ -138,7 +138,7 @@ unordered_set与unordered_multiset底层以hashtable为实现机制，其内的�
 
 由于S1，S2内的每一个元素都不需要唯一，因此，如果某个值在S1中出现n次，在S2中出现m次，那么该值在输出区间中会出现min(n-m, 0)次，并且全部来自于S1。同样，此方法提供两个两个版本，一个是使用`operator<`进行比较，第二个版本是采用仿函数comp进行比较。set_union是一种稳定的操作。
 
-![6-5c]()
+![6-5c](https://pic4.zhimg.com/80/v2-a3c403685a2c406da4766310172ffe2b_hd.jpg)
 
 #### set_symmetric_difference
 
@@ -146,7 +146,7 @@ unordered_set与unordered_multiset底层以hashtable为实现机制，其内的�
 
 由于S1，S2内的每一个元素都不需要唯一，因此，如果某个值在S1中出现n次，在S2中出现m次，那么该值在输出区间中会出现`|n-m|`次。如果`n > m`，输出区间内的最后n-m个元素将由S1复制而来，如果`n < m`则输出区间内的最后m-n个元素将由S2复制而来。同样，此方法提供两个两个版本，一个是使用`operator<`进行比较，第二个版本是采用仿函数comp进行比较。set_union是一种稳定的操作。
 
-![6-5d]()
+![6-5d](https://pic1.zhimg.com/80/v2-18bc529a3deea547c0c3cfb3b6f52d4c_hd.jpg)
 
 ----
 
@@ -220,7 +220,7 @@ includes(S1.begin(), S1.end(), S2.begin(), S2.end(), less<int>());
 includes(S1.begin(), S1.end(), S2.begin(), S2.end(), greater<int>());
 ```
 
-![6-6b]()
+![6-6b](https://pic1.zhimg.com/80/v2-2fbc97e7f48179be15ee394c7e552904_hd.jpg)
 
 **max_element/min_element**
 
@@ -230,7 +230,7 @@ includes(S1.begin(), S1.end(), S2.begin(), S2.end(), greater<int>());
 
 将两个经过排序的集合S1和S2，合并起来置于另外一段空间。所得的结果也是一个有序序列。返回一个迭代器，指向最后结果序列的最后一个元素的下一个位置。
 
-![6-6c]()
+![6-6c](https://pic2.zhimg.com/80/v2-0cd426796dc97ca9aecedb290f14f10d_hd.jpg)
 
 **partition**
 
@@ -238,13 +238,13 @@ partition会将区间`[first, last)`中的元素重新排列。所有被一元�
 
 如果将仿函数设定为是否为偶数时，算法运行如下：
 
-![6-6d]()
+![6-6d](https://pic4.zhimg.com/80/v2-b17b6404100d48c096c61644c4100ba7_hd.jpg)
 
 **remove移除（但不删除）**
 
 移除`[first, last)`之中所有与value相等的元素。这一算法并不是真正从容器中删除那些元素，而是将每一个不与value相等的元素轮番赋值给first之后的空间。如序列`{0,1,0,2,0,3,0,4}`移除所有0元素，执行结果为：`{1,2,3,4,0,3,0,4}`。如果要删除那些残余数据，可将返回的迭代器交给区间所在之容器的erase()。由于array无法缩小尺寸，所以不适用remove()和remove_if()。更多的是使用remove_copy()和remove_copy_if()。
 
-![6-6e]()
+![6-6e](https://pic3.zhimg.com/80/v2-73a552b53f12bea13accc574fd13c5ce_hd.jpg)
 
 **reverse**
 
@@ -256,11 +256,11 @@ partition会将区间`[first, last)`中的元素重新排列。所有被一元�
 
 rotate forward iterator版操作示意：
 
-![6-6h]()
+![6-6h](https://pic3.zhimg.com/80/v2-207e38f5f6c35f6b0b747fa4d6b17aaa_hd.jpg)
 
 rotate bidirectional iterator版操作示意
 
-![6-6i]()
+![6-6i](https://pic1.zhimg.com/80/v2-2653fea0db9623c4cad28ae3df361d98_hd.jpg)
 
 **unique**
 
@@ -274,7 +274,7 @@ rotate bidirectional iterator版操作示意
 
 应用于有序区间，试图在已排序的`[first, last)`区间中寻找元素value。如果`[first, last)`具有与value相等的元素，便返回一个迭代器，指向其中第一个元素。如果没有这样的元素存在，便返回“假设这样的元素存在时应该出现的位置”。也就是说它会返回一个迭代器，指向第一个“不小于value”的元素。如果value大于`[first, last)`内的任何一个元素，则返回last。在不破坏排序状态的原则下，可插入value的第一个位置。而对于upper_bound，则是返回在不破坏排序状态的原则下，可插入value的最后一个合适位置。
 
-![6-7]()
+![6-7](https://pic1.zhimg.com/80/v2-7f0585319e85abbdb224a87b57c1a454_hd.jpg)
 
 **binary_search**
 
