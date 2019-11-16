@@ -1,0 +1,311 @@
+---
+layout:      post
+title:       "读书笔记：《STL源码剖析》-IV"
+subtitle:    "The Annotated STL Sources(using SGI STL)"
+author:      "Ashior"
+header-img:  "img/ReadNotes/bg-Cpp-STL.jpg"
+catalog:     true
+tags:
+  - C++
+  - STL
+  - 读书笔记
+---
+
+> 此篇章为《STL源码剖析》的读书笔记。对应于[读书笔记：《STL源码剖析》-III](https://xinh79.github.io/2019/11/13/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0-STL%E6%BA%90%E7%A0%81%E5%89%96%E6%9E%90-III/) 在需要作出解释的地方，我会添加相应的注释，结合视频学习，与笔者的知识储备。如果有任何错误，或者疑虑，请发送邮件至`ashior@qq.com`。
+
+[TOC]
+
+----
+
+质变算法是指运算过程中会改变区间内（迭代器所指）的元素内容。诸如拷贝（copy）、互换（swap）、替换（replace）、填写（fill）、删除（remove）、排列组合（permutation）、分割（partition）、随机重排（random shuffling）、排序（sort）等算法。
+
+对应的非质变算法是指在运算过程中不会更改区间内（迭代器所指）的元素内容。诸如查找（find）、匹配（search）、计数（count）、巡访（for_each）、比较（equal，mismatch）寻找极值（max、min）等算法。
+
+## 数值算法
+
+#### accumulate
+
+算法`accumulate`用来计算`init`和区间`[first, last)`内所有元素的总和。注意，一定需要提供一个初始值`init`，即便是区间所指内容为空时也能返回一个确定有意义的数值，而非一个随机数。当`init`为0时，即求解区间内的所有数之和。
+
+```cpp
+int ia[5] = { 1, 2, 3, 4, 5 };
+vector<int> iv(ia, ia+5);
+cout << accumulate(iv.bengin(), iv.end(), 0) << endl;
+// 15,  i.e. 0+1+2+3+4+5
+cout << accumulate(iv.bengin(). iv.end(), 0, minus<int>()) << endl;
+// -15, i.e. 0-1-2-3-4-5
+```
+
+#### adjacent_difference
+
+算法`adjacent_difference`用来计算区间`[first, last)`中相邻元素的差额。也就是说，它将`*first`赋值给`*result`，并针对`[first, last)`内的每个迭代器i，将`(i-*(i-1)`之值赋值给`*(result+(i-first))`。
+
+`adjacent_difference`是存储第一元素之值，然后储存后继元素之差值。这么做可以有足够的信息重建输入区间的原始内容。如果对区间值`1,2,3,4,5`执行`adjacent_difference`操作，得到的结果是`1,1,1,1,1`。（`adjacent_difference`和`partial_sum`互为逆运算，所以对此结果再次执行`partial_sum`时，便会获得原始区间值`1,2,3,4,5`）
+
+#### inner_product
+
+算法`inner_product`是能够计算区间`[first1, last1)`和区间`[first2, first2 + (last1 - first1))`的一般内积。同样需要提供一个明确的`init`值。
+
+```cpp
+int ia[5] = { 1, 2, 3, 4, 5 };
+vector<int> iv(ia, ia+5);
+cout << inner_product(iv.begin(), iv.end(), iv.begin(), 10) << endl;
+// 65,  i.e. 10 + 1*1 + 2*2 + 3*3 + 4*4 + 5*5
+cout << inner_product(iv.begin(), iv.end(), iv.begin(), 10, minus<int>(), plus<int>()) << endl;
+// -20, i.e. 10 - 1+1 - 2+2 - 3+3 - 4+4 - 5+5
+```
+
+#### partial_sum
+
+算法`partial_sum`用来计算局部总和。本算法返回输出区间的最尾端位置：`result+(last-first)`。
+
+如果对区间`1,2,3,4,5`执行`partial_sum`，获得的结果为：`1,3,6,10,15`，再对此结果执行`adjacent_difference`就会得到原始区间：`1,2,3,4,5`。
+
+----
+
+## 基本算法
+
+#### equal
+
+如果两个序列在区间`[first1, last1)`内相等，`equal()`返回true。如果第二序列的元素比较多，则不予以考虑。根据源码，如果第二序列比第一序列的元素烧，则会超越序列的尾端，造成不可预测的结果。
+
+#### fill
+
+将区间`[first1, last1)`内的所有元素都改填指定的新值。
+
+#### fill_n
+
+将区间`[first1, last1)`内的前n个元素改填指定的新值，返回的迭代器指向被填入的最后一个元素的下一个位置。如果n超越了容器的大小，由于每次迭代执行的是一个`assignment`操作，是一个覆写（overwrite）操作，所以一旦操作超越了容器大小，就会造成不可预期的结果。解决办法之一是，利用`inserter()`产生的一个具有插入而非覆写能力的迭代器。`inserter()`可产生一个用来修饰迭代器的配接器。
+
+```cpp
+int ia[3] = { 0, 1, 2 };
+vector<int> iv(ia, ia+3);
+fill_n(inserter(iv, iv.begin()), 5, 7);
+// 7 7 7 7 7 0 1 2
+```
+
+#### mismatch
+
+用来平行比较两个序列，之处两者之间的第一个不匹配点。返回一个迭代器，分别指向两序列中的不匹配的点。如果两个序列相等，则返回的是两个序列各自的last迭代器。如果第二序列更长，则多出的部分被忽略，如果更短，则会发现不可预知的错误。
+
+#### copy
+
+![6-2]()
+
+copy算法是一一进行元素赋值操作，如果输出区间的起点位于输入区间内，copy算法便可能会在输入区间的某些元素尚未被复制之前，就覆盖其值，导致错误结果。
+
+![6-3]()
+
+如果copy算法根据接收的迭代器的特性决定调用`memmove()`来执行任务，就不会造成上述错误，因为`memmove()`会先将整个输入区间的内容复制下来，没有被覆盖的危险。
+
+如果使用vector取代deque进行测试，复制结果将是正确的，因为vector迭代器其实是个原生指针，这导致调用的copy算法以`memmove()`执行实际复制操作。
+
+copy更改的是`[result, result+(last-first))`中的迭代器所指对象，而非更改迭代器本身，他会为输出区间内的元素赋予新值，而不是产生新的元素。他不能改变输出区间的迭代器个数。换句话说，copy不能直接用来将元素插入空容器中。
+
+**copy_backward**
+
+将区间`[first, last)`内的每一个元素，以逆行的方向复制到以result-1为起点，方向亦为逆行的区间上。
+
+![6-4]()
+
+----
+
+## set相关算法
+
+STL一共提供了四种与set（集合）相关的算法，分别是并集（union）、交集（intersection）、差集（difference）、对称差集（symmetric difference）。数学上的set允许元素重复而未经排序，而STL则要求元素不能重复，并且经过排序。本节的四个算法所接受的set，必须是有序区间，元素值得重复出现。也即可以接受STL的set/multiset容器作为输入区间。
+
+unordered_set与unordered_multiset底层以hashtable为实现机制，其内的元素并未呈现出排序状态，所以不可以应用于本节的四个算法。
+
+#### set_union
+
+能够构造出集合`S1 ∪ S2`。S1、S2及并集都是以排序区间表示。返回值为一个迭代器，指向输出区间的尾端。
+
+由于S1，S2内的每一个元素都不需要唯一，因此，如果某个值在S1中出现n次，在S2中出现m次，那么该值在输出区间中会出现max(m,n)次，其中n个来自S1，其余的来自S2。同样，此方法提供两个两个版本，一个是使用`operator<`进行比较，第二个版本是采用仿函数comp进行比较。set_union是一种稳定的操作。
+
+![6-5a]()
+
+#### set_intersection
+
+能够构造出集合`S1 ∩ S2`。S1、S2及并集都是以排序区间表示。返回值为一个迭代器，指向输出区间的尾端。
+
+由于S1，S2内的每一个元素都不需要唯一，因此，如果某个值在S1中出现n次，在S2中出现m次，那么该值在输出区间中会出现min(m,n)次，并且全部来自于S1。同样，此方法提供两个两个版本，一个是使用`operator<`进行比较，第二个版本是采用仿函数comp进行比较。set_union是一种稳定的操作。
+
+![6-5b]()
+
+#### set_difference
+
+能够构造出集合`S1 - S2`。S1、S2及并集都是以排序区间表示。返回值为一个迭代器，指向输出区间的尾端。
+
+由于S1，S2内的每一个元素都不需要唯一，因此，如果某个值在S1中出现n次，在S2中出现m次，那么该值在输出区间中会出现min(n-m, 0)次，并且全部来自于S1。同样，此方法提供两个两个版本，一个是使用`operator<`进行比较，第二个版本是采用仿函数comp进行比较。set_union是一种稳定的操作。
+
+![6-5c]()
+
+#### set_symmetric_difference
+
+能够构造出集合`(S1-S2) ∪ (S2-S1)`，对称差集。出现在S1但不出现于S2中，以及出现在S2但不出现在S1中的数的集合。S1、S2及并集都是以排序区间表示。返回值为一个迭代器，指向输出区间的尾端。
+
+由于S1，S2内的每一个元素都不需要唯一，因此，如果某个值在S1中出现n次，在S2中出现m次，那么该值在输出区间中会出现`|n-m|`次。如果`n > m`，输出区间内的最后n-m个元素将由S1复制而来，如果`n < m`则输出区间内的最后m-n个元素将由S2复制而来。同样，此方法提供两个两个版本，一个是使用`operator<`进行比较，第二个版本是采用仿函数comp进行比较。set_union是一种稳定的操作。
+
+![6-5d]()
+
+----
+
+## 其他算法-低阶
+
+**adjacent_find**
+
+找出第一组满足条件的相邻元素。
+
+**count**
+
+运用equality操作符，将区间`[first, last)`内的每一个元素拿来和指定值value比较，并返回与value相等的元素个数。
+
+**count_if**
+
+将指定操作（一个仿函数）pred实施于区间`[first, last)`内的每一个元素，并将“造成pred之计算结果为true”的所有元素的个数返回。
+
+```cpp
+if (pred(*first))  // 将元素带入pred的运算结果为true
+	++n;           // 计数器累加1
+```
+
+**find**
+
+运用equality操作符，循序查找区间`[first, last)`内的所有元素，找出第一个匹配者。
+
+**find_if**
+
+将指定操作（一个仿函数）pred实施于区间`[first, last)`内的每一个元素，找出第一个令pred运算结果为true者。
+
+**find_end**
+
+在序列`[first1, last1)`所涵盖的区间中，查找序列二`[first2, last2)`的最后一次出现点。如果序列一之内不存在“完全匹配序列二”的子序列，便返回迭代器last1。
+
+**find_last_of**
+
+以`[first2, last2)`区间内的某些元素作为查找目标，寻找他们在`[first1, last1)`区间内的第一次出现地点。例如打算在序列`synesthesia`的第一个元音，我们可以定义第二序列为`aeiou`。此时就会返回指向元音序列中任一元素首次出现于第一序列的地点，此例将指向字符序列的第一个e。如果第一序列并未内含第二序列的任何元素，返回的将是last1。
+
+**for_each**
+
+将仿函数f实施于区间`[first, last)`内的每一个元素身上。f不可以改变元素内容。
+
+**generate**
+
+将仿函数的结果填写在区间`[first, last)`内的所有元素身上。所谓的填写就是用迭代器所指元素之assignment操作符。
+
+```cpp
+tmplate <class ForwardIterator, class Generator>
+void generate(ForwardIterator first, ForwardIterator last, Generator gen) {
+	for ( ; first != last; ++first ) {
+		*first = gen();
+	}
+}
+```
+
+**generate_n**
+
+将仿函数的结果填写在区间`[first, last)`内的前n个元素身上。所谓的填写就是用迭代器所指元素之assignment操作符。
+
+**includes(应用于有序区间)**
+
+判断序列二S2是否涵盖于序列一S1。S1和S2必须是有序集合，其中的元素都可以重复（不必唯一）。所谓涵盖，意思是“S2的每一个元素都出现于S1”。由于判断两个元素是否相等，必须以less或者greater运算为依据（当S1元素不小于S2元素且S2元素不小于S1元素，两者即相等；或说当S1元素不大于S2元素且S2元素不大于S1元素，两者即相等），因此配合着两个序列S1和S2的排序方式（递增或者递减），includes算法可供用户选择采用less或greater进行两元素的比较（comparison）。
+
+如果是S1和S2是递增排序（以`operator<`执行比较操作）：
+
+```cpp
+includes(S1.begin(), S1.end(), S2.begin(), S2.end());
+// 默认的情况就是这种
+includes(S1.begin(), S1.end(), S2.begin(), S2.end(), less<int>());
+// 如果是递减排序（以`operator>`执行比较操作）
+includes(S1.begin(), S1.end(), S2.begin(), S2.end(), greater<int>());
+```
+
+![6-6b]()
+
+**max_element/min_element**
+
+返回一个迭代器，指向序列之中数值最大/小的元素。
+
+**merge**
+
+将两个经过排序的集合S1和S2，合并起来置于另外一段空间。所得的结果也是一个有序序列。返回一个迭代器，指向最后结果序列的最后一个元素的下一个位置。
+
+![6-6c]()
+
+**partition**
+
+partition会将区间`[first, last)`中的元素重新排列。所有被一元条件运算pred判定为true的元素，都会被放在区间的前端，被判定为false的元素，都会被放在区间的后段。这个算法是不稳定的。但是可以实现成稳定版，即stable_partition。
+
+如果将仿函数设定为是否为偶数时，算法运行如下：
+
+![6-6d]()
+
+**remove移除（但不删除）**
+
+移除`[first, last)`之中所有与value相等的元素。这一算法并不是真正从容器中删除那些元素，而是将每一个不与value相等的元素轮番赋值给first之后的空间。如序列`{0,1,0,2,0,3,0,4}`移除所有0元素，执行结果为：`{1,2,3,4,0,3,0,4}`。如果要删除那些残余数据，可将返回的迭代器交给区间所在之容器的erase()。由于array无法缩小尺寸，所以不适用remove()和remove_if()。更多的是使用remove_copy()和remove_copy_if()。
+
+![6-6e]()
+
+**reverse**
+
+将序列`[first, last)`的元素在原容器中颠倒重排。
+
+**rotate**
+
+将`[first, middle)`内的元素和`[middle, last)`内的元素互换。middle所指的元素将会成为容器的第一个元素。
+
+rotate forward iterator版操作示意：
+
+![6-6h]()
+
+rotate bidirectional iterator版操作示意
+
+![6-6i]()
+
+**unique**
+
+算法unique能够移除（remove）重复的元素。每当在`[first, last]`内遇到有重复元素群，他便移除该元素群中第一个以后的所有元素。注意，unique只移除相邻的重复元素，所以接收的为已经排序的序列。
+
+----
+
+## 其他算法-高阶
+
+**lower_bound/upper_bound**
+
+应用于有序区间，试图在已排序的`[first, last)`区间中寻找元素value。如果`[first, last)`具有与value相等的元素，便返回一个迭代器，指向其中第一个元素。如果没有这样的元素存在，便返回“假设这样的元素存在时应该出现的位置”。也就是说它会返回一个迭代器，指向第一个“不小于value”的元素。如果value大于`[first, last)`内的任何一个元素，则返回last。在不破坏排序状态的原则下，可插入value的第一个位置。而对于upper_bound，则是返回在不破坏排序状态的原则下，可插入value的最后一个合适位置。
+
+![6-7]()
+
+**binary_search**
+
+二分查找，试图在已排序的`[first, last)`区间中寻找元素value。binary_search利用lower_bound先找出“假设value存在的话，应该出现的位置”，然后再比对该位置上的值是否为我们所要查找的目标，并返回对比结果。
+
+**next_permutation**
+
+STL提供了
+
+三个不同的字符有6种排列，这个数字是从`3*2*1`得到的。一般来说，n个不同的字 符有n!种排列，n!是`nx(n_1)x(n-2)...x2x1`。很容易明白为什么要这样算。有n个对象时，在序列的第一个位置就有n种可能的选择。对于第一个对象的每一种选择，序列的第二个位置还剩下`n-1`种选择，因此前两个有`nx((n-1)`种可能选择。在选择了前两个之后， 第三个位置还剩下`n-2`种选择，因此前三个有`nx(n-1)x(n-2)` 种可能选择，以此类推。序列的末尾是Hobson选择，因为只剩下1种选择。
+
+对于包含相同元素的序列来说，只要一个序列中的元素顺序不同，就是一种排列。next_permutation() 会生成一个序列的重排列，它是所有可能的字典序中的下一个排列，默认使用`<` 运算符来做这些事情。它的参数为定义序列的迭代器和一个返回布尔值的函数，这个函数在下一个排列大于上一个排列时返回true，如果上一个排列是序列中最大的，它返回false，所以会生成字典序最小的排列。
+
+**random_shuffle**
+
+将`[first, last)`的元素次序随机重排。也就是说，在N!种可能的元素排列顺序中选出一种，此处N为last-first。
+
+random_shuffle会产生一个均匀分布，因此任何一个排列被选中的机率为1/N!。这很重要，因为不少算法在其第一阶段过程中必须获得序列的随机重排。
+
+random_shuffle有两个版本，差别在于随机数的取得。版本一使用内部随机数产生器，版本二使用一个会产生随机随机数的仿函数。该仿函数的传递方式是引用传递，而非值传递，因为随机随机数产生器有一个重要特质：它拥有局部状态，每次被调用时都会有所改变，并因此保障产生出来的随机数能够随机。
+
+**sort**
+
+使用partial_sort而非sort的唯一理由就是效率。只挑出前N个最小元素来排序，当然比对整个序列排序快上许多。
+
+STL的sort算法。数据量大时采用quick sort，分段递归排序。一旦分段后的数据量小于某个门槛，为避免quick sort的递归调用带来过大的额外负荷（overhead），就改用insertion sort。如果递归层次过深，还会改用heap sort。
+
+**equal_range（应用于有序区间）**
+
+算法equal_range是一个二分查找法的一个版本，试图在已经排序的`[first, last)`区间中寻找value。它返回一对迭代器i和j。其中i是在不破坏次序的前提下，value可插入的第一个位置（亦即lower_bound），j则是在不破坏次序的前提下，value可插入的最后一个位置（亦即upper_bound）。因此，`[i, j)`内的每个元素都等于value，而且`[i, j)`是`[first, last)`之中符合此一性质的最大子区间。
+
+**inplace_merge（应用于有序区间）**
+
+如果两个链接在一起的序列`[first, middle)`和`[middle, last)`都已排序，那么inplace_merge可将它们结合成单一一个序列，并仍然保持有序。
