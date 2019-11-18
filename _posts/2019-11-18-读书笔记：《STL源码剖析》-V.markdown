@@ -1,0 +1,110 @@
+---
+layout:      post
+title:       "读书笔记：《STL源码剖析》-V"
+subtitle:    "The Annotated STL Sources(using SGI STL)"
+author:      "Ashior"
+header-img:  "img/ReadNotes/bg-Cpp-STL.jpg"
+catalog:     true
+tags:
+  - C++
+  - STL
+  - 读书笔记
+---
+
+> 此篇章为《STL源码剖析》的读书笔记。对应于[读书笔记：《STL源码剖析》-IV](https://xinh79.github.io/2019/11/16/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0-STL%E6%BA%90%E7%A0%81%E5%89%96%E6%9E%90-IV/) 在需要作出解释的地方，我会添加相应的注释，结合视频学习，与笔者的知识储备。如果有任何错误，或者疑虑，请发送邮件至`ashior@qq.com`。
+
+[TOC]
+
+----
+
+## 仿函数（函数对象）
+
+仿函数的相应型别主要用来表现函数参数型别和传回值型别。`<stl_function.h>`定义了两个classes，分别代表一元仿函数和二元仿函数（STL不支持三元仿函数），其中没有任何data members或member functions，唯有一些型别定义。任何仿函数，只要依个人需求选择继承其中一个class，便自动拥有了那些相应型别，也就拥有了配接能力。
+
+**算术类仿函数**
+
+- 加法(plus<T>)
+- 减法(minus<T>)
+- 乘法(multiplies<T>)
+- 除法(divedes<T>)
+- 模取(moduls)：(modulus<T>)
+- 否定(negation)：(negate<T>)
+
+证同元素（identity element），所谓“运算op的证同元素”，意思是数值A若与该元素做op运算，会得到A自己。加法的证同元素为0，因为任何元素加上0仍然为自己。乘法的证同元素为1，因为热混合元素乘以1仍为自己。
+
+**关系运算类仿函数**
+
+- 等于(equality)：equal_to<T>
+- 不等于(inequality)：not_equal_to<T>
+- 大于(greater than)：<greater<T>>
+- 大于或等于(greater than or equal)：greater_equal<T>
+- 小于(less than)：less<T>
+- 小于或等于(less than or equal)：less_equal<T>
+
+**逻辑运算类仿函数**
+
+- And：logical_and<T>
+- Or：logical_or<T>
+- Not：logical_not<T>
+
+----
+
+## 配接器
+
+#### container adapters
+
+**stack**
+
+stack的底层是由deque构成。
+
+```cpp
+template <class T, class Sequence = deque<T>>
+class Stack {
+protected:
+	Sequence c;    // 底层容器
+}
+```
+
+queue的底层由deque构成。
+
+#### iterator adapters
+
+**insert iterators**
+
+每一个`insert iterators`内部都维护有一个容器；容器当然有自己的迭代器，于是，当客户端对`insert iterators`做赋值操作时，就在`insert iterators`中被转为对该容器的迭代器做插入操作，也就是说`insert iterators`的`operator=`操作符中调用底层容器的push_front()或push_back()或insert()操作函数。
+
+**reverse iterators**
+
+所谓reverse iterators，可以将一般迭代器的进行方向逆转，使原本应该前进的operator++变成后退操作，使原本应该后退的operator--变成了前进操作。
+
+只要双向序列容器提供了begin()，end()，它的rbegin()，rend()就是直接`return reverse_iterator(finish);`
+
+![8-3](https://pic4.zhimg.com/80/v2-c0dcf1eaf3699486b4b1dc2f13330beb_hd.jpg)
+
+对于逆向迭代器取值，就是将“对应的正向迭代器”后退一个而后取值。
+
+**IOStream Iterator**
+
+所谓`IOStream Iterator`，可以将迭代器绑定到某个iostream对象身上。绑定到istream对象身上的，称为`istream_iterator`，拥有输入功能；绑定到ostream对象身上的，称为`ostream_iterator`，拥有输出功能。
+
+#### function adapters
+
+仿函数是一种将`operator()`重载的`class template`，迭代器则是一种将`operator++`和`operator*`等指针重载的`class template`。
+
+**对返回值进行逻辑否定：not1,not2**
+
+**对参数进行绑定：bind1st,bind2nd**
+
+```cpp
+cout << count_if(vi.begin(), vi.end(), not1(bind2nd(less<int>(), 40)));
+```
+
+本来`less`函数是判断是否比y更小，使用`bind2nd`来绑定第二参数为40，即判断是否比40更小。需要注意的是，在这里`less<int>()`为对象，此时还没有被调用，当`count_if`函数被调用时，才开始调用此函数，用来统计不小于40(`>=40`，not1)的元素个数。
+
+C++11已经替换成了bind。具体请参考此[网页](http://www.cplusplus.com/reference/functional/bind/?kw=bind)。
+
+**用于函数合成：compose1,compose2**
+
+**用于函数指针：ptr_fun**
+
+**用于成员函数指针：mem_fun,mem_fun_ref**
