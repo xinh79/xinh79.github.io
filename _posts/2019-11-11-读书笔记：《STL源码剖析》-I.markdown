@@ -1,6 +1,6 @@
 ---
 layout:      post
-title:       "读书笔记：《STL源码剖析》-I"
+title:       "读书笔记-《STL源码剖析》-I"
 subtitle:    "The Annotated STL Sources(using SGI STL)"
 author:      "Ashior"
 header-img:  "img/ReadNotes/bg-Cpp-STL.jpg"
