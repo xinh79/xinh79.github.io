@@ -1,0 +1,662 @@
+---
+layout:      post
+title:       "Linux学习笔记-I"
+subtitle:    "Linux System"
+author:      "Ashior"
+header-img:  "img/ReadNotes/bg-linux system.jpg"
+catalog:     true
+tags:
+  - 学习笔记
+  - Linux
+  - 工作
+---
+
+> 此篇文章主要是根据Linux视频教程与网上的相关教程所制作的笔记，为书籍APUE做一个补充，使读者更容易理解书籍内容，本次对应书籍1-6章的内容。读书笔记请参考此篇文章：
+
+- [APUE-1-文件IO](https://xinh79.github.io/2019/11/21/APUE-1-%E6%96%87%E4%BB%B6IO/)
+- [APUE-2-文件和目录](https://xinh79.github.io/2019/11/22/APUE-2-%E6%96%87%E4%BB%B6%E5%92%8C%E7%9B%AE%E5%BD%95/)
+- [APUE-3-I/O库与数据文件和信息](https://xinh79.github.io/2019/11/22/APUE-3-IO%E5%BA%93%E4%B8%8E%E6%95%B0%E6%8D%AE%E6%96%87%E4%BB%B6%E5%92%8C%E4%BF%A1%E6%81%AF/)
+
+[TOC]
+
+----
+
+## 基础命令
+
+`mkdir`：创建目录
+
+`rmdir`：删除目录
+
+`touch`：创建文件，如果文件已经存在，他就改变其访问时间；
+
+`rm`：删除文件，`rm -r dir` 递归删除子目录 / `rm -rf *` 强制删除所有文件；
+
+`cp`：拷贝文件或者目录
+
+`mv`：移动文件或者目录
+
+`more/less`：分屏显示文件信息
+
+`head/tail`：查看文件头/尾信息
+
+`wc`：统计文件内容：`-l`显示行，`-w`单词数，`-c`字节数；
+
+`du`：显示目录占用的空间(-h)
+
+`df`：查看磁盘空间信息(-h)
+
+`find`：查找文件或者目录，可以按照名称，文件类型，大小等进行查找
+
+`grep`：可以按照文件内容查找
+
+`tar`：`tar zcxf a.tar.gz b` `tar zvxf a.tar.gz`
+
+```
+sudo apt-get update // 更新源/etc/apt/sources.list
+sudo apt-get install tree // 安装tree命令
+sudo apt-get remove tree  // 卸载tree命令
+sudo apt-get clean // 清理包
+```
+
+----
+
+## vim编辑器
+
+命令`vimtutor`可以查看`vim`教程。可以查看[vim菜鸟教程](https://www.runoob.com/linux/linux-vim.html)
+
+----
+
+## gcc编译流程
+
+gcc是GUN编译器套件（GNU Compiler Collection）。
+
+一个C/C++文件要经过预处理(preprocessing)、编译(compilation)、汇编(assembly)、和连接(linking)才能变成可执行文件。
+
+预处理【头文件展开，宏替换】：`gcc -E -o hello.i hello.c`
+
+- 预处理就是将**要包含(include)的文件插入原文件中、将宏定义展开、根据条件编译命令选择要使用的代码**，最后将这些代码输出到一个“.i”文件中等待进一步处理。
+
+编译【生成汇编代码】：`gcc -S -o hello.s hello.i`
+
+- 编译就是把C/C++代码(比如上面的".i"文件)**“翻译”成汇编代码**。
+
+汇编【将汇编编译成二进制文件】：`gcc -c -o hello.o hello.s`
+
+- 汇编就是将第二步输出的汇编代码翻译成符合一定格式的机器代码，在Linux系统上一般表现位ELF目标文件(OBJ文件)。
+
+链接【形成可执行文件】：`gcc -o hello hello.o`
+
+- 链接就是将汇编生成的OBJ文件、系统库的OBJ文件、库文件链接起来，最终生成可以在特定平台运行的可执行程序。
+
+总结：在编译过程中。除非使用了`-c`，`-S`,或`-E`选项(或者编译错误阻止了完整的过程)，否则统一完整链接步骤。
+
+#### gcc相关命令
+
+`gcc file.c -I ./include/`如果某个头文件没有，则通过`-I`将头文件路径包括进来。`-L`为包含库路径
+
+`gcc file.c -D DEBUG -o app`将宏`DEBUG`传入，以选择`file.c`中的代码块。
+
+如果使用`gcc`编译`C++`代码，需要加上参数`-lstdc++`。也可以使用`g++`编译。
+
+----
+
+## 制作库文件
+
+#### 静态库
+
+静态库的文件命名：libxxx.a（window为.lib文件）
+
+制作步骤：1.编译成.o文件；2.将.o文件打包【`ar rcs libxxx.a x1.o x2.o`】；3.将头文件与库一起发布。
+
+#### 动态库
+
+静态库的文件命名：libxxx.so（window为.dll文件）
+
+制作步骤：1.编译成.o文件，要求与位置无关，使用参数`-fPIC`；2.将.o文件打包【`gcc -share libxxx.so *.o`】；3.将头文件与库一起发布。
+
+编译`-L`指定路径，`-l`指定库名，用法同静态库
+
+制作完成后，如果编译成功，但是执行时不能找到动态库，则可以修改配置文件：`/etc/ld.so.conf`。将自己的目录的绝对目录在文件中追加，之后使用命令`sudo ldconfig -v`启用文件。（但是重启后失效）也可以拷贝到系统的库路径下，不推荐。修改`LD_LIBRARY_PATH`环境变量，将库所在的路径，添加到环境变量中，用冒号分割。
+
+----
+
+## makefile
+
+makefile一次编写，终身受益。命名有规定：makefile/Makefile
+
+makefile三要素：目标、依赖、规则命令
+
+写法：
+
+```
+目标：依赖
+tab键 规则命令
+```
+
+```makefile
+app:main.c add.c sub.c
+	gcc -o app -I./include main.c add.c sub.c
+```
+
+通过 touch 命令改变文件的时间，之后再次 make 就会全部重新编译。可以考虑编译过程分解，先生成 `.o`文件，再来编译。整个规则是递推的。
+
+```makefile
+app:main.o add.o sub.o
+	gcc -o app -I./include main.o add.o sub.o
+main.o:main.c
+	gcc -c app -I./include
+add.o:add.c
+	gcc -c app -I./include
+sub.o:sub.c
+	gcc -c app -I./include
+```
+
+也可以使用变量的形式编写makefile文件。
+
+```makefile
+# ObjFiles定义的为目标文件
+ObjFiles=main.o add.o sub.o
+# ObjFiles变量的用法
+app:$(ObjFiles)
+	gcc -o app -I./include $(ObjFiles)
+main.o:main.c
+	gcc -c app -I./include
+add.o:add.c
+	gcc -c app -I./include
+sub.o:sub.c
+	gcc -c app -I./include
+.PHONY:clean
+clean:
+	-@rm -f *.o
+	@rm -f app
+```
+
+make 命令默认选择编译第一个目标，可以指定目标进行编译，比如`make clean`，就是清理文件（`-f`可以强制删除，同时避免文件不存在时报错），然后可以重新编译全部文件。在规则命令之前添加`@`，可以不然命令输出在屏幕上。`-`的作用是当命令出错时，仍然继续执行。避免终止。`.PHONY`将目标设置为为目标，避免出现歧义。
+
+**makefile函数：**函数wildcard可以通配指定目标，patsubst是对变量的替换，`%`的位置的字符串不会发生改变，之后的进行替换操作。
+
+```makefile
+# get all .c files
+SrcFiles=$(wildcard *.c)
+# .c files --> .o files
+ObjFiles=$(patsubst %.c,%.o,$(SrcFiles))
+test:
+	echo $(SrcFiles)
+	echo $(ObjFiles)
+```
+**makefile变量：**
+
+- `$@`：代表目标
+- `$^`：代表全部依赖
+- `$<`：第一个依赖
+- `$?`：第一个变化的依赖
+
+以上的变量只能在规则中出现。对最初的命令进行改造：
+
+```makefile
+SrcFiles=$(wildcard *.c)
+ObjFiles=$(patsubst %.c,%.o,$(SrcFiles))
+app:$(ObjFiles)
+	gcc -o app -I./include $(ObjFiles)
+%.o:%.c
+	gcc -c $< -I./include
+```
+
+执行至`app`处，查找相关依赖，找到倒数第二行，系统对里面的元素一一替换。
+
+----
+
+## gdb调试
+
+使用gdb编译的时候加-g参数`gcc func.c main.c -o app -I ./ -g`
+
+启动gdb：gdb app(可执行程序名)
+
+在gdb启动程序：`run`/`r`/`start`(在main函数，分步调试)
+执行下一条指令：`n`/`next`(下一条指令)/step(进入函数内部)
+退出gdb模式：`q`(quit)
+设置启动参数：`set args ...`
+查看源码：`list`
+设置断点：`b 17`（b代表break，将断点设置在**主函数所在的文件**的第17行）除了指定行号，还可以指定函数名称，`b sum`在`sum`函数处设置断点。也可以指定文件进行断点设置`b func.c:11`文件func.c的第11行处设置断点。
+查看信息：`info b`查看断点信息，`info display`查看变量跟踪信息
+删除断点：查看断点后，可以根据查看的信息的Num值，删除指定断点：`d 4`表示删除Num编号为4号的断点。
+跳至下一个断点：`c`
+查看变量的值：`p i`表示查看变量i的值
+查看变量的类型：`ptype i`查看变量i的类型
+可以更改参数：`set agrs=3`将变量agrs的值设置为3。
+跟踪变量：`display argc`，变量argc在每次gdb运行的时候都会将其值显示出来。
+取消变量跟踪：`undisplay 1`这里的1是通过info命令所查看的Num值。
+设置条件断点：`b 32 if i == 1`在32行处设置断点（一个循环内），断点启动的条件是当变量i等于1时。
+
+**gdb调试core文件：**出现段错误（核心已转储）时，设置core文件大小。
+`ulimit -c unlimited`对core文件的大小不受限制。
+
+使用core文件：`gdb app core`运行后，立马出现在导致程序出问题的位置。通过where命令也可以快速定为错误位置。
+
+----
+
+## 1-系统API
+
+**系统API与库函数的关系**
+
+```
+printf("hello\n");
+-->(应用)->FILE *stdin
+write(1, "hello\n", 6);
+-->(进入内核)
+sys_write("hello\n");
+-->
+设备驱动
+-->       -->
+显示器    网络
+```
+
+`FILE *stdin`维持一个数据结构，其中存放文件描述符fd，文件位置f_pos和一个buffer。
+
+文件描述符表对应了一个大小为1K的表，其中存放了文件描述符，每次系统默认打开的是0、1、2。
+
+其中buffer刷新时间为：手动刷新；fclose()关闭；buffer满了。
+
+#### open函数
+
+```c
+#include <fcntl.h>
+#include <sys/type.h>
+#include <unistd.h>
+
+int main() {
+	close(1);
+	int fd = open("1.log", O_CREAT|O_TRUNC|O_WRONLY, 0644);
+	// 打开文件会默认开启一个最小的文件描述符，此时开启的是1
+	printf("hellow world\n");
+	fflush(stdout);
+	close(fd);
+	return 0;
+}
+```
+
+结果输出至文件`1.log`中。
+
+```c
+#include <fcntl.h>
+int open(const char *path, int oflag,...);
+int openat(int fd, const char *path, int oflag,...);
+// 两个函数，成功则返回最小的文件描述符，失败返回-1
+```
+
+oflag为必选项（三选一）：
+
+`O_RDONLY`：只读打开
+`O_WRONLY`：只写打开
+`O_RDWR`：读、写打开
+
+可选项：
+
+`O_APPEND`：追加
+`O_CREAT`：创建文件
+`O_NONBLOCK`：非阻塞
+
+mode权限位最终为`mode & ~umask`
+
+#### close函数
+
+```c
+#include <unistd.h>
+int close(int fd);
+// 成功返回0，失败返回-1
+```
+
+#### read函数
+
+```c
+#include <unistd.h>
+ssize_t read(int fd, void *buf, size_t nbytes);
+// 返回数为读到的字节数，若已到文件尾，返回0；出错返回-1
+```
+
+fd为文件描述符，buf为缓冲区，nbytes为缓冲区大小
+
+非阻塞的情况下，read返回-1，但是此时需要判断errno的值。
+
+#### write
+
+```c
+#include <unistd.h>
+ssize_t write(int fd, const void *buf, size_t nbytes);
+// 成功返回以写的字节数，否则返回-1
+```
+
+fd为文件描述符，buf为缓冲区，nbytes为缓冲区大小
+
+#### 函数lseek
+
+计算文件大小：打开一个文件，然后将文件指针移动管道文件的末尾（SEEK_END），返回值就是文件的大小。
+
+```c
+#include <stdio.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <fcntl.h>
+int main(int argc, char *argv[]) {
+	if (argc != 2) {
+		printf("./a.out filename\n");
+		return -1;
+	}
+	// 1. open
+	int fd = open(argv[1], O_RDONLY);
+	// 2. lseek 获得返回值
+	int ret = lseek(fd, 0, SEEK_END);
+	printf("file size is %d\n", ret);
+	// 3. close
+	close(fd);
+	return 0;
+}
+```
+
+移动文件读写位置：
+
+```c
+#include <unistd.h>
+off_t lseek(int fd, off_t offset, int whence);
+// 若成功，返回新文件偏移量，出错返回-1
+```
+
+#### 实现一个文件的读写操作
+
+```c
+#include <stdio.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <fcntl.h>
+
+int main(int argc, char *argv[]) {
+	if (argc != 2) {
+		printf("./a.out filename\n");
+		return -1;
+	}
+	int fd = open(argv[1], O_RDWR|O_CREAT, 0666);
+	write(fd, "helloworld", 11);
+	// 此时文件已经移动至文件末尾
+	// 需要更改文件读写位置，方便从头开始读取数据
+	lseek(fd, 0, SEEK_SET);
+	char buf[256] = {0};
+	// 返回值为读取的大小
+	int ret = read(fd, buf, sizeof(buf));
+	
+	if (ret) {
+		write(STDOUT_FILENO, buf, ret);
+	}
+}
+
+```
+
+#### 作业
+
+1. 实现一个动态库与静态库的制作
+2. 在一个目录创建两个c代码文件，分别输出相应的信息，要求编写makefile文件，自动生成可执行文件
+3. 实现mycp功能，拷贝一个够大的文件。
+
+----
+
+## 2-系统API
+
+#### 进程的虚拟空间
+
+一个32位的系统，寻址能力为4G，0-3G为用户区域，3G-4G为内核区域。
+
+内核区域存放：虚拟文件系统，内存管理，设备驱动管理，进程管理PCB。
+从3G依次向下存放：cmd(命令)，env(环境变量)，stack(向下生长)，共享库，heap(向上生长)，BSS(未初始化的数据)，data(已经初始化的数据)，text(代码段)。
+
+尝试查看能够打开最多的文件个数，因为文件描述符会自动递增。
+
+编写源程序：
+
+```c
+int main() {
+	int num = 3;
+	char filename[128]={0};
+	while(1) {
+		sprintf(filename, "tmp_%04d", num++);
+		if (open(filename, O_REONLY|O_CREAT, 0666 < 0)) {
+			perror("open err");
+			break;
+		}
+	}
+	printf("num = %d\n", num);
+}
+```
+
+编写makefile文件：
+
+```makefile
+# xxx.c --> xxx
+SrcFiles = $(wildcard *.c)
+TargetFiles = $(patsubst %.c, %, $(SrcFiles))
+all:$(TargetFiles)
+
+%:%.c
+	gcc -o $@ $^
+
+clean:
+	rm -f $(TargetFiles)
+```
+
+- `$@`：代表目标
+- `$^`：代表全部依赖
+- `$<`：第一个依赖
+- `$?`：第一个变化的依赖
+
+#### stat函数
+
+st_mode的结构：
+
+```
+0-2：其他用户权限；
+3-5：组用户权限；
+6-8：用户权限；
+9-11：特殊位权限；
+12-15：文件类型；
+```
+
+一旦给出pathname，stat函数将返回与此命名文件有关的信息结构。
+
+```c
+int stat(const char *restrict pathname, struct stat *restrict buf);
+```
+
+使用例子：
+
+```c
+int main(int argc, char *argv[]) {
+	if (argc != 2) {
+		printf("./a.out filename\n");
+		return -1;
+	}
+	struct stat sb;
+	stat(argv[1], &sb);
+	return 0;
+}
+```
+
+#### 实现命令ls -l
+
+根据上面的stat函数，可以手动实现ls命令。
+
+需要使用`struct passwd *getpwuid(uid_t uid);`获得用户名需要传入uid，然后获得的结构体中包含了username。
+
+同样，`struct passwd *getgrgid(uid_t gid);`获得用户组的名称。
+
+`struct *localtime(const time_t *timep);`函数获得本地时间。传入参数timep对应stat函数得到的结构体的秒数(time_t类型)，最后返回tm结构。
+
+```c
+#include <stdio.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <time.h>
+#include <string.h>
+#include <pwd.h>
+#include <grp.h>
+int main(int argc, char *argv[]) {
+	if (argc != 2) {
+		printf("./a.out filename\n");
+		return -1;
+	}
+	// 调用stat，得到文件的属性信息
+	struct stat sb;
+	stat(argv[1], &sb);
+	// 解析属性信息，st_mode,uid,gid,time
+	
+	// 解析st_mode
+	// 解析文件类型
+	char stmode[11]={0};
+	// 将其初始化为-，避免之后做else判断
+	memset(stmod, '-', sizeof(stmode)-1);
+	if (S_ISREG(sb.st_mode)) stmod[0]='-';
+	if (S_ISDIR(sb.st_mode)) stmod[0]='d';
+	if (S_ISCHR(sb.st_mode)) stmod[0]='c';
+	if (S_ISBLK(sb.st_mode)) stmod[0]='b';
+	if (S_ISFIFO(sb.st_mode)) stmo[0]='p';
+	if (S_ISLINK(sb.st_mode)) stmod[0]='l';
+	if (S_ISSOCK(sb.st_mode)) stmod[0]='s';
+	// 解析文件权限
+	if (sb.st_mode & S_IRUSR) stmod[1]='r';
+	if (sb.st_mode & S_IWUSR) stmod[2]='w';
+	if (sb.st_mode & S_IXUSR) stmod[3]='x';
+	
+	if (sb.st_mode & S_IRGRP) stmod[4]='r';
+	if (sb.st_mode & S_IWGRP) stmod[5]='w';
+	if (sb.st_mode & S_IXGRP) stmod[6]='x';
+	
+	if (sb.st_mode & S_IROTH) stmod[7]='r';
+	if (sb.st_mode & S_IWOTH) stmod[8]='w';
+	if (sb.st_mode & S_IXOTH) stmod[9]='x';
+	
+	// 用户名，组名可以通过函数获得
+	// 文件大小和硬链接数在结构体中含有
+	// 剩下时间获取
+	struct tm *filetm = localtiime(&sb.st_atim.tv.sec);
+	char timebuf[20]={0};
+	sprintf(timebuf, "%dM %d %02d:%02d", filetm->tm_mon+1, filetm->tm_hour, filetm->tm_min);
+	
+	printf("%s %ld %s %s %ld %s %s\n", stmode, sb.st_nlink, getpwuid(sb.st_uid)->pw_name, getgrgid(sb.st_gid)->gr_name, sb.st_size, timebuf, argv[1]);
+	return 0;
+}
+```
+
+stat函数和lstat函数功能一致，但是stat面对软件链接查询时，存在穿透，会直接找到其所指向的真正的文件，而lstat就是直接处理软链接本身。
+
+#### access
+
+```c
+int access(const char *pathname, int mode);
+```
+
+判断文件的权限和是否存在。其中mode填写`R_OK, W_OK, X_OK, F_OK`。如果有权限，则返回0。
+
+#### truncate
+
+截断文件：
+
+```c
+int truncate(const char *path, off_t length);
+```
+
+length如果大于源文件，直接拓展，小于源文件，截断为length长度。
+
+#### 文件链接
+
+link创建硬链接，symlink创建符号链接(软链接)
+
+unlink取消文件链接，当链接数为0时，文件被删除。
+
+#### 递归子目录，统计普通文件个数
+
+```c
+#include <stdio.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <dirent.h>
+#Include <string.h>
+
+int count = 0;// 定义一个全局的计数
+
+int DirCount(char *dirname) {
+	// 打印目录
+	DIR *dirp = opendir(dirname);
+	if (dirp == NULL) {
+		perror("opendir err");
+		return -1;
+	}
+	// 循环读目录，普通文件count++，目录就递归调用此函数
+	struct dirent *dentp = NULL;
+	while ((dentp = readdir(dirp)) != NULL) { // 如果为NULL，则读取到文件末尾
+		printf("dirname:%s, dtype:%d\n", dentp->d_name, dentp->d_type);
+		if (dentp->d_type == DT_DIR) { // 如果是目录
+			if (strcmp(".", dentp->d_name) == 0 || strcmp("..", dentp->d_name) == 0) {
+				continue;
+			}
+			// 注意进程的工作路径，不能直接打开子目录
+			char newdirname[256]={0};
+			// 使用dirname拼接下一级子目录
+			sprintf(newdirname, "%s/%s", dirname, dent->d_name);
+			DirCount(newdirname);
+		}
+		if (dentp->d_type == DT_REG) {
+			count++;
+		}
+	}
+	closedir(dirp);
+	return 0;
+}
+
+int main(int argc, char *argv[]) {
+	if (argc != 2) {
+		printf("./a.out dirname\n");
+		return -1;
+	}
+	printf("count : %d\n", DirCount(argv[1]));
+	return 0;
+}
+```
+
+#### dup2
+
+```c
+// 重定向，关闭newfd对应的文件描述符，将newfd重新指向为oldfd对应的文件
+int dup2(int oldfd, int newfd);
+// 复制文件描述符，返回一个文件描述符指向oldfd对应的文件。
+int dup(int oldfd);
+```
+
+首先将newfd所指向的内容关闭，也即清除指向。随后再将其指向oldfd。
+
+而dup就是简单地复制一份指向内容。
+
+#### 输出重定向测试样例
+
+```c
+#include <stdio.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+int main() {
+	// 预先备份现场
+	int outfd = dup(1);
+	// 先做重定向
+	int fd = open("world", O_WRONLY|O_CREAT, 0666);
+	// 需要刷新缓冲区
+	
+	// 将标准输出重定向到fd对应的文件
+	dup2(fd, 1);
+	printf("hello world\n");
+	// 需要恢复1，重新对应标准输出，所以需要提前备份现场
+	dup2(outfd, 1);
+	printf("hello world\n");
+	return 0;
+}
+```
