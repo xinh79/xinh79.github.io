@@ -1,0 +1,239 @@
+---
+layout:      post
+title:       "APUE-2-文件和目录"
+subtitle:    "Advanced Programming in the UNIX® Environment"
+author:      "Ashior"
+header-img:  "img/ReadNotes/bg-APUE.jpg"
+catalog:     true
+tags:
+  - Linux
+  - 读书笔记
+---
+
+> 此篇章为《UNIX环境高级编程》的读书笔记。对应于[此书籍](http://www.apuebook.com/) 。在需要作出解释的地方，结合笔者的知识储备，会添加相应的注释。也可参考此文章：[APUE-1-文件IO](https://xinh79.github.io/2019/11/21/APUE-1-%E6%96%87%E4%BB%B6IO/)。如果有任何错误，或者疑虑，请发送邮件至`ashior@qq.com`。
+
+[TOC]
+
+----
+
+## 文件
+
+#### 文件类型
+
+1. 普通文件：记录数据或者二进制文件（可执行文件都遵循一种标准化的格式）
+2. 目录文件：包含了其他文件名字以及指向与这些文件有关信息的指针。
+3. 块特殊文件：这种类型的文件提供对设备（如磁盘）带缓冲的访问，每次访问以固定长度为单位进行。
+4. 字符特殊文件：这种类型的文件提供对设备（如磁盘）不带缓冲的访问，每次访问以可变长度为单位进行。
+5. FIFO：这种类型的文件用于进程间通信，有时也称为命名管道。
+6. 套接字：这种类型的文件用于进程间的网络通信。套接字也可以用于在一台宿主机上进程间的非网络通信。
+7. 符号链接：这种类型的文件指向另一个文件。
+
+在`<sys/stat.h>`中的文件类型宏：
+
+| 宏 | 文件类型 |
+|:---:|:---:|
+| S_ISREG() | 普通文件 |
+| S_ISDIR() | 目录文件 |
+| S_ISBLK() | 块特殊文件 |
+| S_ISCHR() | 字符特殊文件 |
+| S_ISFIFO() | FIFO |
+| S_ISLNK() | 套接字 |
+| S_ISSOCK() | 符号链接 |
+
+获取命令行参数，然后针对每一个命令行参数打印其文件类型
+
+```c
+#include "apue.h"
+
+int
+main(int argc, char *argv[])
+{
+	int			i;
+	struct stat	buf;
+	char		*ptr;
+
+	for (i = 1; i < argc; i++) {
+		printf("%s: ", argv[i]);
+		if (lstat(argv[i], &buf) < 0) {
+			err_ret("lstat error");
+			continue;
+		}
+		if (S_ISREG(buf.st_mode))
+			ptr = "regular";
+		else if (S_ISDIR(buf.st_mode))
+			ptr = "directory";
+		else if (S_ISCHR(buf.st_mode))
+			ptr = "character special";
+		else if (S_ISBLK(buf.st_mode))
+			ptr = "block special";
+		else if (S_ISFIFO(buf.st_mode))
+			ptr = "fifo";
+		else if (S_ISLNK(buf.st_mode))
+			ptr = "symbolic link";
+		else if (S_ISSOCK(buf.st_mode))
+			ptr = "socket";
+		else
+			ptr = "** unknown mode **";
+		printf("%s\n", ptr);
+	}
+	exit(0);
+}
+```
+
+#### 文件权限
+
+st_mode包含了对文件的访问权限位。当提及文件权限时，指的是前面所提到的任何类型的文件。需要注意的是删除一个现有文件，必须对包含该文件的目录具有写权限和执行权限。对该文件本身不需要有读、写权限。
+
+----
+
+## 函数
+
+#### 函数access和faccessat
+
+函数access和faccessat是按照实际用户ID和实际组ID进行访问权限测试的。
+
+```c
+#include <unistd.h>
+int access(const char *pathname, int mode);
+int faccessat(int fd, const char *pathname, int mode, int flag);
+// 成功返回0，失败返回-1
+```
+
+#### 函数stat、fstat、fstatat和lstat
+
+```c
+#include <sys/stat.h>
+int stat(const char *restrict pathname, struct stat *restrict buf);
+int fstat(int fd, struct stat *buf);
+int fstatat(const char *restrict pathname, struct stat *restrict buf);
+int lstat(ind fd, const char *restrict pathname, struct stat *restrict buf, int flag);
+// 成功返回0，失败返回-1
+```
+
+一旦给出pathname，stat函数将返回与此命名文件有关的信息结构。fstat函数获得已在描述符fd上打开文件的有关信息。lstat函数类似于stat，但是当命名的文件是一个符号链接时，lstat返回该符号链接的有关信息，而不是由该符号链接引用的文件的信息。
+
+fstatat函数为一个相对于当前打开目录的路径名返回文件统计信息。flag控制着是否跟随着一个符号链接。
+
+#### 函数umask
+
+umask函数为进程设置文件模式创建屏蔽字，并返回之前的值。
+
+```c
+#include <sys/stat.h>
+mode_t umask(mode_t cmask);
+```
+
+#### 函数chown、fchown、fchownat和lchown
+
+```c
+#include <unistd.h>
+int chown(const char *pathname, uid_t owner, gid_t group);
+int fchown(int fd, uid_t owner, gid_t group);
+int fchownat(int fd, const char *pathname, uid_t owner, gid_t group, int flag);
+int lchown(const char *pathname, uid_t owner, gid_t group);
+```
+
+#### 文件长度
+
+stat结构成员st_size表示以字节为单位的文件的长度。文件中的空洞是由所设置的偏移量超过文件尾端。
+
+#### 文件系统
+
+我们可以把一个磁盘分成一个或多个分区。每个分区可以包含一个文件系统。i节点是固定长度的记录项，它包含有关文件的大部分信息。
+
+![4-13](https://pic1.zhimg.com/80/v2-45c128e646d1fad1ff0a3bb356a01df4_hd.jpg)
+
+观察此图：
+
+![4-14](https://pic2.zhimg.com/80/v2-009af95de01cca08b7322440dfc309e2_hd.jpg)
+
+对于上图，我们可以发现：
+
+1. 有2个目录项指向同一个i节点。每个i节点中都有一个链接计数，其值是指向该i节点的目录项数。只有当链接计数减少至0时，才可删除该文件。在stat结构中，链接计数包含在st_nlink成员中，其基本系统数据类型是nlink_t。这种链接类型称为硬链接。
+2. i节点包含了文件有关的所有信息：文件类型、文件访问权限位、文件长度和指向文件数据块的指针等。stat结构中的大多数信息都取自i节点。只有文件名和i节点编号存放在目录项中。
+3. 目录项中的i节点编号指向同一个文件系统中的相应的i节点。
+4. 当在不更换文件系统的情况下为一个文件重命名时，该文件实际未移动，只需要构造一个指向现有i节点的新目录项，并删除老的目录项。链接计数不会改变。
+
+#### 函数link、linkat、unlink、unlinkat和remove
+
+任何一个文件可以有多个目录项指向其i节点。创建一个指向现有文件链接的方法是使用link函数或linkat函数。
+
+```c
+#include <unistd.h>
+int link(const char *existingpath, const char *newpath);
+int linkat(int efd, const char *existingpath, int nfd, const char *newpath, int flag);
+// 成功返回0，失败返回-1
+```
+
+删除现有的目录项
+
+```c
+#include <unistd.h>
+int unlink(const char *pathname);
+int unlinkat(int fd, const char *pathname, int flag);
+// 成功则返回0，出错返回-1
+```
+
+#### 函数rename和renameat
+
+```c
+#include <stdio.h>
+int rename(const char *oldname, const char *newname);
+int renameat(int oldfd, const char *oldname, int newfd, const char *newname);
+// 成功返回0，失败返回-1
+```
+
+注意，如果newname存在，且是一个目录，则先将其删除，然后再将oldname重命名为newname。所以不能将 `/usr/foo`重命名为`/usr/foo/test`因为旧的名字是新名字的路径前缀。
+
+#### 符号链接
+
+符号链接是对一个文件的间接指针。硬链接直接指向文件的i节点。引入符号链接的原因是为了避开硬链接的一些限制。
+
+1. 硬链接通常要求链接和文件位于同一文件系统中。
+2. 只有超级用户才能创建指向目录的硬链接。
+
+#### 文件的时间
+
+每个文件维护三个时间段：文件最后的访问时间、修改时间与i节点状态的最后更改时间。
+
+#### 函数mkdir、mkdirat和rmdir
+
+创建和删除目录
+
+```c
+#include <sys/stat.h>
+int mkdir(const char *pathname, mode_t mode);
+int mkdirat(int fd, const char *pathname, mode_t mode);
+int rmdir(const char *pathname);
+// 成功返回0，失败返回-1
+```
+
+#### 读取目录
+
+```c
+#include <dirnet.h>
+DIR *opendir(const char *pathname);
+DIR *fdopendir(int fd);
+// 成功返回指针，失败返回NULL
+struct dirnet *readdir(DIR *dp);
+// 成功返回指针，若在目录尾或失败则返回NULL
+void rewinddir(DIR *dp);
+int closedir(DIR *DP);
+// 成功返回0，失败返回-1
+long telldir(DIR *dp);
+// 返回与dp相关联的目录中的当前位置
+void seekdir(DIR *dp, long loc);
+```
+
+DIR是一个内部结构，保存当前正在被读的目录的有关信息。
+
+#### 函数chdir、fchdir和getcwd
+
+进程调用该函数可以改变当前工作目录：
+
+```c
+#include <unistd.h>
+int chdir(const char *pathname);
+int fchdir(int fd);
+// 成功返回0，失败返回-1
+```
