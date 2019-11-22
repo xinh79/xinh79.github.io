@@ -1,0 +1,138 @@
+---
+layout:      post
+title:       "APUE-3-I/O库与数据文件和信息"
+subtitle:    "Advanced Programming in the UNIX® Environment"
+author:      "Ashior"
+header-img:  "img/ReadNotes/bg-APUE.jpg"
+catalog:     true
+tags:
+  - Linux
+  - 读书笔记
+---
+
+> 此篇章为《UNIX环境高级编程》的读书笔记。对应于[此书籍](http://www.apuebook.com/) 。在需要作出解释的地方，结合笔者的知识储备，会添加相应的注释。也可参考此文章：[APUE-2-文件和目录](https://xinh79.github.io/2019/11/22/APUE-2-%E6%96%87%E4%BB%B6%E5%92%8C%E7%9B%AE%E5%BD%95/)。如果有任何错误，或者疑虑，请发送邮件至`ashior@qq.com`。
+
+[TOC]
+
+----
+
+## I/O库
+
+#### 流和FILE对象
+
+标准I/O文件流可用于单字节或多字节（宽）字符集。流的定向决定了所读、写的字符是单字节还是多字节的。当一个流最初被创建时，它并没有定向。freopen函数清除一个流的定向；fwide函数可用于设置流的定向。
+
+```c
+#include <stdio.h>
+#include <wchar.h>
+int fwide(FILE *fp, int mode);
+// 若流是宽定向则返回正值，如果是字节定向的，返回负值，若是为定向则返回0值
+```
+
+#### 缓冲
+
+标准I/O提供了一下3种类型的缓冲：
+1. 全缓冲。在这种情况下，在填满标准I/O缓冲区后才进行实际I/O操作。对于驻留在磁盘上的文件通常是由标准I/O库实施全缓冲的。在一个流上执行第一次I/O操作时，相关标准I/O函数通常调用malloc获得需使用的缓冲区。
+2. 行缓冲。在这种情况下，当输入和输出中遇到换行符时，标准I/O库执行I/O操作。
+3. 不带缓冲。标准I/O库不对字符进行缓冲存储。
+
+当然，我们也可以更改缓冲类型：
+
+```c
+#include <stdio.h>
+void setbuf(FILE *restrict fp, char *restrict buf);
+int setvbuf(FILE *restrict fp, char *restrict buf, int mode, size_t size);
+// 成功返回0，失败返回-1
+// 任何时候我们都可以强制刷新缓冲流
+int fflush(FILE *fp);
+// 成功返回0，失败返回-1
+```
+
+#### 打开流
+
+打开一个标准I/O流：
+
+```c
+#include <stdio.h>
+FILE *fopen(const char *restrict pathname, const char *restrict type);
+FILE *freopen(const char *restrict pathname, const char *restrict type, FILE *restrict fp);
+FILE *fdopen(int fd, const char *type);
+// 成功返回文件指针，失败返回NULL
+```
+
+fopen函数打开一个指定的文件；
+freopen函数在一个指定的流上打开一个指定的文件；
+fdopen函数取一个已有的文件描述符，并使用一个标准的I/O流与该描述符相结合。
+
+```c
+#include <stdio.h>
+int fclose(FILE *fp);
+// 成功返回0，失败返回-1
+```
+
+#### 读和写流
+
+输入函数：
+
+```c
+#include <stdio.h>
+int getc(FILE *fp);
+int fgetc(FILE *fp);
+int getchar(void);
+// 成功返回下一个字符，若已经到达文件尾或出错，返回EOF
+```
+
+输出函数：
+
+```c
+#include <stdio.h>
+int putc(int c, FILE *fp);
+int fputc(int c, FILE *fp);
+int putchar(void);
+// 成功返回c，出错返回EOF
+```
+
+#### 每次一行IO
+
+下面两个函数提供每次输入一行的功能：
+
+```c
+#include <stdio.h>
+char *fgets(char *restrict buf, int n, FILE *restrict fp);
+char *gets(char *buf);
+// 成功返回buf，到达文件尾或失败返回EOF
+```
+
+gets从标准输入读，而fgets则从指定的流读。不建议使用gets函数，因为不能指定缓冲区长度。这样可能造成缓冲区溢出，写到缓冲区之后的存储空间中，从而产生不可预料的后果。
+
+每次输出一行的功能：
+
+```c
+#include <stdio.h>
+int fputs(const char *restrict str, FILE *restrict fp);
+int puts(const char *str);
+// 成功返回非负值，失败返回EOF
+```
+
+----
+
+## 数据文件和信息
+
+#### 口令文件
+
+口令文件在`/etc/passwd`中：
+
+```
+root:x:0:0:root:/root:/bin/bash
+squid:x:23:23::/var/spool/squid:/dev/null
+nobody:x:65534:65534:Nobody:/home:/bin/sh
+sar:x:205:105:Setphen Rago:/home/sar:/bin/bash
+```
+
+1. 加密口令字段包含一个占位符。
+2. root用户的ID为0，表示超级用户
+3. shell字段包含了一个可执行程序名，他被用作该用户的登录shell。如果为空，则去系统默认值，通常为/bin/sh。注意，squid登录项的该字段为/dev/null。这样可以阻止任何用户以squid的名义登录到该系统。（很多系统对于帮助他们得以实施的不同守护进程使用不同的用户ID，squid项是为实现squid代理高速缓存服务的进程设置的）
+
+#### 阴影口令
+
+加密口令是经过单向加密算法处理过的用户口令副本。现在某些系统将加密口令存放在另一个通常称为阴影口令的文件中。该文件至少要包含用户名和密码口令。
