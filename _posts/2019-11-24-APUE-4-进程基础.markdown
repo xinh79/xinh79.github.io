@@ -1,0 +1,310 @@
+---
+layout:      post
+title:       "APUE-4-进程基础"
+subtitle:    "Advanced Programming in the UNIX® Environment"
+author:      "Ashior"
+header-img:  "img/ReadNotes/bg-APUE.jpg"
+catalog:     true
+tags:
+  - Linux
+  - 读书笔记
+---
+
+> 经过阅读，发现次数的介绍的“过分细节”，笔者认为偏向于工具书，所以打算通读一遍，然后结合之后的项目来进行总结学习，毕竟时间有限，春招在即，不能面面俱到。
+
+> 此篇章为《UNIX环境高级编程》的读书笔记。对应于[此书籍](http://www.apuebook.com/) 。在需要作出解释的地方，结合笔者的知识储备，会添加相应的注释。如果有任何错误，或者疑虑，请发送邮件至`ashior@qq.com`。
+
+读书笔记请参考此篇文章：
+
+- [APUE-1-文件IO](https://xinh79.github.io/2019/11/21/APUE-1-%E6%96%87%E4%BB%B6IO/)
+- [APUE-2-文件和目录](https://xinh79.github.io/2019/11/22/APUE-2-%E6%96%87%E4%BB%B6%E5%92%8C%E7%9B%AE%E5%BD%95/)
+- [APUE-3-I/O库与数据文件和信息](https://xinh79.github.io/2019/11/22/APUE-3-IO%E5%BA%93%E4%B8%8E%E6%95%B0%E6%8D%AE%E6%96%87%E4%BB%B6%E5%92%8C%E4%BF%A1%E6%81%AF/)
+
+[TOC]
+
+----
+
+## 进程环境
+
+#### 进程终止
+
+有8种进程终止方式，5种为正常终止方式：
+
+1. 从main函数返回
+2. 调用exit
+3. 调用_exit或_Exit
+4. 最后一个线程从其启动例程返回
+5. 从最后一个线程调用pthread_exit
+
+异常终止有3种方式：
+
+1. 调用abort
+2. 接收到一个信号
+3. 最后一个线程对取消请求做出响应
+
+#### 环境表
+
+每个程序都接收到一张环境表。与参数表一样，环境表也是一个字符指针数组，其中每个指针包含一个以null结束的C字符串的地址。
+
+![7-5](https://pic3.zhimg.com/80/v2-1d90e1564661cd0d9dce4db7a9348536_hd.jpg)
+
+如果该环境中包含5个字符串，那么它看起来如图7-5所示。其中，每个字符串的结尾处都显式地有一个null字节。我们称environ为环境指针，指针数组为环境表，其中各指针指向的字符串为环境字符串。
+
+#### C程序的存储空间布局
+
+- 正文段。这是由CPU执行的机器指令部分。
+- 初始化数据段。通常将此段称为数据段，它包含了程序中需明确地赋初值的变量。例如初始化全局变量。
+- 未初始化数据段。通常将此段称为BSS段。
+- 栈。自动变量以及每次函数调用时所需保存的信息都存放在此段中。每次函数调用时，其返回地址以及调用者的环境信息都存放在栈中。
+- 堆。通常在堆中进行动态存储分配。
+
+![7-6](https://pic4.zhimg.com/80/v2-bafef30373c911300af55fa1e4003d37_hd.jpg)
+
+栈是向下生长，也即从高到低生长。
+
+#### 共享库
+
+共享库使得可以执行文件中不再需要包含公用的库函数，而只需要在所有进程都可引用的存储区中保存这种库例程的一个副本。程序第一次执行或者第一次调用某个库函数时，用动态链接方式将程序与共享库函数相链接。这减少了每个可执行文件的长度，但增加了一些运行时间开销。
+
+#### 存储空间分配
+
+1. malloc：分配指定字节数的存储区。此存储区中的初始值不确定。
+2. calloc：为指定数量指定长度的对象分配存储空间。该空间中每一位都初始化为0。
+3. realloc：增加或减少以前分配区的长度。当长度增加时，可能需要将以前分配去的内容移动到另一个足够大的区域，以便在尾端提供增加的存储区，而新增区域内的初始值则不确定。
+
+```c
+#inlcue <stdlib.h>
+void *malloc(size_t size);
+void *calloc(size_t nobj, size_t size);
+void *realloc(void *ptr, size_t size);
+// 成功返回非空指针，失败返回NULL
+void free(void *ptr);
+```
+
+可能产生严重的错误：
+
+1. 释放一个已经释放的块；
+2. 调用free时所用的指针不是3个alloc函数的返回值等；
+3. 如若一个进程调用malloc函数，但却忘记调用free函数，那么该进程占用的存储空间就会连续增加，这样被称为泄露（leakage）。如果不调用free函数释放不再使用的空间，那么进程地址空间长度就会慢慢增加，直至不再有空闲空间。此时，由于过度的换页开销，会造成性能的下降。
+
+#### 环境变量
+
+获取环境变量值：
+
+```c
+#include <stdlib.h>
+char *getenv(const char *name);
+// 指向与name相关联的value的指针，返回NULL
+```
+
+此函数返回一个指针，它指向name=value字符串的value。我们应当使用getevn从环境中取一个指定环境变量的值，而不是直接访问environ。
+
+----
+
+## 进程控制
+
+#### 进程标识
+
+每一个进程都有一个非负整数表示的唯一进程ID。因为进程ID标识符总是唯一的，常将其采用作其他标识符的一部分以保证其唯一性。
+
+ID为0的进程通常是调度进程，常常被称为交换进程（swapper）。进程ID为1通常是init进程，在自举过程结束时由内核调用。进程ID为2是页守护进程（page daemon），此进程负责支持虚拟存储器系统的分页操作。
+
+```c
+#inlcue <unistd.h>
+pid_t getpid(void);
+// 返回调用进程的进程ID
+pid_t getppid(void);
+// 返回调用进程的父进程ID
+pid_t getuid();
+// 返回调用进程的实际用户ID
+pid_t geteuid();
+// 返回调用进程的有效用户ID
+pid_t getgid();
+// 返回调用进程的实际组ID
+pid_t getegid();
+// 返回调用进程的有效组ID
+```
+
+#### 函数fork
+
+```c
+#include <unistd.h>
+pid_t fork(void);
+// 子进程返回0，父进程返回子进程ID，出错返回-1
+```
+
+fork使子进程得到返回值0的理由是：一个进程只会有一个父进程，所有子进程总是可以调用getppid以获得其父进程的进程ID。
+
+文件共享：在重定向父进程的标准输出时，子进程的标准输出也将被重定向。fork的一个特性是父进程的所有打开文件描述符都被复制到子进程中。就像是使用dup函数，父进程和子进程每个相同的打卡描述符共享一个文件表项。
+
+![8-2](https://pic4.zhimg.com/80/v2-552eed2515a0e83b30590338aea126c3_hd.jpg)
+
+同时，父进程和子进程共享一个文件偏移量。一个进程fork了一个子进程，然后等待子进程终止。为了避免在fork之后处理文件描述符出问题，通常的解决方案是：
+
+1. 父进程等待子进程完成；父进程无需对其描述符做任何处理，当子进程终止后，它曾进行过读、写操作的任一共享描述符的文件偏移量已做了相应更新。
+2. 父进程和子进程各自执行不同的程序段。在fork之后，父进程和子进程各自关闭他们不需使用的文件描述符，这样就不会干扰对方使用的文件描述符。这种方法是网络服务进程经常使用的。
+
+fork的用法：
+
+1. 父进程希望复制自己，使父进程和子进程同时执行不同的代码段。这在网络服务进程中是常见的——父进程等待客户端的服务请求。当这种请求到达时，父进程调用fork，使子进程处理此请求。父进程则继续等待下一个服务请求。
+2. 一个进程要执行不同的程序。这对shell是常见的情况。在这种情况下，子进程从fork返回后立即调用exec。
+
+#### 函数vfork
+
+vfork用于创建一个新进程，而该新进程的目的是exec一个新程序。vfork与fork一样都创建一个子进程，但是它并不将父进程的地址空间完全复制到子进程中，因为子进程会立即调用exec（或exit），于是也就不会引用该地址空间。不过在子进程调用exec或exit之前，它在父进程的空间中运行。
+
+还有一个区别就是vfork保证子进程先运行，在它调用exec或exit之后父进程才可能被调度运行，当子进程调用这两个函数中的任意一个时，父进程会恢复运行。
+
+#### 函数exit
+
+进程正常终止：
+
+1. 在main函数内执行return语句。等效于调用exit。
+2. 调用exit函数。其操作包括调用各种终止处理程序，然后关闭所有标准I/O流。
+3. 调用_exit或_Exit函数。其目的是为进程提供一种无需运行终止处理程序或信号处理程序而终止的方法。
+4. 进程的最后一个线程在其启动例程中执行return语句。
+5. 进程的最后一个线程调用pthread_exit函数。
+
+进程异常终止：
+
+1. 调用abort。它产生SIGABRT信号。
+2. 当进程接收到某些信号时。
+3. 最后一个线程对“取消”（cancellation）请求做出响应。
+
+不管进程如何终止，最后都会执行内核中的同一段代码。这段代码为相应进程关闭所有打开描述符，释放它所用的存储器等。
+
+对于父进程已经终止的所有进程，它们的父进程都改变为init进程。我们称这些进程由init进程收养。具体做法是在一个进程终止时，内核逐个检查所有活动进程，以判断它是否是正要终止进程的子进程，如果是，则该进程的父进程ID就更改为1,。以确保每个进程都有一个父进程。
+
+而当子进程结束时，父进程可以通过函数wait或waitpid获得这些信息。这些信息至少包括进程ID、该进程的终止状态以及该进程使用的CPU时间总量。而init是被编写成，当一个子进程终止时，init就会调用一个wait函数取得其终止状态。
+
+#### 函数wait和waitpid
+
+当一个进程正常或异常终止时，内核就像其父进程发送SIGCHLD信号。因为子进程终止是个异步事件，所以这种信号也是内核向父进程发的异步通知。
+
+调用wait或waitpid：
+
+1. 如果其所有子进程都还在运行，则阻塞；
+2. 如果一个子进程已终止，正等待父进程获取其终止状态，则取得该子进程的终止状态立即返回；
+3. 如果它没有任何子进程，则立即出错返回；
+
+```c
+#include <sys/wait.h>
+pid_t wait(int *statloc);
+pid_t waitpid(pid_t pid, int *statloc, int options);
+// 成功返回进程ID，失败返回0
+```
+
+- waitpid有个选项参数，可以使调用者不阻塞。
+- waitpid并不等待在其调用者之后的第一个终止子进程，它有若干个选项，可以控制它所等待的进程。
+
+#### 函数wait3和wait4
+
+```c
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <sys/time.h>
+#include <sys/resource.h>
+pid_t wait3(int *statloc, int options, struct rusage *rusage);
+pid_t wait4(pid_t pid, int *statloc, int options, struct rusage *rusage);
+// 成功返回进程ID，失败返回-1
+```
+
+资源统计信息包括用户CPU时间总量、系统CPU时间总量、缺页次数、接收到信号的次数等。
+
+#### 竞争条件
+
+当多个进程都企图对共享数据进行某种处理，而最后的结果又取决于进程运行的顺序时，我们认为发生了竞争条件（race condition）。
+
+#### 函数exec
+
+当进程调用一种exec函数时，该进程执行的程序完全替换为新程序，而新程序则从其main函数开始执行。因为调用exec并不创建新进程，所以前后的进程ID并未改变。exec只是用磁盘上的一个新程序替换了当前进程的正文段、数据段、堆段和栈段。
+
+```c
+#include <unistd.h>
+int execl(const char *pathname, const char *arg0, ..., (char *)0);
+int execv(const char *pathname, char *const argv[]);
+int execle(const char *pathname, const char *arg0, ..., (char *)0, char *const envp[]);
+int execve(const char *pathname, char *const argv[], char *const envp[]);
+int execlp(const char *filename, const char *arg0, ..., (char *)0);
+int execvp(const char *filename, char *const argv[]);
+int fexecve(int fd, char *const argv[], char *const envp[]);
+// 出错返回-1，成功不返回
+// Linux
+int execvpe(const char *file, char *const argv[], char *const envp[]);
+```
+
+这些函数的区别就是前4个函数取路径名作为参数，后两个函数则取文件名作为参数，最后一个取文件描述符作为参数。当指定filename作为参数时：
+
+- 如果filename中包含`/`，则就将其视为路径名。
+- 否则按照PATH环境变量，在它所指定的各目录中搜寻可执行文件。
+
+PATH变量包含了一张目录表（称为路径前缀），目录之间用冒号（:）分隔。例如，下面`name=value`环境字符串指定在4个目录中进行搜索：`PATH=/bin:/usr/bin:/usr/local/bin:.`
+
+![8-15](https://pic1.zhimg.com/80/v2-eaae4134eba6b43b7a51c6f8844a2a8c_hd.jpg)
+
+其中就execve属于系统调用，所有的exec函数最终都要调用此系统调用。
+
+#### 解释器文件
+
+最常见的解释器文件以下列行开始：`#! /bin/sh`
+
+#### 函数system
+
+```c
+#inlcude <stdlib.h>
+int system(const char *cmdstring);
+```
+
+#### 用户标识
+
+```c
+#include <unistd.h>
+char *getlogin(void);
+// 成功返回指向登录名字符串的指针，失败返回NULL
+```
+
+给出了登录名，就可以用getpwnam在口令文件中查找用户的相应记录。
+
+#### 进程调度
+
+调度策略和调度优先级是由内核确定的。进程可以通过调整nice值选择以更低优先级运行。进程可以通过nice函数来查看和更改自己的本进程的nice值。
+
+```c
+#include <unistd.h>
+int nice(int incr);
+// 成功返回新的nice值NZERO，失败返回-1
+```
+
+在调用nice函数之前需要清除erron，在nice函数返回-1时，需要检查它的值。如果nice调用成功，并且返回值为-1，那么erron仍然为0.如果erron不为0，说明nice调用失败。
+
+```c
+#include <sys/resource.h>
+int getpriority(int which, id_t who);
+// 成功返回-NZERO~NZERO-1，失败返回-1
+int setpriority(int which, id_t who, int value);
+// 成功返回0，失败返回-1
+```
+
+#### 进程时间
+
+```c
+#include <sys/times.h>
+clock_t times(struct tms *buf);
+// 成功返回时间，失败返回-1
+```
+
+#### 会话
+
+会话是一个或多个进程组的集合。通常是由shell的管道将几个进程编成一组。
+
+#### 函数tcgetpgrp、tcsetpgrp和tcgetsid
+
+需要一个方法来通知内核哪一个进程组是前台进程组，这样，终端设备驱动程序就能知道将终端输入和终端产生的信号发送至何处。
+
+```c
+#include <unistd.h>
+pid_t tcgetpgrp(int fd);
+// 成功返回前台进程组ID，出错返回-1
+int tcsetpgrp(int fd, pid_t pgrpid);
+// 成功返回0，失败返回-1
+```
