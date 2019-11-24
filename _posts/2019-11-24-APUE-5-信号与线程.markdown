@@ -1,0 +1,359 @@
+---
+layout:      post
+title:       "APUE-5-信号与线程"
+subtitle:    "Advanced Programming in the UNIX® Environment"
+author:      "Ashior"
+header-img:  "img/ReadNotes/bg-APUE.jpg"
+catalog:     true
+tags:
+  - Linux
+  - 读书笔记
+---
+
+> 经过阅读，发现次数的介绍的“过分细节”，笔者认为偏向于工具书，所以打算通读一遍，然后结合之后的项目来进行总结学习，毕竟时间有限，春招在即，不能面面俱到。
+
+> 此篇章为《UNIX环境高级编程》的读书笔记。对应于[此书籍](http://www.apuebook.com/) 。在需要作出解释的地方，结合笔者的知识储备，会添加相应的注释。如果有任何错误，或者疑虑，请发送邮件至`ashior@qq.com`。
+
+读书笔记请参考此篇文章：
+
+- [APUE-1-文件IO](https://xinh79.github.io/2019/11/21/APUE-1-%E6%96%87%E4%BB%B6IO/) 
+- [APUE-2-文件和目录](https://xinh79.github.io/2019/11/22/APUE-2-%E6%96%87%E4%BB%B6%E5%92%8C%E7%9B%AE%E5%BD%95/)
+- [APUE-3-I/O库与数据文件和信息](https://xinh79.github.io/2019/11/22/APUE-3-IO%E5%BA%93%E4%B8%8E%E6%95%B0%E6%8D%AE%E6%96%87%E4%BB%B6%E5%92%8C%E4%BF%A1%E6%81%AF/)
+- [APUE-4-进程基础](https://xinh79.github.io/2019/11/24/APUE-4-%E8%BF%9B%E7%A8%8B%E5%9F%BA%E7%A1%80/)
+
+[TOC]
+
+----
+
+## 信号
+
+#### 信号的基本概念
+
+信号是异步事件的经典实例。产生信号的事件对进程而言是随机出现的。接收到信号后，通常有三种做法：忽略此信号；捕捉信号；执行系统默认动作。
+
+```c
+#define SIGHUP  进程由於控制终端死去或者控制终端发出起命令 
+#define SIGINT  键盘中断所产生的信号 
+#define SIGQUIT  键盘终止 
+#define SIGILL  非法的指令 
+#define SIGTRAP   进程遇到一个追踪(trace)或者是一个中断嵌套 
+#define SIGABRT  由abort系统调用所产生的中断信号 
+#define SIGIOT  类似於SIGABRT 
+#define SIGBUS   进程试图使用不合理的记忆体 
+#define SIGFPE  浮点异常 
+#define SIGKILL  KILL 
+#define SIGUSR1  用户自定义 
+#define SIGSEGV  段错误 
+#define SIGUSR2  用户自定义 
+#define SIGPIPE  管道操作时没有读只写 
+#define SIGALRM 由alarm系统调用产生的timer时钟信号 
+#define SIGTERM 收到终端信号的进程 
+#define SIGSTKFLT 堆叠错误 
+#define SIGCHLD  子进程向父进程发出的子进程已经stop或者终止的信号 
+#define SIGCONT  继续运行的信号 
+#define SIGSTOP  stop 
+#define SIGTSTP  键盘所产生的stop信号 
+#define SIGTTIN   当运行在後状态时却需要读取stdin的资料 
+#define SIGTTOU   当运行在後状态时却需要写向stdout 
+#define SIGURG   socket的紧急情况 
+#define SIGXCPU  进程超额使用CPU分配的时间 
+#define SIGXFSZ  进程使用了超出系统规定文件长度的文件 
+#define SIGVTALRM  内部的alarm时钟过期 
+#define SIGPROF  在一个程式段中描绘时钟集过期 
+#define SIGWINCH 终端视窗的改变 
+#define SIGIO 非同步IO 
+#define SIGPOLL  SIGIO pollable事件发生 
+```
+
+#### 函数signal
+
+```c
+#include <signal.h>
+void (*signal(int signo, void (*func)(int)))(int);
+// 成功返回以前的信号处理配置，出错返回SIG_ERR
+```
+
+signo参数是信号名称，func的值时常量SIG_IGN、常量SIG_DFL或当接到此信号后要调用的函数的地址。如果指定SIG_IGN，则向内核表示忽略此信号（SIGKILL和SIGSTOP不能忽略）。如果指定SIG_DFL，则表示接到此信号后的动作是系统默认的动作。当指定函数地址时，则在信号发生时，调用该函数，我们称这种处理为捕捉该信号，称此函数为信号处理程序或信号捕捉函数。
+
+1. 程序启动：当执行一个程序时，所有信号的状态都是系统默认或忽略。通常所有信号都被设置为它们的默认动作，除非调用exec的进程忽略该信号。
+2. 进程创建：当一个进程调用fork时，其子进程继承父进程的信号处理方式。因为子进程在开始时复制了父进程内存映像，所以信号捕捉函数的地址在子进程中是有意义的。
+
+#### 中断的系统调用
+
+如果进程在执行一个低速系统调用而阻塞期间捕捉到一个信号，则该系统调用就被中断不再继续执行。该系统调用返回出错，其errno设置为EINTR。
+
+系统调用分成两种：低速系统调用和其他系统调用。低速系统调用可能会使进程永远阻塞的一类系统调用，包括：
+
+- 如果某些类型文件（如读管道、终端设备和网络设备）的数据不存在，则读操作可能会使调用者永远阻塞；
+- 如果这些数据类型不能被相同的文件类型立即接受，则写操作可能会使调用者永远阻塞；
+- 在某种条件之前打开某些类型文件，可能会发生阻塞（例如要打开一个终端设备，需要先等待与之连接的调制解调器应答）；
+- pause函数和wait函数；
+- 某些ioctl操作；
+- 某些进程间通信函数；
+
+#### 可重入函数
+
+信号处理中保证信号处理程序的安全。这些函数是可重入函数，也被称为异步信号安全的。除了可重入以外，在信号处理操作期间，它会阻塞任何会引起不一致的信号发送。那些不可重入的函数通常是：使用静态数据结构；调用malloc或free；属于标准I/O函数。
+
+#### 函数kill和raise
+
+kill将信号发送给进程或进程组。raise函数则允许进程向自身发送信号。
+
+```c
+#include <signal.h>
+int kill(pid_t pid, int signo);
+int raise(int signo);
+// 成功返回0，失败返回-1
+```
+
+调用`raise(signo)`等价于调用`kill(getpid(), signo)`。
+
+#### 函数alarm和pause
+
+使用alarm函数可以使用一个定时器，在将来的某个时刻该定时器会超时。当定时器超时时，产生SIGALRM信号。如果忽略或不捕捉此信号，则其默认动作是终止调用该alarm函数的进程。
+
+```c
+#include <unistd.h>
+unsigned int alarm(unsigned int seconds);
+// 0或以前闹钟时间的余留秒数
+```
+
+每个进程只能有一个闹钟时间。如果在调用alarm时，之前已为该进程注册的闹钟时间还没有超时，则该闹钟时间的余留值作为本次alarm函数调用的返回值。以前注册的闹钟时间则被新值代替。
+
+```c
+#include <unistd.h>
+int pause(void);
+// 返回值：-1，erron设置为EINTR
+```
+
+pause函数使调用进程挂起直至捕捉到一个信号。只有执行了一个信号处理程序并从其返回时，pause才返回。
+
+#### 信号集
+
+能够表示多个信号的数据结构——信号集。
+
+```c
+#include <signal.h>
+int sigemptyset(sigset_t *set);
+int sigfillset(sigset_t *set);
+int sigaddset(sigset_t *set, int signo);
+int sigdelset(sigset_t *set, int signo);
+// 成功返回0，失败返回-1
+int sigismember(const sigset_t *set, int signo);
+// 若真，返回1，若假返回0
+```
+
+函数sigemptyset初始化由set指向的信号集，清除其中所有信号。函数sigfillset初始化由set指向的信号集，使其包括所有信号。所有应用程序在使用信号集前，要对该信号集调用sigemptyset或sigfillset一次。
+
+#### 函数sigprocmask
+
+检测和更改信号屏蔽字。
+
+```c
+#include <signal.h>
+int sigprocmask(int how, const sigset_t *restrict set, gigset_t *restrict oset);
+// 成功返回0，失败返回-1
+```
+
+首先，若oset是非空指针，那么进程的当前信号屏蔽字通过oset返回。
+其次，若set是一个非空指针，则参数how指示如何修改当前信号屏蔽字。
+
+#### 函数sigpending
+
+sigpending函数返回一个信号集，对于调用进程而言，其中的各信号时阻塞不能传递的，因而也一定his当前未决的。该信号集通过set参数返回。
+
+```c
+#include <signal.h>
+int sigpending(sigset_t *set);
+// 如果成功返回0，失败返回-1
+```
+
+#### 函数sigaction
+
+函数功能是检查和修改与指定信号相关联的处理动作。
+
+```c
+#include <signal.h>
+int sigaction(int signo, const struct sigaction *restrict act, struct sigaction *restrict oact);
+// 成功返回0，失败返回-1
+```
+
+#### 函数sigsuspend
+
+更改进程的信号屏蔽字可以阻塞所选择的信号，或解除对它们的阻塞。使用这种技术可以保护不希望由信号中断的代码临界区、
+
+如果在信号阻塞时，产生了信号，那么该信号的传递就被推迟直到对它解除了阻塞。
+
+#### 函数abort
+
+abort函数的功能是使程序异常终止。
+
+```c
+#include <stdlib.h>
+void abort(void);
+```
+
+此函数将SIGABRT信号发送给调用进程（进程不应该忽略此信号）。
+
+#### 函数sleep
+
+```c
+#include <unistd.h>
+unsigned int sleep(unsigned int seconds);
+// 返回0或未休眠完的秒数
+```
+
+进程被挂起，直到满足以下条件之一：
+
+1. 已经过了seconds所指定的墙上时钟时间。
+2. 调用进程捕捉到一个信号并从信号处理程序返回。
+
+----
+
+## 线程
+
+#### 线程概念
+
+有了多线程之后，在程序设计时就可以吧进程设计成在某一时刻能够做不止一件事情，每个线程处理各自独自的任务。
+
+- 通过位每种事件类型分配单独的处理线程，可以简化处理异步事件的代码。每个线程在进行事件处理是可以采用同步编程模式。
+- 多个进程必须使用复杂机制才能实现内存和文件描述符的共享。
+- 有些问题可以分解从而提高整个程序的吞吐量。
+- 交互的程序可以通过多线程来改善响应时间。
+
+#### 线程标识
+
+进程ID用pid_t非负整数标识，线程ID用pthread_t整数类型来表示。
+
+```c
+#include <pthread.h>
+int pthread_equal(pthread_t tid1, pthread_t tid2);
+// 若相等返回非0数值，否则返回0
+pthread_t pthread_self(void);
+// 获得自身的线程ID
+```
+
+#### 线程创建
+
+```c
+#include <pthread.h>
+int pthread_create(pthread_t *restrict tidp, const pthread_attr_t *restrict attr, void *(*start_rtn)(void*), void *restrict arg);
+// 成功返回0，失败返回错误编号
+```
+
+创建成功时，新创建的线程ID会被设置成tidp指向的内存单元。attr参数用于制定各种不同的线程属性。
+
+#### 线程终止
+
+如果进程中的任意线程调用了exit、_Exit或者_exit，那么整个进程就会终止。与此相类似，如果默认的动作是终止进程，那么，发送到线程的信号就会终止整个进程。
+
+单个线程有3种方式退出，因此可以在不终止整个进程的情况下，停止它的控制流。
+
+1. 线程可以简单地从启动例程中返回，返回值是线程的退出码。
+2. 线程可以被同一进程中的其他线程取消。
+3. 线程调用pthread_exit。
+
+```c
+#include <pthread.h>
+void pthread_exit(void *rval_ptr);
+
+void pthread_join(pthread_t thread, void **rval_ptr);
+// 成功返回0，失败返回错误编号
+```
+
+rval_ptr参数是一个无类型指针，与传给启动例程的单个参数类似。进程中的其他线程也可以通过调用pthread_join函数访问到这个指针。
+
+线程可以通过调用pthread_cancel函数来请求取消同一进程中的其他线程。
+
+```c
+#include <pthread.h>
+int pthread_cancel(pthread_t tid);
+// 若成功，返回0，失败返回错误编号
+```
+
+线程可以安排它退出时需要调用的函数，这与进程在退出时可以用atexit函数安排退出是类似的。这样的函数成为线程清理处理程序。一个线程可以建立多个清理处理程序。处理程序记录在栈中，也就是说，他们的执行顺序与他们注册时相反。
+
+```c
+#include <pthread.h>
+void pthread_cleeanup_push(void (*rtn)(void *), void *arg);
+void pthread_cleanup_pop(int execute);
+```
+
+当线程执行以下动作时，清理函数rtn是由pthread_cleanup_push函数调度的，调度时只有一个参数arg：
+
+- 调用pthread_exit时；
+- 响应取消请求时；
+- 用非零execute参数调用pthread_cleanup_pop时；
+
+如果execute参数为0，清理函数将不被调用。
+
+#### 线程同步
+
+当多个控制线程共享相同的内存时，需要确保每个线程看到一致的数据视图。如果每个线程使用的变量都是其他线程不会读取和修改的，那么久不存在一致性问题。使用锁机制来解决数据不一样问题。
+
+**互斥量**
+
+使用pthread的互斥接口来保护数据，确保同一时间只有一个线程访问数据。互斥量从本质上就是一把锁，在访问共享资源前对互斥量进行设置，在访问完成后释放互斥量。
+
+```c
+#include <pthread.h>
+int pthread_mutex_init(pthread_mutex_t *restrict mutex, const pthread_mutexattr_t *restrict attr);
+int pthread_mutex_destroy(pthread_mutex_t *mutex);
+// 成功返回0，失败返回错误编号
+
+int ptrhard_mutex_lock(pthread_mutex_t *mutex);
+int ptrhard_mutex_trylock(pthread_mutex_t *mutex);
+int ptrhard_mutex_unlock(pthread_mutex_t *mutex);
+// 成功返回0，失败返回错误编号
+```
+
+**函数pthread_mutex_timedlock**
+
+当线程试图获取一个以加锁的互斥量时，pthread_mutex_timedlock互斥量原语允许绑定线程阻塞时间。pthread_mutex_timedlock函数与pthread_mutex_lock是基本等价的，但是在达到超时时间值时，pthread_mutex_timedlock不会对互斥量进行加锁，而是返回错误码ETIMEDOUT。
+
+```c
+#include <pthread.h>
+#include <time.h>
+int pthread_mutex_timedlock(pthread_mutex_t *restrict mutex, const struct timespec *restrict tsptr);
+// 成功返回0，失败返回错误编号
+```
+
+**读写锁**
+
+读写锁与互斥量类似，不过读写锁允许更高的并行性。互斥量要么是锁住状态，要么就是不加锁状态，而且一次只要一个线程可以对其加锁。
+
+**自旋锁**
+
+自旋锁与互斥量类似，但它不是通过休眠使进程阻塞，而是在获取锁之前一直处于忙等（自旋）阻塞状态。自旋锁可用于以下情况：锁被持有的时间短，而且线程并不希望在重新调度上花费太多的成本。
+
+**屏障**
+
+屏障是用户协调多个线程并行工作的同步机制。屏障允许每个线程等待，知道有的合作线程都到达某一点，然后从该点继续执行。
+
+----
+
+## 线程控制
+
+#### 线程属性
+
+pthread接口允许我们通过设置每个对象关联的不同属性来细调线程和同步对象的行为。
+
+1. 每个对象与它自己类型的属性对象进行关联；
+2. 有一个初始化函数，把属性设置为默认值；
+3. 还有一个销毁属性对象的函数；
+4. 每个属性都有一个从属性对象中获取属性值的函数；
+5. 每个属性都有一个设置属性值的函数；
+
+#### 重写
+
+如果一个函数在相同的时间点可以被多个线程安全的调用，就称该函数是线程安全的。但是这并不能说明对信号处理程序来说该函数也是可重入的。如果函数对异步信号处理程序的重入是安全的，那么久可以说函数是异步信号安全的。
+
+#### 线程特定数据
+
+线程特定数据也称线程私有数据，是存储和查询某个特定线程相关数据的一种机制。我们希望在每个线程可以访问它自己单独的数据副本，而不需要担心与其他线程的同步访问问题。
+
+出现线程特定数据的原因：
+
+1. 有时候需要维护基于每线程的数据。
+2. 它提供了让基于进程的接口适应多线程环境的机制。
+
