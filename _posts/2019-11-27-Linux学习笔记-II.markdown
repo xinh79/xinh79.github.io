@@ -1,0 +1,1574 @@
+---
+layout:      post
+title:       "Linux学习笔记-II"
+subtitle:    "Linux System"
+author:      "Ashior"
+header-img:  "img/ReadNotes/bg-linux system.jpg"
+catalog:     true
+tags:
+  - 学习笔记
+  - Linux
+  - 工作
+---
+
+> 此篇文章主要是根据Linux视频教程与网上的相关教程所制作的笔记，为书籍APUE做一个补充，使读者更容易理解书籍内容。
+
+读书笔记请参考此篇文章：
+
+- [APUE-1-文件IO](https://xinh79.github.io/2019/11/21/APUE-1-%E6%96%87%E4%BB%B6IO/) 
+- [APUE-2-文件和目录](https://xinh79.github.io/2019/11/22/APUE-2-%E6%96%87%E4%BB%B6%E5%92%8C%E7%9B%AE%E5%BD%95/)
+- [APUE-3-I/O库与数据文件和信息](https://xinh79.github.io/2019/11/22/APUE-3-IO%E5%BA%93%E4%B8%8E%E6%95%B0%E6%8D%AE%E6%96%87%E4%BB%B6%E5%92%8C%E4%BF%A1%E6%81%AF/)
+- [APUE-4-进程基础](https://xinh79.github.io/2019/11/24/APUE-4-%E8%BF%9B%E7%A8%8B%E5%9F%BA%E7%A1%80/)
+- [APUE-5-信号与线程](https://xinh79.github.io/2019/11/24/APUE-5-%E4%BF%A1%E5%8F%B7%E4%B8%8E%E7%BA%BF%E7%A8%8B/)
+- [Linux学习笔记-I](https://xinh79.github.io/2019/11/22/Linux%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0-I/)
+
+[TOC]
+
+----
+
+## 基本概念
+
+进程是系统资源分配的基本单位。微观上串行，宏观上并行。
+
+进程的状态切换：
+
+就绪态-（获得CPU）-运行态-（失去CPU）-就绪态
+
+运行态-（缺少非CPU的资源）-挂起态-（获得非CPU资源）-就绪态
+
+#### MMU、PCB
+
+**MMU**
+
+1. 虚拟内存和物理内存的映射
+2. 设置修改内存访问级别
+
+![1-1](https://pic1.zhimg.com/80/v2-3517a64c10515aef8c0b2bc073921c94_hd.jpg)
+
+用户空间映射到物理内存是独立的。
+
+**PCB**
+
+- 进程ID，标识系统中每一个进程的唯一ID号；
+- 进程的状态：就绪态、运行态、挂起态、停止态等；
+- 描述虚拟地址空间的信息；
+- 描述控制终端的信息；
+- 当前工作目录；
+- umask掩码；
+- 文件描述符表，包含很多指向file结构体的指针；
+- 和信号相关的信息；
+- 用户ID和组ID；
+
+----
+
+## 进程API
+
+#### 函数fork
+
+创建一个新的进程：`pid_t fork(void);`两个返回值，父进程返回子进程ID，子进程返回0。
+
+```c
+pid_t getpid(void);
+// 获得进程ID
+pid_t getppid(void);
+// 获得父进程的ID
+```
+
+创建多个子进程：
+
+```c
+#include <stdio.h>
+#include <unistd.h>
+#incldeu <stdlib.h>
+int main() {
+	int n = 5;
+	int i = 0;
+	pid_t pid = 0;
+	for (i = 0; i < n; i++) {
+		pid = fork();
+		if (pid == 0) {
+			// son
+			printf("I an child, pid = %d, ppid = %d\n", getpid(), getppid());
+			break;
+		} else if (pid > 0) {
+			// father
+			printf("I an father, pid = %d, ppid = %d\n", getpid(), getppid());
+		}
+	}
+	sleep(i);
+	if (i < 5) {
+		printf("I an child, will exit, pid = %d, ppid = %d\n", getpid(), getppid());
+	} else {
+		// father
+		printf("I an father, pid = %d, ppid = %d\n", getpid(), getppid());
+	}
+	return 0;
+}
+```
+
+通过创建子进程过程中，变量i的值的不同，可以控制子进程的结束循序。
+
+#### 进程共享
+
+父子进程相同处：全局变量、data、text、栈、堆、环境变量、用户ID、宿主目录、进程工作目录、信号处理方式；
+
+父子进程不同点：进程ID、fork返回值、父进程ID、进程运行时间、闹钟（定时器）、未决信号集；
+
+看起来像是子进程复制了一分0-3G的用户区内容，实际上是父子进程遵循**读时共享，写时复制**的原则。这样可以节省开销。只读文件共享，当要求修改数据时，就复制一份出来。
+
+父子进程不共享全局变量。因为对其进行修改后，系统先复制一份给子进程。
+
+#### exec族函数
+
+可以执行其他程序：
+
+```c
+// 执行命令时需要增加路径指定文件
+int execl(const char *path, const char *arg, .../*(char *)NULL*/);
+// 执行程序的时候，使用PATH环境变量，执行的程序可以不用加路径
+int execlp(const char *path, const char *arg, .../*(char *)NULL*/);
+```
+
+file代表要执行的程序，arg参数列表，参数列表需要一个NULL作为结尾（哨兵）。返回值，只有失败才返回。
+
+实际上是将某条命令的代码拿出来，替换掉主程序的代码段。（代码段替换）
+
+```c
+execlp("ls", "ls", "-l", "--color=auto", NULL);
+execl("/bin/ls", "ls", "-l", "--color=auto", NULL);
+```
+
+上述两条语句等效。
+
+#### 孤儿进程和僵尸进程
+
+孤儿进程：父进程周期接收，子进程被init进程领养。
+僵尸进程：子进程死了，父进程没有回收子进程的资源（PCB）。
+
+对于僵尸进程，使用命令`kill -9 父进程ID`杀死父进程，然后就归init管理，也即让系统回收。
+
+#### 子进程回收
+
+回收子进程，知道子进程死亡原因。
+
+```c
+pid_t wait(int *status);
+// status传出参数
+// 返回值成功为子进程ID，失败为-1
+pid_t waitpid(pid_t pid, int *status, int options);
+// pid：
+// pid传入-1为回收任意子进程
+// <-1 -组ID
+// 0 回收和调用进程组ID相同组内的子进程
+// >0 回收指定的pid
+// options：
+// 0与wait相同，也会阻塞
+// WNOHANG如果当前没有子进程退出，会立即返回
+// 如果设置了WNOHANG，那么如果没有子进程退出，返回0
+// 如果有子进程退出，返回退出的pid
+// 失败返回-1（没有子进程，或是子进程早已死亡）
+```
+
+作用：阻塞等待，回收子进程资源，查看死亡原因。
+
+wait函数会阻塞进程，知道有子进程死亡，同时系统会回收子进程的系统资源，而子进程死亡原因可以通过下面的标志查看：
+
+正常死亡：WIFEXITED，如果WIFEXITED为真，使用WEXITSTATUS得到退出状态。
+
+非正常死亡：WIFSIGNALED，如果WIFSIGNALED为真，使用WTERMSIG得到相关信号。
+
+```c
+int status;
+pid_t wpid = wait(&status);
+printf("wait ok, wpid=%d, pid=%d\n", wpid, pid);
+if (WIFEXXITED(status)) {
+	printf("child exit with %d\n", WEXITSTATUS(status));
+}
+if (WIFSIGNALED(status)) {
+	printf("child killed by %d\n", WTERMSIG(status));
+}
+```
+
+批量回收子进程的方式：
+
+```c
+if (i == 5) {
+	printf("I am father\n");
+	while (1) {
+		pid_t wpid = waitpid(-1, NULL, WNOHANG);
+		if (wpid == -1) {
+			break;
+		}
+		else if (wpid > 0) {
+			printf("waitpid wpid = %d\n", wpid);
+		}
+	}
+	while (1) {
+		sleep(1);
+	}
+}
+```
+
+----
+
+## 进程间通信
+
+#### IPC概念
+
+Inter Process Communication进程间通信，通过内核提供的缓冲区进行数据交换的机制。IPC通信的几种方式：
+
+1. pipe 管道，最简单
+2. fifo 有名管道
+3. mmap 文件映射共享I/O，速度最快
+4. socket 本地套接字，最稳定
+5. 信号 携带信息量最小
+5. 共享内存
+6. 消息队列
+
+#### 管道
+
+```c
+int pipe(int pipefd[2]);
+```
+
+pipefd读写文件描述符，0代表读，1代表写。
+
+```c
+#include <stdio.h>
+#include <unistd.h>
+
+int main() {
+	int fd[2];
+	pipe(fd);
+	pid_t pid = fork();
+	if (pid == 0) {
+		// son
+		write(fd[1], "hello", 5);
+	} else if (pid > 0) {
+		// parent
+		char buf[12] = {0};
+		int ret = read(fd[0], buf, sizeof(buf));
+		if (ret > 0) {
+			write(STDOUT_FILENO, buf, ret);
+		}
+	}
+}
+```
+
+read函数在读取管道设备的时候会阻塞。
+父子进程pipe通信，实现ps aux |grep bash命令：
+
+```c
+#include <stdio.h>
+#include <unistd.h>
+int main() {
+	int fd[2];
+	pipe(fd);
+	pid_t pid = fork();
+	if (pid == 0) {
+		// son
+		// 为了避免阻塞，负责读或写的进程应该只负责自己的部分
+		//而被继承的文件描述应该关闭
+		close(fd[0]);
+		// 1. 先使用dup重定向
+		// 标准输出重定向到管道写端
+		dup2(fd[1], STDOUT_FILENO);
+		// 2. execlp
+		execlp("ps", "ps", "aux", NULL);
+	} else if (pid > 0) {
+		// parent
+		// 为了避免阻塞，负责读或写的进程应该只负责自己的部分
+		//而被继承的文件描述应该关闭
+		close(fd[1]);
+		// 1. 重定向，标准输入重定向到管道的读端
+		dup2(fd[0], STDIN_FILENO);
+		// 2. execlp
+		execlp("grep", "grep", "bash", NULL);
+	}
+}
+```
+
+读管道：
+
+- 写端全部关闭：read读到0，相当于读到文件末尾；
+- 写端没有全部关闭：有数据——read读到数据；没有数据——read阻塞，fcntl函数可以更改非阻塞；
+
+写管道：
+
+- 读端全部关闭：产生一个信号SIGPIPE，程序异常终止
+- 读端未全部关闭：管道已满——write阻塞；管道未满——write正常写入；
+
+#### FIFO
+
+FIFO称为命名管道。实现无血缘关系进程通信。
+
+- 创建一个管道的伪文件：mkfifo myfifo 命令创建；也可以使用函数`int mkfifo(const char *pathname, mode_t mode);`
+- 内核会针对FIFO文件开辟一个缓冲区，操作FIFO文件，可以操作缓冲区，实现进程间通信。实际上就是文件读写。
+
+FIFO写进程：
+
+```c
+#include <stdio.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <string.h>
+int main(int argc,char *argv[]) {
+    if(argc != 2){
+        printf("./a.out fifoname\n");
+        return -1;
+    }
+    // 当前目录有一个 myfifo 文件
+    // 打开fifo文件
+    printf("begin open ....\n");
+    int fd = open(argv[1],O_WRONLY);
+    printf("end open ....\n");
+    //写
+    char buf[256];
+    int num = 1;
+    while(1){
+        memset(buf,0x00,sizeof(buf));
+        sprintf(buf,"xiaoming%04d",num++);
+        write(fd,buf,strlen(buf));
+        sleep(1);
+        //循环写
+    }
+    //关闭描述符
+    close(fd);
+    return 0;
+}
+```
+
+FIFO读进程：
+
+```c
+#include <stdio.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <string.h>
+int main(int argc,char *argv[]) {
+    if(argc != 2){
+        printf("./a.out fifoname\n");
+        return -1;
+    }
+    printf("begin oepn read...\n");
+    int fd = open(argv[1],O_RDONLY);
+    printf("end oepn read...\n");
+    char buf[256];
+    int ret;
+    while(1){
+        //循环读
+        memset(buf,0x00,sizeof(buf));
+        ret = read(fd,buf,sizeof(buf));
+        if(ret > 0){
+            printf("read:%s\n",buf);
+        }
+    }
+    close(fd);
+    return 0;
+}
+```
+
+open函数原本不阻塞，但是当打开FIFO块时，直到另外一端也打开，他才返回。
+
+----
+
+## mmap
+
+在文件中的某一段，通过offset与length指定某一段映射至内存中的内容。
+
+```c
+void *mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset);
+int munmap(void *addr, size_t length);
+```
+
+- addr：目前传NULL值；
+- length：映射区的长度；
+- port：PROT_READ可读；PROT_WRITE可写；
+- flags：MAP_SHARED共享的；MAP_PRIVATE私有的；
+- fd：文件描述符，open打开一个文件
+- offset：文件偏移量，必须是4K的整数倍；
+- 返回值：成功返回可用的内存首地址；失败返回MAP_FAILED
+
+munmap释放内存空间。
+
+- addr：传递mmap的返回值；
+- length：mmap创建的长度；
+- 返回值：成功为0，失败-1；
+
+```c
+#include <stdio.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <string.h>
+int main() {
+	//创建并且截断文件
+    int fd = open("mem.txt",O_RDWR);
+    //int fd = open("mem.txt",O_RDWR|O_CREAT|O_TRUNC,0664);
+    ftruncate(fd,8);   
+    //创建映射区
+   char *mem = mmap(NULL,20,PROT_READ|PROT_WRITE,MAP_SHARED,fd,0);
+    //char *mem = mmap(NULL,8,PROT_READ|PROT_WRITE,MAP_PRIVATE,fd,0);
+    if(mem == MAP_FAILED){
+        perror("mmap err");
+        return -1;
+    }
+    close(fd);
+    //拷贝数据
+    strcpy(mem,"helloworld");
+	//mem++;
+    //释放mmap
+    if(munmap(mem,20) < 0){
+        perror("munmap err");
+    }
+    return 0;
+}
+```
+
+可以通过匿名的方式（MAP_ANON）创建映射：
+
+```c
+#include <stdio.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/mman.h>
+#include <fcntl.h>
+#include <sys/wait.h>
+int main(){
+    int *mem = mmap(NULL,4,PROT_READ|PROT_WRITE,MAP_SHARED|MAP_ANON,-1,0);
+    if(mem == MAP_FAILED){
+        perror("mmap err");
+        return -1;
+    }
+    pid_t pid = fork();
+    if(pid == 0 ){
+        //son 
+        *mem = 101;
+        printf("child,*mem=%d\n",*mem);
+        sleep(3);
+        printf("child,*mem=%d\n",*mem);
+    }else if(pid > 0){
+        //parent 
+        sleep(1);
+        printf("parent,*mem=%d\n",*mem);
+        *mem = 10001;
+        printf("parent,*mem=%d\n",*mem);
+        wait(NULL);
+    }
+    munmap(mem,4);
+    return 0;
+}
+```
+
+用mmap实现无血缘关系的进程间通信。
+
+mmap_r.c
+
+```c
+#include <stdio.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/mman.h>
+#include <fcntl.h>
+#include <sys/wait.h>
+
+typedef struct _Student{
+    int sid;
+    char sname[20];
+}Student;
+
+int main(int argc,char *argv[])
+{
+    //open file 
+    int fd = open(argv[1],O_RDWR);
+    //mmap 
+    int length = sizeof(Student);
+    Student *stu = mmap(NULL,length,PROT_READ|PROT_WRITE,MAP_SHARED,fd,0);
+    if(stu == MAP_FAILED){
+        perror("mmap err");
+        return -1;
+    }
+    //read data 
+    while(1){
+        printf("sid=%d,sname=%s\n",stu->sid,stu->sname);
+        sleep(1);
+    }
+    //close and munmap 
+    munmap(stu,length);
+    close(fd);
+    return 0;
+}
+```
+
+mmap_w.c
+
+```c
+#include <stdio.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/mman.h>
+#include <fcntl.h>
+#include <sys/wait.h>
+
+typedef struct  _Student{
+    int sid;
+    char sname[20];
+}Student;
+
+int main(int argc,char *argv[])
+{
+    if(argc != 2){
+        printf("./a.out filename\n");
+        return -1;
+    }
+    
+    // 1. open file 
+	// O_TRUNC：若文件存在，则长度被截为0，属性不变
+    int fd = open(argv[1],O_RDWR|O_CREAT|O_TRUNC,0666);
+    int length = sizeof(Student);
+
+    ftruncate(fd,length);
+
+    // 2. mmap
+    Student * stu = mmap(NULL,length,PROT_READ|PROT_WRITE,MAP_SHARED,fd,0);
+    
+    if(stu == MAP_FAILED){
+        perror("mmap err");
+        return -1;
+    }
+    int num = 1;
+    // 3. 修改内存数据
+    while(1){
+        stu->sid = num;
+        sprintf(stu->sname,"xiaoming-%03d",num++);
+        sleep(1);//相当于没隔1s修改一次映射区的内容
+    }
+    // 4. 释放映射区和关闭文件描述符
+    munmap(stu,length);
+    close(fd);
+    return 0;
+}
+```
+
+#### 作业
+
+1. 通过命名管道传输数据，进程A和进程B，进程A将一个文件MP3发送给进程B；
+
+fifo_r.c
+
+```c
+#include<stdio.h>
+#include<stdlib.h>
+#include<unistd.h>
+#include<errno.h>
+#include<string.h>
+#include<fcntl.h>
+// read lzx.flac file data, then transport those data to another process through fifo tp.
+int main(int argc,char *argv[]){
+    // 创建命名管道
+    // mkfifo("tp",0644);
+    // 读端
+    int infd;
+    infd = open("lzx.flac",O_RDONLY);
+    if(-1 == infd){
+        perror("open");
+        exit(1);
+    }
+
+    // 写端
+    int outfd;
+    outfd = open("tp",O_WRONLY);
+    if(-1 == outfd){
+        perror("open");
+        exit(1);
+    }
+
+    char buf[1024];
+    int n;
+	printf("begin to transport file to fifo.\n");
+    while((n = read(infd, buf, 1024)) > 0){
+        // read尝试将文件描述符infd中的字节读取到缓冲区buf
+        // read返回成功读取到的字节数
+        write(outfd, buf, n);
+        // write返回：若成功则返回写入的字节数，若出错则返回-1
+        // write尝试将缓冲区buf中的字节写到文件描述符outfd中
+    }
+	printf("end of transport.\n");
+    // 关闭读端写端
+    close(infd);
+    close(outfd);
+
+    return 0;
+}
+```
+
+fifo_w.c
+
+```c
+#include<unistd.h>
+#include<stdlib.h>
+#include<stdio.h>
+#include<errno.h>
+#include<string.h>
+#include<fcntl.h>
+// read data from fifo tp, then write data to the file.
+int main(int argc,char *argv[]){
+    // 写端
+    int outfd;
+	char file_name[13] = "lzx_bak.flac";
+    outfd = open(file_name, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if(-1 == outfd){
+        perror("open");
+        exit(1);
+    }
+
+    // 读端
+    int infd;
+    infd = open("tp",O_RDONLY);
+    if(-1 == infd){
+        perror("open");
+        exit(1);
+    }
+
+    char buf[1024];
+    int n;
+    // 将从管道中读取到的数据写入文件file_bak中
+	printf("begin to transport file to %s.\n", file_name);
+    while((n = read(infd, buf, 1024)) > 0){
+        write(outfd, buf, n);
+    }
+	printf("end to write the %s.\n", file_name);
+    close(infd);
+    close(outfd);
+    unlink("tp");
+    return 0;
+}
+```
+
+2. 实现多进程拷贝；
+
+```c
+#include <stdio.h>
+#include <unistd.h>
+#inllude <sys/types.h>
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+
+int main(int argc, char *argv[]) {
+	int n = 5;
+	// 输入参数至少是3，第四个参数可以是进程数目
+	if (argc < 3) {
+		printf("./a.out src dst [n]\n");
+		return 0;
+	}
+	if (argc == 4) {
+		n = atoi(argv[3);
+	}
+	// 打开源文件
+	int srcfd = open(argv[1], O_RDONLY);
+	if (srcfd < 0) {
+		perror("open err");
+		exit(1);
+	}
+	int dstfd = open(argv[2], O_RDWR|O_CREAT|O_TRUNC, 0664);
+	if (dstfd < 0) {
+		perror("open dst err");
+		exit(1);
+	}
+	// 目标拓展，从源文件获得文件大小
+	struct stat sb;
+	stat(argv[1], &sb);// 为了计算大小
+	int len = sb.st_size;
+	truncate(argv[2], len);
+	// 将源文件映射到缓冲区
+	char *psrc = mmap(NULL, len, PROT_READ, MAP_SHARED, srcfd, 0);
+	if (psrc == MAP_FAILED) {
+		perror("mmap src err");
+		exit(1);
+	}
+	// 将目标文件映射
+	char *pdst = mmap(NULL, len, PROT_READ|PROT_WRITE, MAP_SHARED, dstfd, 0);
+	if (pdst == MAP_FAILED) {
+		perror("mmap dstc err");
+		exit(1);
+	}
+	// 创建多个子进程
+	int i = 0;
+	for (i = 0; i < n; i++) {
+		if (fork() == 0) {
+			break;
+		}
+	}
+	// 计算子进程需要拷贝的起点和大小
+	int cpsize = len / n;
+	int mod = len % n;
+	// 数据拷贝，memcpy
+	if (i < n) { // 子进程
+		if (i == n-1) { // 最后一个子进程
+			memcpy(pdst+i*cpsize, psrc+i*cpsize, cpsize+mod);
+		} else {
+			memcpy(pdst+i*cpsize, psrc+i*cpsize, cpsize);
+		}
+	} else { // 父进程
+		for (i = 0; i < n; i++) {
+			wait(NULL);
+		}
+	}
+	// 释放映射区
+	if (munmap(psrc, len) < 0) {
+		perror("munmap src err");
+		exit(1);
+	}
+	if (munmap(pdst, len) < 0) {
+		perror("munmap dst err");
+		exit(1);
+	}
+	// 关闭文件
+	close(srcfd);
+	close(dstfd);
+	return 0;	
+}
+```
+
+----
+
+## 信号
+
+#### 信号概述
+
+**信号的产生**
+
+- 按键产生Ctrl+c Ctrl+z等
+- 调用函数kill、raise、abort
+- 定时器alarm、settimer
+- 命令产生kill
+- 硬件异常、段错误、浮点型错误、SIGPIPE
+
+**信号的状态**
+
+- 产生
+- 传递：信号到达并且处理完成；
+- 未决：信号被阻塞；
+
+**信号的捕获**
+
+- 忽略
+- 执行默认动作
+- 捕获
+
+**阻塞信号集**
+
+也称信号屏蔽字：将某些信号加入集合，对他们设置屏蔽，当屏蔽x信号后，再收到该信号，该信号的处理将退后（解除屏蔽后）
+
+**未决信号集**
+
+1. 产生信号，未决信号集中描述该信号的位立刻翻转为1，表信号处于未决状态。当信号被处理对应为翻转回为0.这一时刻往往非常短暂。
+2. 信号产生后由于某些原因（主要是阻塞）不能抵达。这类信号的集合称之为未决信号集。在屏蔽解除前，信号一直处于未决状态。
+
+#### kill函数
+
+```c
+int kill(pid_t pid, int sig);
+// pid > 0 要发送的进程ID
+// pid = 0 代表当前调用进程组内所有进程
+// pid = -1 代表有权限发送的所有进程
+// pid < 0 代表-pid对应的组内所有进程
+// sig 对应信号
+```
+
+raise给自己发送信号；abort直接给自己产生一个异常信号。
+
+时钟信号alarm，定时给自己发送SIGALRM，几秒钟后发送信号，返回值为上次闹钟剩余的描述。
+
+setitimer函数，周期性的发送信号：
+
+```c
+struct itimerval {
+	// 周期性的时间设置
+	struct timeval it_interval;
+	// 下次的闹钟时间
+	struct timeval it_value;
+}
+
+struct timeeval {
+	time_t tv_sec;
+	suseconds_t tv_usec;
+}
+
+int setitimer(int which, const struct setitimer *new_value, struct setitimer *old_value);
+// ITIMER_REAL自然定时法SIGALRM
+// ITIMER_VIRTUAL计算进程执行时间SIGVIALRM
+// ITMER_PROF进程执行时间+调度时间ITIMER_VIRTUAL
+// new_value要设置的闹钟时间
+// old_value原闹钟时间
+```
+
+设置某些信号，加入未决信号集，进入相关信号后，不处理，下面的代码可以查看未决信号集：
+
+```c
+int main() {
+	sigset_t pend, sigproc;
+	// 设置阻塞信号，等待按键产生信号
+	sigemptyset(&sigproc);
+	sigaddset(&sigproc, SIGINT);
+	sigaddset(&sigproc, SIGQUIT);
+	// 设置阻塞信号集
+	siggrocmask(SIG_BLOCK, &sigproc, NULL);
+	// 循环取未决信号集，打印
+	while(1) {
+		sigending(&pend);
+		int i = 1;
+		for (i = 1; i < 32; i++) {
+			if (sigismember(&pend, i) == 1) {
+				printf("1");
+			} else {
+				printf("0");
+			}
+		}
+		printf("\n");
+		sleep(1);
+	}
+	return 0;	
+}
+```
+
+#### 信号捕捉
+
+防止进程意外死亡
+
+```c
+typedef void(*sighandler_t)(int);
+sighandler_t signal(int signum, sighandler_t handler);
+```
+
+为了避免歧义，所以更多的使用的是以下函数捕捉信号：
+
+```c
+int sigaction(int signum, const struct sigaction *act, struct sigaction *oldact);
+// signum 捕捉的信号
+// act 传入的动作
+// oldact 原动作，用于恢复现场
+struct sigaction {
+	// 函数指针sa_flags为0就使用下面这个函数指针，非0使用第二个函数指针
+	void (*sa_handler)(int);
+	void (*sa_sigaction)(int, siginfo_t *, void *);
+	// 执行捕捉函数期间，临时屏蔽的信号集
+	sigset_t sa_mask;
+	// 一般填0
+	int sa_flags;
+	// 无效
+	void (*sa_restorer)(void);
+}
+```
+
+进行函数捕捉：
+
+```c
+#include <signal.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <sys/time.h>
+void catch_sig() {
+	printf("catch %d sig\n", num);
+}
+int main() {
+	// 注册捕捉函数
+	struct sigaction act;
+	act.sa_flags = 0;
+	act.sa_handler = catch_sig;
+	sigemptyset(&act.sa_mask);
+	// SIGALRM为捕捉的信号，此信号是时钟信号
+	sigaction(SIGALRM, &act, NULL);
+	// 闹钟启动，第一次是五秒后启动，之后的每一次是3秒的间隔
+	struct itimerval myit = {{3, 0}, {5, 0}};
+	setitimer(ITIMER_REAL, &myit, NULL);
+	while (1) {
+		printf("who can kill me!\n");
+		sleep(1);
+	}
+	return 0;
+}
+```
+
+子进程在暂停或者退出的时候会发送SIGCHLD信号。通过捕捉此信号，来回收子进程。注意，可以实现成回收所有的进程。
+
+```c
+#include <stdio.h>
+#include <unistd.h>
+#include <sys/wait.h>
+#inlcude <signal.h>
+void catch_sig(int num) {
+	// waitpid回收的时候，有进程被回收，返回值就大于0
+	// 所以当进程同时死亡时，他可以循环判断
+	while(waitpid(-1, NULL, WNOHANG) > 0) {
+		printf("wait chaild %d ok.\n", wpid);
+	}
+	// 下面的代码一次只能回收一个子进程
+	// pid_t wpid = waitpid(-1, NULL, WNOHANG);
+	// if (wpid > 0) {
+	//	 printf("wait chaild %d ok.\n", wpid);
+	// }
+}
+int main() {
+	int i = 0;
+	pid_t pid;
+	// 避免子进程过早死亡
+	sigset_t myset, oldset;
+	sigemptyset(&myset);
+	sigaddset(&myset, SIGCHLD);
+	// oldset参数用于保存现场，便于还原。设置了SIGCHLD到阻塞信号集
+	sigprocmask(SIG_BLOCK, &myset, &oldset);
+	
+	for ( i = 0; i < 10; i++ ) {
+		pid = fork();
+		if (pid == 0) {
+			break;
+		}
+	}
+	if (i == 10) {
+		// parent
+		
+		// 模拟注册晚于子进程死亡
+		sleep(2);
+		// 注册前，应该先屏蔽SIGCHLD
+		// 当注册时，再解除屏蔽
+		struct sigaction act;
+		act.sa_flags = 0;
+		sigemptyset(&act.sa_mask);
+		act.sa_handler = catch_sig;
+		sigaction(SIGCHLD, &act, NULL);
+		// 解除屏蔽现场
+		sigprocmask(SIG_SETMASK, &oldset, NULL);
+		while (1) {
+			sleep(1);
+		}
+	} else if (i < 10) {
+		// printf();
+		// 如果不睡觉，则信号估计一次过去，但是信号处理不排队
+		// 所以信号可能没有被处理。可以尝试修改处理函数
+		sleep(i);
+	}
+}
+```
+
+#### 作业
+
+- 使用setitimer实现每一个一秒打印一次hello，world
+- 利用SIGUSR1和SIGUSG2在父子进程之间进行消息传递，实现父子进程交替报数，间隔一秒。1.kill(pid, sig)发送信号，2.父子进程捕捉信号。
+- 在父子进程进行管道通信时，如果管道读端都关闭，会受到SIGPIPE信号，模拟场景，对该信号进行捕捉，并且使用捕捉函数回收子进程。
+
+----
+
+## 守护进程
+
+**进程组**
+
+父进程创建了子进程，那么父子进程就是一个组，其中组长是父进程，如果要杀死某一个组的进程，可以直接传入组长ID，将其杀死。
+
+**会话**
+
+进程组的更高一级，多个进程组对应一个会话。进程组：多个进程在同一个组，第一个进程默认是进程组的组长。创建会话需要注意五点：
+
+1. 调用进程不能是进程组组长，该进程变成新会话首进程（session header）；
+2. 该进程成为一个新进程组的组长进程；
+3. 新会话丢弃原有的控制终端，该会话没有控制终端；
+4. 该调用进程是组长组长进程，则出错返回；
+5. 建立新会话时，先调用fork，父进程终止，子进程调用setsid；
+
+**getsid/setsid函数**
+
+setsid调用之后就成为会长。
+
+Daemon精灵进程，是Linux中的后台服务进程，通常独立于控制终端并且周期性地执行某种任务或等待处理某些发生的时间，一般采用以d结尾的名字。
+
+Linux后台的一些系统服务进程，没有控制终端，不能直接和用户交互。。不受用户登录、注销的影响，一直在运行着，他们都是守护进程。如预读入缓输入机制的实现；ftp服务器；nfs服务器等。
+
+创建守护进程，最关键的一步是调用setsid函数创建一个新的session，并成为session leader。
+
+1. 创建子进程 fork
+2. 父进程退出
+3. 子进程当会长 setsid
+4. 切换工作目录 $HOME
+5. 设置掩码 umask
+6. 关闭文件描述符0,1,2，为了避免浪费资源
+7. 执行核心逻辑
+8. 退出
+
+```c
+#include <stdio.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <string.h>
+#include <stdlib.h>
+#include <sys/time.h>
+#include <signal.h>
+#include <time.h>
+
+// 定义文件格式化
+#define _FILE_NAME_FORMAT_ "%s/log/mydaemon.%ld"
+
+void touchfile(int num) {
+	char *HoneDir = getenv("HOME");
+	char strFilename[256]={0};
+	time();
+	sprintf(strFilename, _FILE_NAME_FORMAT_, HomeDir, time(NULL));
+	
+	if (fd < 0) {
+		perror("open err");
+		exit(1);
+	}
+	close(fd);
+}
+
+int main() {
+	// 创建子进程，父进程退出
+	pid_t pid = fork();
+	if (pid > 0) {
+		exit(1);
+	}
+	// 当会长
+	setsid();
+	// 设置掩码
+	umask(0);
+	// 切换工作目录
+	chdir(getenv("HOME"));
+	// 关闭文件描述符
+	// close(0); close(1); close(2);
+	// 开始执行核心逻辑
+	struct itimerval myit = {{60, 0}, {60, 0}};
+	setitimer(ITIMER_REAL, &myit, NULL);
+	struct sigaction act;
+	act.sa_flags = 0;
+	sigemptyset(&act.sa_mask);
+	act.sa_handler = touchfile;
+	sigaction(SIGALRM, &act, NULL);
+	while (1) {
+		// 每隔1分钟在/home/yellow/log下创建文件
+		sleep(1);
+	}
+	// 退出
+	return 0;
+}
+```
+
+除了以上的步骤，可以通过`nohup`来忽略系统发送的0号信号（SIGHUP），这样如果再将程序放置后台执行，则也可以成为类似守护进程的存在。
+
+`nohup ./a.out &`
+
+----
+
+## 线程
+
+线程man page安装：`sudo apt-get install manpages-posix-dev`
+
+线程是轻量级的进程，一个进程内部可以有多个线程，默认情况下一个进程只有一个线程。
+
+线程是最小的执行单位，进程是最小的系统资源分配单位，内核实现都是通过clone函数实现的。
+
+创建一个线程：
+
+```c
+int pthread_create(pthread_t *thread, const pthread_attr_t *attr, void *(*start_routine)(void *), void *arg);
+
+```
+
+- thread 线程的id，传出参数
+- attr 代表线程的属性
+- 第三个参数为函数指针，`void *func(void*)`
+- atg 形成执行函数的参数
+- 返回值成功返回0，失败返回errno
+
+```makefile
+SrcFiles=$(wildcard *.c)
+TargetFiles=$(patsubst %.c,%,$(SrcFiles))
+all:$(TargetFiles)
+
+%:%.c
+	gcc -o $@ $< -lpthread
+clean:
+	-rm -f $(TargetFiles)
+```
+
+`pthread_exit(NULL)`线程退出函数，也可以使用`return NULL;`，exit表示退出整个进程。
+
+线程回收也是阻塞等待的：
+
+```c
+// 当调用pthread_join()时，当前线程会处于阻塞状态，直到被调用的线程结束后，当前线程才会重新开始执行。
+int pthread_join(pthread_t thread, void **retval);
+// thread 创建的时候传出的第一个参数
+// retval 代表的传出线程的退出信息
+```
+
+杀死线程：
+
+```c
+int pthread_cancel(pthread_t thread);
+#define PTHREAD_CANCELED ((void*) -1)
+```
+
+被pthread_cancel杀死的线程，退出状态为PTHREAD_CANCELED。可以通过`pthread_testcancel()`前行设置取消点。
+
+线程分离：此时不需要pthread_join回收资源。
+
+```c
+int pthread_detach(pthread_t thread);
+```
+
+
+
+创建多个线程，并且顺序回收线程。
+
+```c
+#include <stdio.h>
+#include <unistd.h>
+#include <pthread.h>
+
+void thr(void *arg) {
+	int num = (int)arg;
+	printf("I am %d thread, self=%lu\n", num, pthread_self());
+	return (void*)(100+num);
+}
+
+int main() {
+	pthread_t tid[5];
+	int i;
+	for (i = 0; i < 5; i++) {
+		pthread_create(&tid[i], NULL, thr, (void*)i);
+	}
+	for (i = 0; i < 5; i++) {
+		void *ret;
+		pthread_join(tid[i], &ret);
+		printf("i=%d, ret=%d\n", i, (int)ret);
+	}
+}
+```
+
+也可以用过属性的方式，避免来不及设置线程分离时，线程就已经死亡，此时在属性处进行设置。
+
+```c
+#include <stdio.h>
+#include <unistd.h>
+#include <pthread.h>
+#include <string.h>
+
+void thr(void *arg) {
+	printf("I am a thread\n");
+	return NULL;
+}
+
+int main() {
+	pthread_attr_t attr;
+	// 初始化属性
+	pthread_attr_init(&attr);
+	// 设置属性分离
+	pthread_attr_setdetachsatae(&attr, PTHREAD_CREATE_DETACHED);
+	pthread_t tid;
+	pthread_create(&tid, &attr, thr, NULL);
+	int ret;
+	if ((ret = pthread_join(tid, NULL)) > 0) {
+		// join err:22, Invalid argument
+		printf("join err:%d, %s\n", ret, strerror(ret));
+	}
+	// 销毁属性
+	pthread_attr_destory(&attr);
+	return 0;
+}
+```
+
+线程创建的个数：`CPU核数*2+2`
+
+#### 多线程复制一个文件
+
+```c
+#include <pthread.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <string.h>
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/mman.h>
+
+#define _THR_CNT_ 5  // 线程个数
+
+typedef struct _TaskInfo {
+	int num;   // 线程编号
+	void *src; // 源 
+	void *des; // 目的
+	int size;  // 大小
+}TaskInfo;
+
+void *thr_cp(void *arg) {
+	TaskInfo *info = arg;
+	int num = info->num;
+	int cpsize = info->size/_THR_CNT_;
+	int mod = info->size % cpsize;
+	
+	if (num == _THR_CNT_ - 1) {
+		memcpy(info->des+num*cpsize, info->src+num*cpsize, cpsize+mod);
+	} else {
+		memcpy(info->des+num*cpsize, info->src+num*cpsize, cpsize);
+	}
+	return NULL;
+}
+
+int main(int argc, char *argv[]) {
+	if (argc != 3) {
+		printf("./a.out srcfile desfile\n");
+		return -1;
+	}
+	int n = _THR_CNT_;
+	struct stat sb;
+	if (stat(argv[1], &sb) < 0) {
+		perror(argv[1]);
+		exit(1);
+	}
+	long lfilesize = sb.st_size;
+	
+	int fdsrc = open(argv[1], O_REONLY);
+	int fddes = open(argv[2], O_REWR|O_CREATE|O_TRUNC, 0666);
+	ftruncate(fddes, lfilesize);
+	
+	void *srcmem = mmap(NULL, lfilesize, PROT_READ, MAP_PRIVATE, fdsrc, 0);
+	if (srcmem == MAP_FAILED) {
+		perror("mmap secfile err");
+		exit(1);
+	}
+	void *desmem = mmap(NULL, lfilesize, PROT_READ, MAP_PRIVATE, fddes, 0);
+	if (desmem == MAP_FAILED) {
+		perror("mmap desfile err");
+		exit(1);
+	}
+	TasjInfo taskInfos[_THR_CNT_];
+	pthread_t tid[_THR_CNT_];
+	int i = 0;
+	for (i = 0; i < n; i++) {
+		taskInfos[i].src = srcmem;
+		taskInfos[i].des = desmem;
+		taskInfos[i].num = i;
+		taskInfos[i].size = lfilesize;
+		pthread_create(&tid[i], NULL, thr_cp, &taskInfos[i]);
+	}
+	for (i = 0; i < n; i++) {
+		pthread_join(tid[i], NULL);
+	}
+	munmap(srcmem, lfilesize);
+	munmap(desmem, lfilesize);
+	return 0;
+}
+```
+
+####  往指定的文件中写入日志信息
+
+```c
+#include <pthread.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <string.h>
+#include <fcntl.h>
+#include <sys/time.h>
+#include <time.h>
+#include <signal.h>
+
+#define _PROGRAM_NAME_ "touchevery"
+// mm-dd dhh:mi:ss programname [pid]:msg
+#define _LOG_FORMAT_   "%02d-%02d %02d:%02d:%02d %s [%06d]:%s\n"
+// $HOME/log/programname.yy.mm，如果￥HOME/log不存在，需要创建
+#define _LOG_FILE_     "%s/log/%s.%04d%02d"
+
+void catch_alarm(int num) {
+	time_t nowtime = time(NULL);
+	struct tm* nowtm = localtime(nowtime);
+	
+	char strLogFile[100];
+	memset(strLogFile, 0x00, sizeof(strLogFile));
+	sprintf(strLogFile, _LOG_FILE_, getenv("HOME"), _PROGRAM_NAME_, nowtm->tm_year+1900, nowtm->tm_mon+1);
+	int fd = open(strLogFile, O_WRONLY|O_CREATE|O_APPEND, 0666);
+	if (fd > 0) {
+		perror("open file err");
+		printf("file is %s\n", strLogFile);
+		exit(1);
+	}
+	char buf[2048] = {0};
+    sprintf(buf, _LOG_FORMAT_, nowtm->tm_mon+1, nowtm->tm_mday, nowtm->tm_hour, nowtm->tm_min, 
+        nowtm->tm_sec, _PROGRAM_NAME_, getpid(), " This is yellow append info. ");
+    write(fd, buf, strlen(buf));
+    close(fd);
+}
+
+int main() {
+    // 初始化需要的环境变量
+    char *strHomeDir = getenv("HOME");
+    printf("homedir is %s\n", strHomeDir);
+    // 创建守护进程
+    pid_t pid = fork();
+    if (pid > 0) {
+        exit(1);  // 父进程退出
+    }
+    setsid(); // 子进程当会长
+    umask(0); // 设置掩码
+    chdir(strHomeDir);
+    close(0);
+    // 设置信号捕捉，捕捉ALRM信号
+    struct sigaction act;
+    sigemptyset(&act.sa_mask);
+    act.sa_flags = 0;
+    act.sa_handler = catch_alarm;
+    sigaction(SIGALRM, &act, NULL);
+
+    // 设置时钟参数
+    struct itimerval myit = {{60, 0}, {1, 0}}; // 每隔60秒来一次闹钟
+    setitimer(ITIMER_REAL, &myit, NULL);
+    // 循环等待
+    while(1) {
+        sleep(120);
+    }
+    return 0;
+}
+```
+
+----
+
+## 线程同步
+
+#### 加锁
+
+```c
+// 常量初始化锁
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+// 函数初始化锁
+int pthread_mutex_init(pthread_mutex_t *restrict mutex, const pthread_mutexattr_t *restrict attr);
+// 加了restrict修饰，则只能通过后面的变量进行修改即：
+// 约束该块内存区域对应的数据，只能通过后面的变量进行访问和修改
+int pthread_mutex_lock(pthread_mutex_t *mutex);
+// mutex init初始化的锁
+// 如果已经加锁，阻塞等待
+int pthread_mutex_unlock(pthread_mutex_t *mutex);
+// 销毁锁
+int pthread_mutex_destory(pthread_mutex_t *mutex);
+```
+
+**死锁**
+
+解决办法就是每个线程申请锁的顺序要一致，如果申请到一把锁，申请另外一把锁的时候申请失败，应该释放已经掌握的。
+
+#### 读写锁
+
+读时共享，写时独占的。读写锁仍然是一把锁，有不同的状态：未加锁、读锁、写锁。
+
+线程A持有读锁，然后线程B请求写锁，然后线程C请求读锁：BC阻塞；A释放后，B加锁；B释放后，C加锁。
+
+线程A持有写锁，线程B请求读锁，线程C请求写锁：BC阻塞；A释放，C加锁；C释放，B加锁。
+
+因为写锁具有更改的优先级。具有大量读操作，少数写操作的时候，应该使用读写锁。
+
+```c
+// 读写锁初始化，读写锁的类型为pthread_rwlock_t
+int pthread_rwlock_init(pthread_rwlock_t *restrict rwlock, const pthread_rwlockattr_t *restrict attr);
+// 也可以在全局变量的位置添加锁的初始化
+pthread_rwlock_t rwlock = PTHREAD_RWLOCK_INITIALIZER;
+// 销毁锁
+int pthread_rwlock_destory(pthread_rwlock_t *rwlock);
+// 加读锁
+int pthread_rwlock_rd(pthread_rwlock_t *rwlock);
+// 加写锁
+int pthread_rwlock_wr(pthread_rwlock_t *rwlock);
+// 释放锁
+int pthread_rwlock_unlock(pthread_rwlock_t *rwlock);
+```
+
+#### 生产者消费者--mutex锁
+
+**条件变量**
+
+条件变量要不是锁，要和互斥量组合使用。条件变量避免无必要的竞争。
+
+```c
+// 超时等待为绝对的时间abstime
+int pthread_cond_timedwait(pthread_cond_t *restrict cond, pthread_mutex_t *restrict mutex, const struct timespec *restrict abstime);
+// 条件变量阻塞等待
+int pthread_cond_wait(pthread_cond_t *restrict cond, pthread_mutex_t *restrict mutex);
+// 先释放锁mutex，阻塞在cond条件变量上
+
+// 锁的初始化
+int pthread_cond_init(pthread_cond_t *restrict cond, pthread_condattr_t *restrict attr);
+pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
+// 锁的销毁
+int pthread_cond_destory(pthread_cond_t *cond);
+// 唤醒至少一个阻塞在条件变量cond上的线程
+int pthread_cond_signal(pthread_cond_t *cond);
+// 唤醒阻塞在条件变量cond上的全部线程
+int pthread_cond_broadcast(pthread_cond_t *cond);
+```
+
+**生产者消费者模型**
+
+product
+
+```c
+#include <stdio.h>
+#include <unistd.h>
+#include <pthread.h>
+#include <stdlib.h>
+
+int beginnum = 1000;
+
+// 初始化锁
+pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
+pthread_cond_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
+typedef strcut _ProdInfo {
+	int num;
+	struct _ProdInfo *next;
+}ProdInfo;
+ProdInfo *Head = NULL;
+void *thr_producter(void *arg) {
+	// 负责在链表添加数据
+	while(1) {
+		ProdInfo *prod = malloc(sizeof(ProdInfo));
+		prod->num = beginnum++;
+		printf("----%s----self=%lu----%d\n", __FUNCTION__, pthread_self(), prod->num);
+		pthread_mutex_lock(&mutex);
+		prod->next = Head;
+		Head = prod;
+		pthread_mutex_unlock(&mutex);
+		pthread_cond_signal(&cond);
+		sleep(rand()%2);
+	}
+	return NULL;
+}
+
+void *thr_customer(void *arg) {
+	ProdInfo *prod = NULL;
+	while (1) {
+		// 取链表的数据
+		pthread_mutex_lock(&mutex);
+		// 此处使用while循环判断，而不是if只判断一次
+		// 因为在多线程竞争的情况下，判断确实不为空
+		// 但是当你获得锁的时候，另外一个线程可能已经消费完最后一个资源
+		while (Head == NULL) {
+			// 在此之前必须先加锁
+			pthread_cond_wait(&cond, &mutex);
+		}
+		prod = Head;
+		Head = Head->next;
+		printf("----%s----self=%lu----%d\n", __FUNCTION__, pthread_self(), prod->num);
+		pthread_mutex_unlock(&mutex);
+		sleep(rand()%4);
+		free(prod);
+	}
+	return NULL;
+}
+
+int main() {
+	pthread_t tid[3];
+	pthread_create(&tid[0], NULL, thr_producter, NULL);
+	pthread_create(&tid[1], NULL, thr_customer, NULL);
+	pthread_create(&tid[2], NULL, thr_customer, NULL);
+
+	pthread_join(tid[0], NULL);
+	pthread_join(tid[1], NULL);
+	pthread_join(tid[2], NULL);
+	pthread_mutex_destory(&mutex);
+	pthread_cond_destory(&cond);
+	return 0;
+}
+```
+
+#### 信号量
+
+实际上就是加强版的互斥量操作。mutex_lock时，mutex就不可用了。而信号量可以让mutex可以上锁N次。
+
+```c
+int sem_init(sem_t *sem, int pshared, unsigned int value);
+// sem 定义信号量，传出
+// pshared 0代表线程信号量，非0代表进程信号量
+// value 定义信号量的个数
+int sem_destory(sem_t *sem);
+//  申请信号量，当信号量为0时，阻塞。
+int sem_wait(sem_t *sem);
+// 释放信号量，执行value++
+int sem_post(sem_t *sem);
+```
+
+#### 消费者生产者问题--信号量
+
+```c
+#include <stdio.h>
+#include <unistd.h>
+#include <pthread.h>
+#incldue <semaphore.h>
+#include <stdlib.h>
+
+sem_t blank, xfull;
+
+#define _SEM_CNT_ 5
+
+int queue[_SEM_CNT_]; // 模拟容器大小
+int beginnum = 100;
+
+void *thr_producter(void *arg) {
+	int i = 0;
+	while (1) {
+		sem_wait(&blank); // 申请资源blank--
+		printf("----%s----self--%lu----num---%d\n", __FUNCTION__, pthread_self(), beginnum);
+		queue[(i++)%_SEM_CNT_] = beginnum++;
+		sem_post(&xfull); // 释放资源xfull++
+		sleep(rand()%3);
+	}
+	return NULL;
+}
+
+void *thr_customer(void *arg) {
+	int i = 0;
+	while (1) {
+		sem_wait(&xfull); // 申请资源xfull--
+		num = queue[(i++)%_SEM_CTN_];
+		printf("----%s----self--%lu----num---%d\n", __FUNCTION__, pthread_self(), num);
+		queue[(i++)%_SEM_CNT_] = beginnum++;
+		sem_post(&blank); // 释放资源blank--
+		sleep(rand()%3);
+	}
+	return NULL;
+	return NULL;
+}
+
+int main() {
+	// 生产者，blank表示可以生产的个数
+	sem_init(&blank, 0, _SEM_CNT_);
+	// 消费者，表示可以消费的个数
+	sem_init(&xfull, 0, 0);
+	
+	pthread_t tid[2];
+	pthread_create(&tid[0], NULL, thr_producter, NULL);
+	pthread_create(&tid[1], NULL, thr_customer, NULL);
+	
+	pthread_join(tid[0], NULL);
+	pthread_join(tid[1], NULL);
+	
+	sem_destory(&blank);
+	sem_destory(&xfull);
+	return 0;
+}
+```
+
+#### 哲学家用餐问题
+
+五个哲学家代表五个进程，面代表共享资源，筷子代表锁。
