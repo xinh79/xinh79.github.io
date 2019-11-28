@@ -892,7 +892,7 @@ int main() {
 	// SIGALRM为捕捉的信号，此信号是时钟信号
 	sigaction(SIGALRM, &act, NULL);
 	// 闹钟启动，第一次是五秒后启动，之后的每一次是3秒的间隔
-	struct itimerval myit = {{3, 0}, {5, 0}};
+	struct itimerval myit = { {3, 0}, {5, 0} };
 	setitimer(ITIMER_REAL, &myit, NULL);
 	while (1) {
 		printf("who can kill me!\n");
@@ -1049,7 +1049,7 @@ int main() {
 	// 关闭文件描述符
 	// close(0); close(1); close(2);
 	// 开始执行核心逻辑
-	struct itimerval myit = {{60, 0}, {60, 0}};
+	struct itimerval myit = { {60, 0}, {60, 0} };
 	setitimer(ITIMER_REAL, &myit, NULL);
 	struct sigaction act;
 	act.sa_flags = 0;
@@ -1334,7 +1334,7 @@ int main() {
     sigaction(SIGALRM, &act, NULL);
 
     // 设置时钟参数
-    struct itimerval myit = {{60, 0}, {1, 0}}; // 每隔60秒来一次闹钟
+    struct itimerval myit = { {60, 0}, {1, 0} }; // 每隔60秒来一次闹钟
     setitimer(ITIMER_REAL, &myit, NULL);
     // 循环等待
     while(1) {
