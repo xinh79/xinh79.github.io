@@ -1,0 +1,265 @@
+---
+layout:      post
+title:       "APUE-5-进程基础"
+subtitle:    "Advanced Programming in the UNIX® Environment"
+author:      "Ashior"
+header-img:  "img/ReadNotes/bg-APUE.jpg"
+catalog:     true
+tags:
+  - Linux
+  - 读书笔记
+---
+
+> 经过阅读，发现次数的介绍的“过分细节”，笔者认为偏向于工具书，所以打算通读一遍，然后结合之后的项目来进行总结学习，毕竟时间有限，春招在即，不能面面俱到。
+
+> 此篇章为《UNIX环境高级编程》的读书笔记。对应于[此书籍](http://www.apuebook.com/) 。在需要作出解释的地方，结合笔者的知识储备，会添加相应的注释。如果有任何错误，或者疑虑，请发送邮件至`ashior@qq.com`。
+
+> 后面的内容真的是全是源码分析了，所以笔者为了不耽误直接，还是直接开始《Linux学习笔记》的相关文章吧。
+
+读书笔记请参考此篇文章：【此部分的内容，更多详细、重点的内容，请参考Linux学习笔记-II，其中包含示例与源码】
+
+- [APUE-1-文件IO](https://xinh79.github.io/2019/11/21/APUE-1-%E6%96%87%E4%BB%B6IO/) 
+- [APUE-2-文件和目录](https://xinh79.github.io/2019/11/22/APUE-2-%E6%96%87%E4%BB%B6%E5%92%8C%E7%9B%AE%E5%BD%95/)
+- [APUE-3-I/O库与数据文件和信息](https://xinh79.github.io/2019/11/22/APUE-3-IO%E5%BA%93%E4%B8%8E%E6%95%B0%E6%8D%AE%E6%96%87%E4%BB%B6%E5%92%8C%E4%BF%A1%E6%81%AF/)
+- [APUE-4-进程基础](https://xinh79.github.io/2019/11/24/APUE-4-%E8%BF%9B%E7%A8%8B%E5%9F%BA%E7%A1%80/)
+- [APUE-5-信号与线程](https://xinh79.github.io/2019/11/24/APUE-5-%E4%BF%A1%E5%8F%B7%E4%B8%8E%E7%BA%BF%E7%A8%8B/)
+- [Linux学习笔记-I](https://xinh79.github.io/2019/11/22/Linux%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0-I/)
+- [Linux学习笔记-II](https://xinh79.github.io/2019/11/27/Linux%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0-II/)
+
+[TOC]
+
+----
+
+## 高级I/O
+
+#### 非阻塞I/O
+
+对于一个给定的文件描述符，有两种方法设置为非阻塞I/O：
+
+1. 如果调用open获得描述符，则可指定O_NONBLOCK标志
+2. 对于一个已经打开的文件描述符，则可调用fcntl，由该函数打开O_NONBLOCK文件状态标志。
+
+#### 记录锁
+
+record locking的功能是：当第一个进程正在读或修改文件的某个部分时，使用记录锁可以阻止其他进程修改同一文件区。更准确的说，应该是字节范围锁（byte range locking），因为它锁定的只是文件中的一个区域。
+
+**fcntl记录锁**
+
+```c
+#include <fcntl.h>
+it fcntl(int fd, int cmd, ... /*struct flock *flockptr*/);
+// 成功返回依赖于cmd，否则返回-1
+
+struct flock {
+	short l_type;   // F_RDLCK, F_WELCK, F_UNLCK
+	short l_whence; // SEEK_SET, SEEK_CUR, SEEK_END
+	off_t l_start;  // offset in bytes, relative to l_whence
+	off_t l_len;    // length, in bytes; 0 means lock to EOF
+	pid_t l_pid;    // returned with F_GETLK
+}
+```
+
+- 锁的类型：共享读锁F_RDLCK, 独占性写锁F_WELCK, 解锁一个区域F_UNLCK
+- 要加锁或解锁区域的起始字节偏移量（l_start和l_whence）。
+- 区域的字节长度（l_len）。
+- 进程的ID（l_pid）持有的锁能阻塞当前进程。
+
+#### I/O多路转接
+
+从一个描述符读，然后又写入另外一个描述符时，可以在下列形式的循环中使用阻塞I/O：
+
+```c
+while ((n=read(STDIN_FILENO, buf, BUFSIZE)) > 0) {
+	if (write(STDOUT_FILENO, buf, n) != n) {
+		err_sys("write error");
+	}
+}
+```
+
+这种形式的阻塞I/O随处可见，但是如果必须从两个描述符读时，我们不能再任一描述符上进行阻塞读（read），否则可能会因为被阻塞在一个描述符的读操作上而导致另外一个个描述符即使有数据也无法处理。
+
+处理这种特殊问题的一种方法是将一个进程变成两个进程（fork），美格尔进程处理一条数据通路。如果子进程接收到数据并终止，则发送SIGCHLD信号，然后父进程回收并终止，如果父进程先终止，则需要发送SIGUSR1信号通知子进程。
+
+为了避免这种复杂性，使用一个进程两个线程的做法。但是又要求两个线程加锁同步，未免得不偿失。另外一个方法是仍旧使用一个进程执行该程序，但使用非阻塞I/O读取数据。其基本思想是：将两个输入描述符都设置为非阻塞，对第一个描述符发一个read。如果该输入上有数据，则读取数据，否则立即返回。对第二个描述符也是如此。询问完成后，等待一段时间再次重试。这种轮询方式就是会造成CPU的浪费。
+
+还有一种技术就是通过异步I/O完成。进程告诉内核：当前描述符准备好可以进行I/O时，用一个信号通知它。
+
+I/O多路转换就可以解决上述问题。
+
+**函数select和pselect**
+
+```c
+#include <sys/select.h>
+int select(int maxfdp1, fd_set *restrict readfds, fd_set *restrict writefds, fd_set *restrict exceptfds, struct timeval *restrict tvptr);
+// 返回值为准备就绪的描述符数目
+// 超时返回0，出错返回-1
+```
+
+readfds、writefds、exceptfds是指向描述符集的指针。这三个描述符集说明了我们关心的可读、可写或处于异常条件的描述符集合。
+
+```c
+#include <sys/select.h>
+int FD_ISSET(int fd, fd_set *fdset);
+void FD_CLR(int fd, fd_set *fdset);
+void FD_SET(int fd, fd_set *fdset);
+void FD_ZERO(fd_set *fdset);
+```
+
+FD_ZERO将一个fd_set变量的所有位设置为0.要开启描述符集中的一位，可以调用FD_SET。调用FD_CLR可以清除一位。最后，可以调用FD_ISSET测试描述符集中的一个指定位是否已打开。
+
+**函数poll**
+
+poll函数类似于select，但是程序员接口有所不同。
+
+```c
+#include <poll.h>
+int poll(struct pollfd fdarray[], nfds_t nfds, int timeout);
+// 准备就绪的描述符数目，超时时返回0，出错返回-1
+
+struct pollfd {
+	int fd;
+	short events;
+	short revents;
+}
+```
+
+与select不同，poll不是为每个条件（可读性、可写性和异常性）构造一个描述符集，而是构造一个pollfd结构的数组，每个数组元素指定一个描述符编号以及我们对该描述符感兴趣的条件。
+
+关于描述符的状态，系统并不主动告诉我们任何消息，我们需要进行查询（调用select或poll）。
+
+#### 存储映射I/O
+
+存储映射I/O能将一个磁盘文件映射到存储空间中的一个缓冲区上，于是，当从缓冲区中取数据时，就相当于读文件中的相应字节。与此类似，将数据存入缓冲区时，相应字节就自动写入文件。这样，就可以在不使用read和write的情况下执行I/O。
+
+```c
+#include <sys/mman.h>
+void *mmap(void *addr, size_t len, int port, int flag, int fd, off_t off);
+// 成功返回映射区的起始地址，出错返回MAP_FAILED
+```
+
+addr：用于指定映射存储区的起始地址；
+fd：指定要被映射文件的描述符；
+len：表示映射的字节数；
+off：表示映射字节在文件中的起始偏移量；
+prot：指定了映射存储区的保护要求；
+
+prot可以指定参数：PROT_READ（可读）、PROT_WRITE（可写）、PROT_EXEC（可执行）、PROT_NONE（不可访问）
+
+----
+
+## 进程间通信
+
+进程间通信IPC（InterProcess Communication）
+
+#### 管道
+
+```c
+#include <unistd.h>
+int pipe(int fd[2]);
+// 成功返回0，出错返回-1
+// fd[0]为读而打开；
+// fd[1]为写而打开；
+```
+
+**函数popen和pclose**
+
+创建一个连接到另外一个进程的管道，然后读其输出或向其输入端发送数据。这两个函数实现的操作是：创建一个管道，fork一个子进程，关闭未使用的管道端，执行一个shell运行命令，然后等待命令终止。
+
+```c
+#include <stdio.h>
+FILE *popen(const char *cmdstring, const char *type);
+// 成功返回文件指针，出错返回NULL
+int pclose(FILE *fp);
+// 成功返回cmdstring的终止状态，出错返回-1
+```
+
+函数popen先执行fork，然后调用exec执行cmdstring，并且返回一个标准I/O文件指针。
+
+#### 协同进程
+
+popen只提供连接到另外一个进程的标准输入或标准输出的一个单向管道，而协同进程则有连接到另一个进程的两个单向管道：一个接到其标准输入，另一个则来自其标准输出。
+
+#### FIFO
+
+FIFO被称为命名管道。未命名的管道只能在相关联的两个进程中运行，而且这两个相关的进程要有一个共同创建了他们的祖先进程。FIFO对于不相关的进程也能进行数据交换。
+
+```c
+#include <sys/stat.h>
+int mkfifo(const char *path, mode_t mode);
+int mkfileat(it fd, const char *path, mode_t mode);
+// 成功返回0，失败返回-1
+```
+
+#### 共享存储
+
+共享存储允许两个或多个进程共享一个给定的存储区。因为数据不需要在客户进程和服务器进程之间复制，所以这是最快的一种IPC。在多个进程之间同步访问一个给定的存储区。若服务器进程正在将数据放入共享存储区，则在它做完这一操作之前，客户进程不应当去取这些数据。
+
+----
+
+## 网络套接字
+
+```c
+#include <sys/socket.h>
+int socket(int domain, int type, int protocol);
+// 成功返回文件套接字描述符，失败返回-1
+```
+
+domain确定通信特性，包括地址格式：
+
+- AF_INET：IPv4 因特网域
+- AF_INET6：IPv6 因特网域
+- AF_UNIX：UNIX域
+- AF_UPSPEC：未指定
+
+type确定套接字类型：
+
+- SOCK_DGRAM：固定长度的、无连接的、不可靠的报文传递
+- SOCK_RAW：IP协议的数据报接口
+- SOCK_SEQPACKET：固定长度的、有序的、可靠的、面向连接的报文
+- SOCK_STREAM：无序的、可靠的、双向的、面向连接的字节流
+
+protocol指定协议类型，通常设置为0。
+
+套接字通信时双向的。可以采用shutdown函数来禁止一个套接字的I/O。
+
+```c
+#include <sys/socket.h>
+int shutdown(int sockfd, int how);
+// 成功返回0，出错返回-1
+```
+
+how如果是SHUT_RD（关闭读端），那么无法从套接字读取数据。如果是SHUT_WD（关闭写端），那么无法使用套接字发送数据。如果是SHUT_RDWR，则读写数据都不可以。
+
+#### 建立连接
+
+开始交换数据之前需要在请求服务的进程套接字（客户端）和提供服务的进程套接字（服务器）之间建立一个连接。
+
+```c
+#include <sys/socket.h>
+int connect(int sockfd, const struct sockaddr *addr, socklen_t len);
+// 成功返回0，失败返回-1
+
+// 服务器调用此函数来宣告它愿意接受连接请求
+int listen(int sockfd, int backlog);
+// 成功返回0， 失败返回-1
+```
+
+参数backlog提示系统该进程所要入队的未完成连接请求数量。一旦队列满，系统就会拒绝多余的连接请求，所以backlog的值应该基于服务器期望负载和处理量来选择，其中处理量是指接受连接请求与启动服务的数量。
+
+一旦服务器调用了listen，所用的套接字就能接收连接请求。使用accept函数获得连接并请求建立连接。
+
+```c
+int accept(int sockfd, struct sockaddr *restrict addr, socklen_t *restrict len);
+// 成功返回套接字描述符，失败返回-1
+```
+
+如果服务器调用accept，并且当前没有连接请求，服务器会阻塞直到一个请求到来。另外，服务器可以使用poll或select来等待一个请求的到来。在这种情况下，一个带有等待连接请求的套接字会以可读的方式出现。
+
+#### 数据传输
+
+```c
+ssize_t send(int sockfd, const void *buf, size_t nbytes, int flags);
+// 成功返回发送的字节数，失败返回-1
+```
+
+即使send返回成功，我们能保证的是数据已经被无错误地发送到网络驱动程序上。并不表示连接的另外一端的进程就一定接收了数据。
