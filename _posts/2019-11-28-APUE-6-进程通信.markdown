@@ -1,6 +1,6 @@
 ---
 layout:      post
-title:       "APUE-5-进程基础"
+title:       "APUE-6-进程通信"
 subtitle:    "Advanced Programming in the UNIX® Environment"
 author:      "Ashior"
 header-img:  "img/ReadNotes/bg-APUE.jpg"
