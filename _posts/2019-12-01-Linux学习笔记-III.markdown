@@ -1,0 +1,1036 @@
+---
+layout:      post
+title:       "Linux学习笔记-III"
+subtitle:    "Linux System"
+author:      "Ashior"
+header-img:  "img/ReadNotes/bg-linux system.jpg"
+catalog:     true
+tags:
+  - 学习笔记
+  - Linux
+  - 工作
+---
+
+> 此篇文章主要是根据Linux视频教程与网上的相关教程所制作的笔记，为书籍UNP做一个补充，使读者更容易理解书籍内容。
+
+读书笔记请参考此篇文章：
+
+- [APUE-1-文件IO](https://xinh79.github.io/2019/11/21/APUE-1-%E6%96%87%E4%BB%B6IO/) 
+- [APUE-2-文件和目录](https://xinh79.github.io/2019/11/22/APUE-2-%E6%96%87%E4%BB%B6%E5%92%8C%E7%9B%AE%E5%BD%95/)
+- [APUE-3-I/O库与数据文件和信息](https://xinh79.github.io/2019/11/22/APUE-3-IO%E5%BA%93%E4%B8%8E%E6%95%B0%E6%8D%AE%E6%96%87%E4%BB%B6%E5%92%8C%E4%BF%A1%E6%81%AF/)
+- [APUE-4-进程基础](https://xinh79.github.io/2019/11/24/APUE-4-%E8%BF%9B%E7%A8%8B%E5%9F%BA%E7%A1%80/)
+- [APUE-5-信号与线程](https://xinh79.github.io/2019/11/24/APUE-5-%E4%BF%A1%E5%8F%B7%E4%B8%8E%E7%BA%BF%E7%A8%8B/)
+- [APUE-6-进程通信](https://xinh79.github.io/2019/11/28/APUE-6-%E8%BF%9B%E7%A8%8B%E9%80%9A%E4%BF%A1/)
+- [Linux学习笔记-I](https://xinh79.github.io/2019/11/22/Linux%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0-I/)
+- [Linux学习笔记-II](https://xinh79.github.io/2019/11/27/Linux%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0-II/)
+
+[TOC]
+
+----
+
+## 网络编程
+
+#### 网络基础
+
+网络应用程序设计模式：
+
+- C/S-client/server架构：优点：协议灵活，可以缓存数据；缺点：对用户安全构成威胁，开发工作量大，调试困难；
+- B/S-browser/server架构：优点：跨平台；缺点：只能使用http
+
+OIS七层模型：
+
+- 物：物理层：双绞线，光纤；
+- 数：数据链路层：数据的传输和错误检测；
+- 网：网络层：为数据包选择路由；
+- 传：传输层：提供端对端的接口；
+- 会：会话层：解除或建立与别的节点的联系；
+- 表：表示层：数据格式化，代码转换，数据加密；
+- 应：应用层：文件传输，电子邮件，文件服务，虚拟终端；
+
+4层模型：
+
+TCP/IP：网络接口层；网络层；传输层；应用层；
+
+以太网帧格式：借助MAC地址完成数据报传递
+ARP协议，根据IP请求对方的MAC地址。
+
+IP段格式：4位版本ipv4/ipv6。8位生存时间（TTL）：最多能经过多少跳。32位源IP地址：数据发送端地址。32位目的IP地址：数据接收端地址。
+
+UDP数据报格式：16位源端口；16位目的端口；16位UDP长度；16位UDP校验和；数据。
+
+TCP数据包格式：16位源端口号；16位目的端口；32位序号；32位确认需要；6个标志位；16位滑动窗口；
+
+TCP：面向连接的安全的流式传输协议
+
+- 连接的时候，进行三次握手
+- 数据发送的时候，会进行数据确认，数据丢失之后，会进行数据重传；
+
+UDP：面向无连接的不安全的报式传输
+
+- 连接的时候不会握手
+- 数据发送出去之后就不管了
+
+#### 大小端
+
+发送主机通常将发送缓冲区中的数据按内存地址从低到高的顺序发出，接收主机把从网络上接到的字节依次保存在接收缓冲区中，也是按内存地址从低到高的顺序保存，因此，网络数据流的地址应这样规定：先发出的数据是低地址，后发出的数据是高地址。
+
+大端：网络字节序，数据的高位字节，存储在内存的低地址位
+小端：主机字节序，数据的高位字节，存储在内存的高地址位
+
+TCP/IP协议规定，网络数据流应采用大端字节序，即低地址高字节。
+
+端口号是1000（0x3e8），则地址0是0x03，地址1是0xe8，也就是先发0x03，再发0xe8，这16位在发送主机的缓冲区中也应该是低地址存0x03，高地址存0xe8。
+
+为使网络程序具有可移植性，使同样的C代码在大端和小端计算机上编译后都能正常运行，可以调用以下库函数做**网络字节序和主机字节序的转换**。
+
+```c
+#include <arpa/inet.h>
+uint32_t htonl(uint32_t hostlong);
+uint16_t htons(uint16_t hostshort);
+uint32_t ntohl(uint32_t netlong);
+uint16_t ntohs(uint16_t netshort);
+```
+
+h表示host，n表示network，l表示32位长整数，s表示16位短整数。
+
+**IP地址转换函数**
+
+本地IP转网络字节序列，字符串转int（大端方式存储）
+
+```c
+#include <arpa/inet.h>
+// 将点分十进制的ip地址转化为用于网络传输的数值格式
+int inet_pton(int af, const char *src, void *dst);
+// 将数值格式转化为点分十进制的ip地址格式
+const char *inet_ntop(int af, const void *src, char *dst, socklen_t size);
+```
+支持IPv4和IPv6。
+其中inet_pton和inet_ntop不仅可以转换IPv4的in_addr，还可以转换IPv6的in6_addr。因此函数接口是`void *addrptr`。
+
+**sockaddr数据结构**
+
+```c
+struct sockaddr {
+	sa_family_t sa_family;
+	/* address family, AF_xxx */
+	char sa_data[14];
+	/* 14 bytes of protocol address */
+};
+```
+
+IPv4、IPv6和Unix Domain Socket的地址类型分别定义为常数AF_INET、AF_INET6、AF_UNIX。
+
+#### socket
+
+socket是网络通信的函数接口，文件（内核的缓冲区）操作。封装了传输层协议：TCP/UDP。套接字创建成功，得到一个文件描述符fd，fd操作的是一块内核缓冲区。
+
+```c
+#include <sys/types.h> /* See NOTES */
+#include <sys/socket.h>
+int socket(int domain, int type, int protocol);
+```
+
+domain:
+
+- AF_INET 这是大多数用来产生socket的协议，使用TCP或UDP来传输，用IPv4的地址
+- AF_INET6 与上面类似，不过是来用IPv6的地址
+- AF_UNIX 本地协议，使用在Unix和Linux系统上，一般都是当客户端和服务器在同一台及其上的时候使用
+
+type:
+
+- SOCK_STREAM 这个协议是按照顺序的、可靠的、数据完整的基于字节流的连接。这是一个使用最多的socket类型，这个socket是使用TCP来进行传输。
+- SOCK_DGRAM 这个协议是无连接的、固定长度的传输调用。该协议是不可靠的，使用UDP来进行它的连接。
+- SOCK_SEQPACKET该协议是双线路的、可靠的连接，发送固定长度的数据包进行传输。必须把这个包完整的接受才能进行读取。
+- SOCK_RAW socket类型提供单一的网络访问，这个socket类型使用ICMP公共协议。（ping、traceroute使用该协议）
+- SOCK_RDM 这个类型是很少使用的，在大部分的操作系统上没有实现，它是提供给数据链路层使用，不保证数据包的顺序
+protocol:传0 表示使用默认协议。返回值：	成功：返回指向新创建的socket的文件描述符，失败：返回-1，设置errno
+
+socket()打开一个网络通讯端口，如果成功的话，就像open()一样返回一个文件描述符，应用程序可以像读写文件一样用read/write在网络上收发数据，如果socket()调用出错则返回-1。对于IPv4，domain参数指定为AF_INET。对于TCP协议，type参数指定为SOCK_STREAM，表示面向流的传输协议。如果是UDP协议，则type参数指定为SOCK_DGRAM，表示面向数据报的传输协议。protocol参数的介绍从略，指定为0即可。
+
+```c
+#include <sys/types.h> /* See NOTES */
+#include <sys/socket.h>
+int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
+```
+
+sockfd：socket文件描述符
+addr:构造出IP地址加端口号
+addrlen:sizeof(addr)长度
+返回值：成功返回0，失败返回-1, 设置errno
+
+bind()的作用是将参数sockfd和addr绑定在一起，使sockfd这个用于网络通讯的文件描述符监听addr所描述的地址和端口号。前面讲过，`struct sockaddr *`是一个通用指针类型，addr参数实际上可以接受多种协议的sockaddr结构体，而它们的长度各不相同，所以需要第三个参数addrlen指定结构体的长度。如：
+
+```c
+struct sockaddr_in servaddr;
+bzero(&servaddr, sizeof(servaddr));
+servaddr.sin_family = AF_INET;
+servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+servaddr.sin_port = htons(6666);
+```
+
+首先将整个结构体清零，然后设置地址类型为AF_INET，网络地址为INADDR_ANY，这个宏表示本地的任意IP地址，因为服务器可能有多个网卡，每个网卡也可能绑定多个IP地址，这样设置可以在所有的IP地址上监听，直到与某个客户端建立了连接时才确定下来到底用哪个IP地址，端口号为6666。
+
+**listen函数**
+
+```c
+#include <sys/types.h> /* See NOTES */
+#include <sys/socket.h>
+int listen(int sockfd, int backlog);
+```
+
+sockfd:socket文件描述符
+backlog:排队建立3次握手队列和刚刚建立3次握手队列的链接数和
+
+**accept函数**
+
+```c
+#include <sys/types.h> 		/* See NOTES */
+#include <sys/socket.h>
+int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
+```
+
+sockdf：socket文件描述符
+addr：传出参数，返回链接客户端地址信息，含IP地址和端口号
+addrlen：传入传出参数（值-结果）,传入sizeof(addr)大小，函数返回时返回真正接收到地址结构体的大小
+返回值：成功返回一个新的socket文件描述符，用于和客户端通信，失败返回-1，设置errno
+
+三方握手完成后，服务器调用accept()接受连接，如果服务器调用accept()时还没有客户端的连接请求，就阻塞等待直到有客户端连接上来。addr是一个传出参数，accept()返回时传出客户端的地址和端口号。addrlen参数是一个传入传出参数（value-result argument），传入的是调用者提供的缓冲区addr的长度以避免缓冲区溢出问题，传出的是客户端地址结构体的实际长度（有可能没有占满调用者提供的缓冲区）。如果给addr参数传NULL，表示不关心客户端的地址。
+
+服务器程序：
+
+```c
+while (1) {
+	cliaddr_len = sizeof(cliaddr);
+	connfd = accept(listenfd, (struct sockaddr *)&cliaddr, &cliaddr_len);
+	n = read(connfd, buf, MAXLINE);
+	......
+	close(connfd);
+}
+```
+
+整个是一个while死循环，每次循环处理一个客户端连接。由于cliaddr_len是传入传出参数，每次调用accept()之前应该重新赋初值。accept()的参数listenfd是先前的监听文件描述符，而accept()的返回值是另外一个文件描述符connfd，之后与客户端之间就通过这个connfd通讯，最后关闭connfd断开连接，而不关闭listenfd，再次回到循环开头listenfd仍然用作accept的参数。accept()成功返回一个文件描述符，出错返回-1。
+
+**connect函数**
+
+```c
+#include <sys/types.h> 					/* See NOTES */
+#include <sys/socket.h>
+int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
+```
+
+sockdf：socket文件描述符
+addr：传入参数，指定服务器端地址信息，含IP地址和端口号
+addrlen：传入参数,传入sizeof(addr)大小
+返回值：成功返回0，失败返回-1，设置errno
+
+客户端需要调用connect()连接服务器，connect和bind的参数形式一致，区别在于bind的参数是自己的地址，而connect的参数是对方的地址。connect()成功返回0，出错返回-1。
+
+socket tcp server
+
+服务端：
+
+```c
+// 创建套接字：lfd用于监听的
+int lfd = socket;
+// 绑定本地IP和端口：
+struct sockaddr_in serv;
+serv.port = htons(port);
+serv.IP = htons(IP);
+bind(lfd, &serv, sizeof(serv));
+// 监听
+listen(lfd, 128);
+// 等待并接收连接请求
+struct sockaddr_in client;
+int len = sizeof(client);
+int cfd = accept(lfd, &client, &len);
+// cfd-用于通信的
+// 接收数据：read/recv
+// 发送数据：write/send
+// 关闭
+```
+
+客户端：
+
+```c
+// 创建套接字
+int fd = socket
+// 连接服务器
+struct sockaddr_in server;
+server.port
+server.ip = (int)
+server.family
+connect(fd, &server, sizeof(server));
+// 通信
+// 接收数据read/recv
+// 发送数据write/send
+// 断开连接
+close(fd);
+```
+
+#### TCP三次握手/四次挥手
+
+标志位：SYN请求建立连接；ACK应答；FIN断开连接。
+
+连接需要三次握手：
+
+**第一次握手：**
+客户端：携带标志位**SYN**；随机产生32位序号：e.g.1000(0)，可携带数据，如果携带了10个字节，则下次服务器端回复1011。
+服务器：检测SYN值是否为1
+
+**第二次握手：**
+服务器：**ACK标志位+32位确认序号**（客户端发送的32位随机序号+1（因为SYN的大小为1字节），e.g.1001）；发起一个连接请求，SYN+32位随机序号e.g.2000(0)
+客户端：检测标志位：1；校验，确认需要是否正确。
+
+**第三次握手：**
+客户端：**发送确认数据包ACK标志位+32位确认序号**（服务器端发送的32位随机序号+1，e.g.2001）；
+服务器：检测ACK是否为1；校验，确认序号是否正确。
+
+对应代码就是客户端使用connect申请连接，服务器端使用accept接受连接。MSS：最大数据长度
+
+四次挥手时，哪一端断开连接都行。客户端主动断开连接情况：
+
+**第一次挥手**
+客户端：**FIN+序号**：携带的信息为最后一个收到服务器端发送的ACK携带的确认序号大小；**ACK+序号**。
+服务器：检测FIN值是否为1；ACK的作用是告诉对方，之前发送的数据，客户端已经接收了多少。
+**第二次挥手**
+服务器：给客户端发送**ACK数据包**：ACK+确认序号，序号为FIN对应的序号+1+携带数据大小。
+客户端：检测ACK值，检测确认序号。
+**第三次挥手（注意）**
+服务器：**FIN+序号**：携带的信息为最后一个收到客户端端发送的ACK携带的确认序号大小；**ACK+序号**。
+客户端：数据监测。
+**第四次挥手**
+客户端：发送**确认ACK**。
+
+对应代码就是客户端和客户端都是调用close函数结束连接。
+
+**半关闭**
+
+A给B发送是FIN（A调用了close函数），但是B没有给A发送FIN（B没有调用close）。
+A断开了与B的连接，B没有断开与A的连接。
+
+A不能给B发送数据，A可以收到B发送的数据，B可以给A发送数据。
+
+#### 简单的C/S源码
+
+server.c
+
+```c
+#include <stdio.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <string.h>
+#include <arpa/inet.h>
+#include <ctype.h>
+
+int main(int argc, const char* argv[])
+{
+    // 创建监听的套接字
+    int lfd = socket(AF_INET, SOCK_STREAM, 0);
+    if(lfd == -1)
+    {
+        perror("socket error");
+        exit(1);
+    }
+
+    // lfd 和本地的IP port绑定
+    struct sockaddr_in server;
+    memset(&server, 0, sizeof(server));
+    server.sin_family = AF_INET;    // 地址族协议 - ipv4
+    server.sin_port = htons(8888);
+    server.sin_addr.s_addr = htonl(INADDR_ANY);
+    int ret = bind(lfd, (struct sockaddr*)&server, sizeof(server));
+    if(ret == -1)
+    {
+        perror("bind error");
+        exit(1);
+    }
+
+    // 设置监听
+    ret = listen(lfd, 20);
+    if(ret == -1)
+    {
+        perror("listen error");
+        exit(1);
+    }
+
+    // 等待并接收连接请求
+    struct sockaddr_in client;
+    socklen_t len = sizeof(client);
+    int cfd = accept(lfd, (struct sockaddr*)&client, &len);
+    if(cfd == -1)
+    {
+        perror("accept error");
+        exit(1);
+    }
+
+    printf(" accept successful !!!\n");
+    char ipbuf[64] = {0};
+    printf("client IP: %s, port: %d\n", 
+           inet_ntop(AF_INET, &client.sin_addr.s_addr, ipbuf, sizeof(ipbuf)),
+           ntohs(client.sin_port));
+    // 一直通信
+    while(1) {
+        // 先接收数据
+        char buf[1024] = {0};
+        int len = read(cfd, buf, sizeof(buf));
+        if(len == -1) {
+            perror("read error");
+            exit(1);
+        } else if(len == 0) {
+            printf(" 客户端已经断开了连接 \n");
+            close(cfd);
+            break;
+        } else {
+            printf("recv buf: %s\n", buf);
+            // 转换 - 小写 - 大写
+            for(int i=0; i<len; ++i) {
+                buf[i] = toupper(buf[i]);
+            }
+            printf("send buf: %s\n", buf);
+            write(cfd, buf, len);
+        }
+    }
+    close(lfd);
+    return 0;
+}
+```
+
+client.c的作用是从命令行参数中获得一个字符串发给服务器，然后接收服务器返回的字符串并打印。
+
+```c
+#include <stdio.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <string.h>
+#include <arpa/inet.h>
+
+int main(int argc, const char* argv[])
+{
+    if(argc < 2) {
+        printf("eg: ./a.out port\n");
+        exit(1);
+    }
+
+    int port = atoi(argv[1]);
+    // 创建套接字
+    int fd = socket(AF_INET, SOCK_STREAM, 0);
+
+    // 连接服务器
+    struct sockaddr_in serv;
+    memset(&serv, 0, sizeof(serv));
+    serv.sin_family = AF_INET;
+    serv.sin_port = htons(port);
+    // oserv.sin_addr.s_addr = htonl();
+    inet_pton(AF_INET, "127.0.0.1", &serv.sin_addr.s_addr);
+    connect(fd, (struct sockaddr*)&serv, sizeof(serv) );
+
+    // 通信
+    while(1) {
+        // 发送数据
+        char buf[1024];
+        printf("请输入要发送的字符串: \n");
+		// 从终端接入数据
+        fgets(buf, sizeof(buf), stdin);
+        write(fd, buf, strlen(buf));
+        // 等待接收数据
+        int len = read(fd, buf, sizeof(buf));
+        if(len == -1) {
+            perror("read error");
+            exit(1);
+        } else if(len == 0) {
+            printf("服务器端关闭了连接\n");
+            break;
+        } else {
+            printf("recv buf: %s\n", buf);
+        }
+    }
+    close(fd);
+    return 0;
+}
+```
+
+#### 多进程并发执行
+
+使用多进程的方式，解决服务器处理多连接的问题：
+
+1. 共享：读时共享，写时复制；文件描述符；内存映射区--mmap；
+2. 父进程的角色是什么？等待接受客户端连接accept，有连接就创建一个子进程fork()，将通信的文件描述符关闭，节省开销。
+3. 子进程的角色是什么？通信，使用accept返回值-fd；关掉监听的文件描述符，避免浪费资源。
+4. 创建的进程个数限制：受硬件限制；文件描述符默认也是有上限的1024。
+5. 子进程资源回收：wait/waitpid；使用信号回收，signal/sigaction，捕捉SIGCHLD。
+
+process_server.c
+
+```c
+#include <stdio.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <ctype.h>
+#include <signal.h>
+#include <sys/wait.h>
+#include <errno.h>
+
+// 进程回收函数
+void recyle(int num)
+{
+    pid_t pid;
+    while( (pid = waitpid(-1, NULL, WNOHANG)) > 0 )
+    {
+        printf("child died , pid = %d\n", pid);
+    }
+}
+
+int main(int argc, const char* argv[])
+{
+    if(argc < 2)
+    {
+        printf("eg: ./a.out port\n");
+        exit(1);
+    }
+    struct sockaddr_in serv_addr;
+    socklen_t serv_len = sizeof(serv_addr);
+    int port = atoi(argv[1]);
+
+    // 创建套接字
+    int lfd = socket(AF_INET, SOCK_STREAM, 0);
+    // 初始化服务器 sockaddr_in 
+    memset(&serv_addr, 0, serv_len);
+    serv_addr.sin_family = AF_INET;                   // 地址族 
+    serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);    // 监听本机所有的IP
+    serv_addr.sin_port = htons(port);            // 设置端口 
+    // 绑定IP和端口
+    bind(lfd, (struct sockaddr*)&serv_addr, serv_len);
+
+    // 设置同时监听的最大个数
+    listen(lfd, 36);
+    printf("Start accept ......\n");
+
+    // 使用信号回收子进程pcb
+    struct sigaction act;
+    act.sa_handler = recyle;
+    act.sa_flags = 0;
+    sigemptyset(&act.sa_mask);
+    sigaction(SIGCHLD, &act, NULL);
+
+    struct sockaddr_in client_addr;
+    socklen_t cli_len = sizeof(client_addr);
+    while(1)
+    {
+        // 父进程接收连接请求
+        // accept阻塞的时候被信号中断, 处理信号对应的操作之后
+        // 回来之后不阻塞了, 直接返回-1, 这时候 errno==EINTR
+        int cfd = accept(lfd, (struct sockaddr*)&client_addr, &cli_len);
+        while(cfd == -1 && errno == EINTR)
+        {
+            cfd = accept(lfd, (struct sockaddr*)&client_addr, &cli_len);
+        }
+        printf("connect sucessful\n");
+        // 创建子进程
+        pid_t pid = fork();
+        if(pid == 0)
+        {
+            close(lfd);
+            // child process
+            // 通信
+            char ip[64];
+            while(1)
+            {
+                // client ip port
+                printf("client IP: %s, port: %d\n", 
+                       inet_ntop(AF_INET, &client_addr.sin_addr.s_addr, ip, sizeof(ip)),
+                       ntohs(client_addr.sin_port));
+                char buf[1024];
+                int len = read(cfd, buf, sizeof(buf));
+                if(len == -1)
+                {
+                    perror("read error");
+                    exit(1);
+                }
+                else if(len == 0)
+                {
+                    printf("客户端断开了连接\n");
+                    close(cfd);
+                    break;
+                }
+                else
+                {
+                    printf("recv buf: %s\n", buf);
+                    write(cfd, buf, len);
+                }
+            }
+            // 干掉子进程
+            return 0;
+
+        }
+        else if(pid > 0)
+        {
+            // parent process
+            close(cfd);
+        }
+    }
+
+    close(lfd);
+    return 0;
+}
+```
+
+pthread_server.c
+
+```c
+#include <stdio.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <ctype.h>
+#include <pthread.h>
+
+// 自定义数据结构
+typedef struct SockInfo
+{
+    int fd; // 
+    struct sockaddr_in addr;
+    pthread_t id;
+}SockInfo;
+
+// 子线程处理函数
+void* worker(void* arg)
+{
+    char ip[64];
+    char buf[1024];
+    SockInfo* info = (SockInfo*)arg;
+    // 通信
+    while(1)
+    {
+        printf("Client IP: %s, port: %d\n",
+               inet_ntop(AF_INET, &info->addr.sin_addr.s_addr, ip, sizeof(ip)),
+               ntohs(info->addr.sin_port));
+        int len = read(info->fd, buf, sizeof(buf));
+        if(len == -1)
+        {
+            perror("read error");
+            pthread_exit(NULL);
+        }
+        else if(len == 0)
+        {
+            printf("客户端已经断开了连接\n");
+            close(info->fd);
+            break;
+        }
+        else
+        {
+            printf("recv buf: %s\n", buf);
+            write(info->fd, buf, len);
+        }
+    }
+    return NULL;
+}
+
+int main(int argc, const char* argv[])
+{
+    if(argc < 2)
+    {
+        printf("eg: ./a.out port\n");
+        exit(1);
+    }
+    struct sockaddr_in serv_addr;
+    socklen_t serv_len = sizeof(serv_addr);
+    int port = atoi(argv[1]);
+
+    // 创建套接字
+    int lfd = socket(AF_INET, SOCK_STREAM, 0);
+    // 初始化服务器 sockaddr_in 
+    memset(&serv_addr, 0, serv_len);
+    serv_addr.sin_family = AF_INET;                   // 地址族 
+    serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);    // 监听本机所有的IP
+    serv_addr.sin_port = htons(port);            // 设置端口 
+    // 绑定IP和端口
+    bind(lfd, (struct sockaddr*)&serv_addr, serv_len);
+
+    // 设置同时监听的最大个数
+    listen(lfd, 36);
+    printf("Start accept ......\n");
+
+    int i = 0;
+    SockInfo info[256];
+    // 规定 fd == -1  
+    for(i=0; i<sizeof(info)/sizeof(info[0]); ++i)
+    {
+        info[i].fd = -1;
+    }
+
+    socklen_t cli_len = sizeof(struct sockaddr_in);
+    while(1)
+    {
+        // 选一个没有被使用的, 最小的数组元素
+        for(i=0; i<256; ++i)
+        {
+            if(info[i].fd == -1)
+            {
+                break;
+            }
+        }
+        if(i == 256)
+        {
+            break;
+        }
+        // 主线程 - 等待接受连接请求
+        info[i].fd = accept(lfd, (struct sockaddr*)&info[i].addr, &cli_len);
+
+        // 创建子线程 - 通信
+        pthread_create(&info[i].id, NULL, worker, &info[i]);
+        // 设置线程分离
+        pthread_detach(info[i].id);
+
+    }
+
+    close(lfd);
+
+    // 只退出主线程
+    pthread_exit(NULL);
+    return 0;
+}
+```
+
+----
+
+## select-poll
+
+#### 端口复用
+
+端口复用的作用：
+
+- 防止服务器重启时，之前绑定的端口还未释放
+- 程序突然退出而系统没有释放端口
+
+设置方法：
+
+```c
+int setsockopt(sockfd, SOL_SOCKER, SO_REUSEADDR, (const void *)&opt, sizeof(opt));
+
+// 设置端口复用
+int flag = 1;
+setsockopt(lfd, SOL_SOCKET, SO_REUSEADDR, &flag, sizeof(flag));
+```
+
+#### I/O多路转接
+
+使用IO多路转接技术select/poll/epoll
+
+委托内核检测连接的客户端，哪些需要进行数据通信。select/poll（底层遍历一个线性表）知道有多少个，但是具体是哪一个就不清楚了。epoll知道具体的客户端（底层遍历一个红黑树）。
+
+什么是I/O多路转接技术：
+
+1. 首先构造一张有关文件描述符的列表，将要监听的文件描述符添加到该表中。
+2. 然后调用一个函数，监听该表中的文件描述符，直到这些描述符表中的一个精心I/O操作时，该函数才返回。- 该函数为阻塞函数；-函数对文件描述符的检测操作时由内核完成的。
+3. 在返回时，它告诉进程由多少（哪些）描述符要进行I/O操作。
+
+**select**
+
+1.	select能监听的文件描述符个数受限于FD_SETSIZE，一般为1024，单纯改变进程打开的文件描述符个数并不能改变select监听文件个数。
+2.	解决1024以下客户端时使用select是很合适的，但如果链接客户端过多，select采用的是轮询模型，会大大降低服务器响应效率，不应在select上投入更多精力。
+
+
+```c
+#include <sys/select.h>
+/* According to earlier standards */
+#include <sys/time.h>
+#include <sys/types.h>
+#include <unistd.h>
+int select(int nfds, fd_set *readfds, fd_set *writefds,
+			fd_set *exceptfds, struct timeval *timeout);
+
+nfds: 		监控的文件描述符集里最大文件描述符加1，因为此参数会告诉内核检测前多少个文件描述符的状态
+readfds：	监控有读数据到达文件描述符集合，*传入传出参数
+writefds：	监控写数据到达文件描述符集合，NULL传入传出参数
+exceptfds：	监控异常发生达文件描述符集合，如带外数据到达异常，NULL传入传出参数
+timeout：	定时阻塞监控时间，3种情况
+			1.NULL，永远等下去
+			2.设置timeval，等待固定时间
+			3.设置timeval里时间均为0，检查描述字后立即返回，轮询
+struct timeval {
+	long tv_sec; /* seconds */
+	long tv_usec; /* microseconds */
+};
+void FD_CLR(int fd, fd_set *set); 	//把文件描述符集合里fd清0
+int FD_ISSET(int fd, fd_set *set); 	//测试文件描述符集合里fd是否置1
+void FD_SET(int fd, fd_set *set); 	//把文件描述符集合里fd位置1
+void FD_ZERO(fd_set *set); 			//把文件描述符集合里所有位清0
+```
+
+**select多路转接代码**
+
+```c
+#include <stdio.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <ctype.h>
+
+
+int main(int argc, const char* argv[])
+{
+    if(argc < 2)
+    {
+        printf("eg: ./a.out port\n");
+        exit(1);
+    }
+    struct sockaddr_in serv_addr;
+    socklen_t serv_len = sizeof(serv_addr);
+    int port = atoi(argv[1]);
+
+    // 创建套接字
+    int lfd = socket(AF_INET, SOCK_STREAM, 0);
+    // 初始化服务器 sockaddr_in 
+    memset(&serv_addr, 0, serv_len);
+    serv_addr.sin_family = AF_INET;                   // 地址族 
+    serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);    // 监听本机所有的IP
+    serv_addr.sin_port = htons(port);            // 设置端口 
+    // 绑定IP和端口
+    bind(lfd, (struct sockaddr*)&serv_addr, serv_len);
+
+    // 设置同时监听的最大个数
+    listen(lfd, 36);
+    printf("Start accept ......\n");
+
+    struct sockaddr_in client_addr;
+    socklen_t cli_len = sizeof(client_addr);
+
+    // 最大的文件描述符
+    int maxfd = lfd;
+    // 文件描述符读集合
+    fd_set reads, temp;
+    // init
+    FD_ZERO(&reads);
+    FD_SET(lfd, &reads);
+
+    while(1)
+    {
+        // 委托内核做IO检测
+        temp = reads;
+        int ret = select(maxfd+1, &temp, NULL, NULL, NULL);
+        if(ret == -1)
+        {
+            perror("select error");
+            exit(1);
+        }
+        // 客户端发起了新的连接
+        if(FD_ISSET(lfd, &temp))
+        {
+            // 接受连接请求 - accept不阻塞
+            int cfd = accept(lfd, (struct sockaddr*)&client_addr, &cli_len);
+            if(cfd == -1)
+            {
+                perror("accept error");
+                exit(1);
+            }
+            char ip[64];
+            printf("new client IP: %s, Port: %d\n", 
+                   inet_ntop(AF_INET, &client_addr.sin_addr.s_addr, ip, sizeof(ip)),
+                   ntohs(client_addr.sin_port));
+            // 将cfd加入到待检测的读集合中 - 下一次就可以检测到了
+            FD_SET(cfd, &reads);
+            // 更新最大的文件描述符
+            maxfd = maxfd < cfd ? cfd : maxfd;
+        }
+        // 已经连接的客户端有数据到达
+        for(int i=lfd+1; i<=maxfd; ++i)
+        {
+            if(FD_ISSET(i, &temp))
+            {
+                char buf[1024] = {0};
+                int len = recv(i, buf, sizeof(buf), 0);
+                if(len == -1)
+                {
+                    perror("recv error");
+                    exit(1);
+                }
+                else if(len == 0)
+                {
+                    printf("客户端已经断开了连接\n");
+                    close(i);
+                    // 从读集合中删除
+                    FD_CLR(i, &reads);
+                }
+                else
+                {
+                    printf("recv buf: %s\n", buf);
+                    send(i, buf, strlen(buf)+1, 0);
+                }
+            }
+        }
+    }
+
+    close(lfd);
+    return 0;
+}
+
+```
+
+poll函数：
+
+```c
+#include <poll.h>
+int poll(struct pollfd *fds, nfds_t nfds, int timeout);
+struct pollfd {
+	int fd; 		/* 文件描述符 */
+	short events; 	/* 监控的事件 */
+	short revents; 	/* 监控事件中满足条件返回的事件 */
+};
+POLLIN			*普通或带外优先数据可读，即POLLRDNORM | POLLRDBAND
+POLLRDNORM		数据可读
+POLLRDBAND		优先级带数据可读
+POLLPRI 		高优先级可读数据
+POLLOUT			*普通或带外数据可写
+POLLWRNORM		数据可写
+POLLWRBAND		优先级带数据可写
+POLLERR 		*发生错误
+POLLHUP 		发生挂起
+POLLNVAL 		描述字不是一个打开的文件
+
+nfds 			监控数组中有多少文件描述符需要被监控
+
+timeout 		毫秒级等待
+	-1：阻塞等，#define INFTIM -1 				Linux中没有定义此宏
+	0 ：立即返回，不阻塞进程
+	>0：等待指定毫秒数，如当前系统时间精度不够毫秒，向上取值
+
+```
+
+如果不再监控某个文件描述符时，可以把pollfd中，fd设置为-1，poll不再监控此pollfd，下次返回时，把revents设置为0。select源码实现为数组，而poll的存储方式为链表，所以不受1024大小的限制。
+
+**poll代码**
+
+```c
+#include <stdio.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <ctype.h>
+#include <poll.h>
+
+#define SERV_PORT 8989
+
+int main(int argc, const char* argv[])
+{
+    int lfd, cfd;
+    struct sockaddr_in serv_addr, clien_addr;
+    int serv_len, clien_len;
+
+    // 创建套接字
+    lfd = socket(AF_INET, SOCK_STREAM, 0);
+    // 初始化服务器 sockaddr_in 
+    memset(&serv_addr, 0, sizeof(serv_addr));
+    serv_addr.sin_family = AF_INET;                   // 地址族 
+    serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);    // 监听本机所有的IP
+    serv_addr.sin_port = htons(SERV_PORT);            // 设置端口 
+    serv_len = sizeof(serv_addr);
+    // 绑定IP和端口
+    bind(lfd, (struct sockaddr*)&serv_addr, serv_len);
+
+    // 设置同时监听的最大个数
+    listen(lfd, 36);
+    printf("Start accept ......\n");
+
+    // poll结构体
+    struct pollfd allfd[1024];
+    int max_index = 0;
+    // init
+    for(int i=0; i<1024; ++i)
+    {
+        allfd[i].fd = -1;
+    }
+    allfd[0].fd = lfd;
+	allfd[0].events = POLLIN;
+
+    while(1)
+    {
+        int i = 0;
+        int ret = poll(allfd, max_index+1, -1); 
+        if(ret == -1)
+        {
+            perror("poll error");
+            exit(1);
+        }
+
+        // 判断是否有连接请求
+        if(allfd[0].revents & POLLIN)
+        {
+            clien_len = sizeof(clien_addr);
+            // 接受连接请求
+            int cfd = accept(lfd, (struct sockaddr*)&clien_addr, &clien_len);
+            printf("============\n");
+
+            // cfd添加到ｐｏｌｌ数组
+            for(i=0; i<1024; ++i)
+            {
+                if(allfd[i].fd == -1)
+                {
+                    allfd[i].fd = cfd;
+                    break;
+                }
+            }
+            // 更新最后一个元素的下标
+            max_index = max_index < i ? i : max_index;
+        }
+
+        // 遍历数组
+        for(i=1; i<=max_index; ++i)
+        {
+            int fd = allfd[i].fd;
+            if(fd == -1)
+            {
+                continue;
+            }
+            if(allfd[i].revents & POLLIN)
+            {
+                // 接受数据
+                char buf[1024] = {0};
+                int len = recv(fd, buf, sizeof(buf), 0);
+                if(len == -1)
+                {
+                    perror("recv error");
+                    exit(1);
+                }
+                else if(len == 0)
+                {
+                    allfd[i].fd = -1;
+                    close(fd);
+                    printf("客户端已经主动断开连接。。。\n");
+                }
+                else
+                {
+                    printf("recv buf = %s\n", buf);
+                    for(int k=0; k<len; ++k)
+                    {
+                        buf[k] = toupper(buf[k]);
+                    }
+                    printf("buf toupper: %s\n", buf);
+                    send(fd, buf, strlen(buf)+1, 0);
+                }
+
+            }
+
+        }
+    }
+
+    close(lfd);
+    return 0;
+}
+```
