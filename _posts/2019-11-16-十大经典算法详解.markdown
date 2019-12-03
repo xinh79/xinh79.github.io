@@ -108,6 +108,8 @@ void insertionSort(vector<int>& array) {
 		return ;
 	}
 	for (int i = 1; i < array.size(); i++) {
+	        // 往后进行比较，找到合适的位置交换
+        	// 其实就是一个往后插入的逆向冒泡排序的过程
 		for (int j = i - 1; j >= 0 && array[j] > array[j + 1]; j--) {
 			swap(array[j], array[j+1]);
 		}
@@ -346,6 +348,42 @@ void mergeSortIteration(vector<int>& array) {
 
 递归版本：
 
+左程云版本：
+
+```java
+public static void quickSort(int[] arr) {
+    if (arr == null || arr.length < 2) {
+        return;
+    }
+    quickSort(arr, 0, arr.length - 1);
+}
+
+public static void quickSort(int[] arr, int l, int r) {
+    if (l < r) {
+        swap(arr, l + (int) (Math.random() * (r - l + 1)), r);
+        int[] p = partition(arr, l, r);
+        quickSort(arr, l, p[0] - 1);
+        quickSort(arr, p[1] + 1, r);
+    }
+}
+
+public static int[] partition(int[] arr, int l, int r) {
+    int less = l - 1;
+    int more = r;
+    while (l < more) {
+        if (arr[l] < arr[r]) {
+            swap(arr, ++less, l++);
+        } else if (arr[l] > arr[r]) {
+            swap(arr, --more, l);
+        } else {
+            l++;
+        }
+    }
+    swap(arr, more, r);
+    return new int[] { less + 1, more };
+}
+```
+
 ```cpp
 // 快速排序（递归）
 // 选则最左端、最右端和中间位置3元素的中值作为基准值，并将3元素排序，返回基准值
@@ -480,6 +518,59 @@ void heapSort(vector<int>& array){
 }
 ```
 
+左程云算法：
+
+```java
+public static void heapSort(int[] arr) {
+    if (arr == null || arr.length < 2) {
+        return;
+    }
+    for (int i = 0; i < arr.length; i++) {
+        // 插入，建立一个大根堆
+        heapInsert(arr, i);
+    }
+    int size = arr.length;
+    // 让第一个数和最后一个数交换位置
+    // 最后一个元素不再动了
+    swap(arr, 0, --size);
+    // 重复调整大根堆
+    while (size > 0) {
+        heapify(arr, 0, size);
+        swap(arr, 0, --size);
+    }
+}
+
+public static void heapInsert(int[] arr, int index) {
+    // 当前节点位置比父节点位置更大，则循环交换
+    while (arr[index] > arr[(index - 1) / 2]) {
+        swap(arr, index, (index - 1) / 2);
+        index = (index - 1) / 2;
+    }
+}
+// 跟自己的左右孩子比较，将大的数上移
+public static void heapify(int[] arr, int index, int size) {
+    // 左孩子下标
+    int left = index * 2 + 1;
+    while (left < size) {
+        // 在右孩子不越界，然后找到左右孩子中更大的孩子下标
+        int largest = left + 1 < size && arr[left + 1] > arr[left]
+                            ? left + 1 
+                            : left;
+        // 获取左右孩子下标后，判断与父节点的大小，返回一个最大值的下标
+        largest = arr[largest] > arr[index] ? largest : index;
+        // 如果最大值为父节点，即无需调整，退出循环
+        if (largest == index) {
+            break;
+        }
+        // 需要调整大根堆
+        swap(arr, largest, index);
+        // 更换父节点的下标值，继续执行左右孩子的大小比较
+        index = largest;
+        left = index * 2 + 1;
+    }
+}
+```
+
 ----
 
 ## 计数排序
@@ -594,7 +685,7 @@ void bucketSort (vector<int>& array){
 2. 根据个位数值大小，对数组进行排序；
 3. 重复上一步骤，依次根据更高位数值进行排序，直至到达最高位；
 
-![jishu](https://images0.cnblogs.com/i/497634/201403/161837176365265.jpg)
+![jishu](https://www.runoob.com/wp-content/uploads/2019/03/radixSort.gif)
 
 ```cpp
 // 基数排序 （只适用于正数，此处不适用）
@@ -626,7 +717,3 @@ void radixSort(vector<int>& array){
     }
 }
 ```
-
-----
-
-## 稳定性
