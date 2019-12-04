@@ -25,108 +25,91 @@ tags:
 设`(row1, col1) (raw2, col2)`为左上角与右下角的矩阵，然后打印这个矩阵的外围，之后再左上角的值均`++`，右下角的值均`--`。
 
 ```java
-package basic_class_03;
+public static void spiralOrderPrint(int[][] matrix) {
+    int tR = 0;
+    int tC = 0;
+    int dR = matrix.length - 1;
+    int dC = matrix[0].length - 1;
+    while (tR <= dR && tC <= dC) {
+        printEdge(matrix, tR++, tC++, dR--, dC--);
+    }
+}
 
-public class Code_07_PrintMatrixSpiralOrder {
-
-	public static void spiralOrderPrint(int[][] matrix) {
-		int tR = 0;
-		int tC = 0;
-		int dR = matrix.length - 1;
-		int dC = matrix[0].length - 1;
-		while (tR <= dR && tC <= dC) {
-			printEdge(matrix, tR++, tC++, dR--, dC--);
-		}
-	}
-
-	public static void printEdge(int[][] m, int tR, int tC, int dR, int dC) {
-		if (tR == dR) { // �Ӿ���ֻ��һ��ʱ
-			for (int i = tC; i <= dC; i++) {
-				System.out.print(m[tR][i] + " ");
-			}
-		} else if (tC == dC) { // �Ӿ���ֻ��һ��ʱ
-			for (int i = tR; i <= dR; i++) {
-				System.out.print(m[i][tC] + " ");
-			}
-		} else { // һ�����
-			int curC = tC;
-			int curR = tR;
-			while (curC != dC) {
-				System.out.print(m[tR][curC] + " ");
-				curC++;
-			}
-			while (curR != dR) {
-				System.out.print(m[curR][dC] + " ");
-				curR++;
-			}
-			while (curC != tC) {
-				System.out.print(m[dR][curC] + " ");
-				curC--;
-			}
-			while (curR != tR) {
-				System.out.print(m[curR][tC] + " ");
-				curR--;
-			}
-		}
-	}
-
-	public static void main(String[] args) {
-		int[][] matrix = { { 1, 2, 3, 4 }, { 5, 6, 7, 8 }, { 9, 10, 11, 12 },
-				{ 13, 14, 15, 16 } };
-		spiralOrderPrint(matrix);
-
-	}
-
+public static void printEdge(int[][] m, int tR, int tC, int dR, int dC) {
+    if (tR == dR) { // 当前数据只有一行
+        for (int i = tC; i <= dC; i++) {
+            System.out.print(m[tR][i] + " ");
+        }
+    } else if (tC == dC) { // 当前数据只有一列
+        for (int i = tR; i <= dR; i++) {
+            System.out.print(m[i][tC] + " ");
+        }
+    } else {
+        // 3 1 2 4
+        // 5 6 7 8
+        // 9 0 3 1
+        // 打印的顺序时：
+        // 1 2 3
+        // 4 8
+        // 1 3 0
+        // 9 5
+        int curC = tC;
+        int curR = tR;
+        while (curC != dC) {
+            System.out.print(m[tR][curC] + " ");
+            curC++;
+        }
+        while (curR != dR) {
+            System.out.print(m[curR][dC] + " ");
+            curR++;
+        }
+        while (curC != tC) {
+            System.out.print(m[dR][curC] + " ");
+            curC--;
+        }
+        while (curR != tR) {
+            System.out.print(m[curR][tC] + " ");
+            curR--;
+        }
+    }
 }
 ```
 
 #### Z字打印数组[ZigZagPrintMatrix]
 
-从全局出发（宏观调度），就是如何打印一条对角线。
+从全局出发（宏观调度），就是如何打印一条对角线。同样是取两个点，从起左上角开始，一起移动至右下角。
 
 ```java
-package basic_class_03;
+public static void printMatrixZigZag(int[][] matrix) {
+    int tR = 0;
+    int tC = 0;
+    int dR = 0;
+    int dC = 0;
+    int endR = matrix.length - 1;
+    int endC = matrix[0].length - 1;
+    boolean fromUp = false;
+    while (tR != endR + 1) {
+        printLevel(matrix, tR, tC, dR, dC, fromUp);
+        tR = tC == endC ? tR + 1 : tR;
+        tC = tC == endC ? tC : tC + 1;
+        dC = dR == endR ? dC + 1 : dC;
+        dR = dR == endR ? dR : dR + 1;
+        fromUp = !fromUp;
+    }
+    System.out.println();
+}
 
-public class Code_08_ZigZagPrintMatrix {
-
-	public static void printMatrixZigZag(int[][] matrix) {
-		int tR = 0;
-		int tC = 0;
-		int dR = 0;
-		int dC = 0;
-		int endR = matrix.length - 1;
-		int endC = matrix[0].length - 1;
-		boolean fromUp = false;
-		while (tR != endR + 1) {
-			printLevel(matrix, tR, tC, dR, dC, fromUp);
-			tR = tC == endC ? tR + 1 : tR;
-			tC = tC == endC ? tC : tC + 1;
-			dC = dR == endR ? dC + 1 : dC;
-			dR = dR == endR ? dR : dR + 1;
-			fromUp = !fromUp;
-		}
-		System.out.println();
-	}
-
-	public static void printLevel(int[][] m, int tR, int tC, int dR, int dC,
-			boolean f) {
-		if (f) {
-			while (tR != dR + 1) {
-				System.out.print(m[tR++][tC--] + " ");
-			}
-		} else {
-			while (dR != tR - 1) {
-				System.out.print(m[dR--][dC++] + " ");
-			}
-		}
-	}
-
-	public static void main(String[] args) {
-		int[][] matrix = { { 1, 2, 3, 4 }, { 5, 6, 7, 8 }, { 9, 10, 11, 12 } };
-		printMatrixZigZag(matrix);
-
-	}
-
+public static void printLevel(int[][] m, int tR, int tC, int dR, int dC,
+        boolean f) {
+    if (f) {
+        while (tR != dR + 1) {
+            System.out.print(m[tR++][tC--] + " ");
+        }
+    } else {
+        while (dR != tR - 1) {
+            System.out.print(m[dR--][dC++] + " ");
+        }
+    }
 }
 ```
 
@@ -148,39 +131,19 @@ public class Code_08_ZigZagPrintMatrix {
 **解题思路：**从右上角的数开始比较，如果比查找值更大，则往左移动，如果比查找值更小，则往下移动。（也可以从左下角开始移动）
 
 ```java
-package basic_class_03;
-
-public class Code_09_FindNumInSortedMatrix {
-
-	public static boolean isContains(int[][] matrix, int K) {
-		int row = 0;
-		int col = matrix[0].length - 1;
-		while (row < matrix.length && col > -1) {
-			if (matrix[row][col] == K) {
-				return true;
-			} else if (matrix[row][col] > K) {
-				col--;
-			} else {
-				row++;
-			}
+public static boolean isContains(int[][] matrix, int K) {
+	int row = 0;
+	int col = matrix[0].length - 1;
+	while (row < matrix.length && col > -1) {
+		if (matrix[row][col] == K) {
+			return true;
+		} else if (matrix[row][col] > K) {
+			col--;
+		} else {
+			row++;
 		}
-		return false;
 	}
-
-	public static void main(String[] args) {
-		int[][] matrix = new int[][] { { 0, 1, 2, 3, 4, 5, 6 },// 0
-				{ 10, 12, 13, 15, 16, 17, 18 },// 1
-				{ 23, 24, 25, 26, 27, 28, 29 },// 2
-				{ 44, 45, 46, 47, 48, 49, 50 },// 3
-				{ 65, 66, 67, 68, 69, 70, 71 },// 4
-				{ 96, 97, 98, 99, 100, 111, 122 },// 5
-				{ 166, 176, 186, 187, 190, 195, 200 },// 6
-				{ 233, 243, 321, 341, 356, 370, 380 } // 7
-		};
-		int K = 233;
-		System.out.println(isContains(matrix, K));
-	}
-
+	return false;
 }
 ```
 
@@ -191,61 +154,37 @@ public class Code_09_FindNumInSortedMatrix {
 类似于归并排序的外排步骤，两个指针，谁小谁移动，如果相等则记录，并同时往下移动。
 
 ```java
-package basic_class_03;
+public static class Node {
+    public int value;
+    public Node next;
+    public Node(int data) {
+        this.value = data;
+    }
+}
 
-public class Code_10_PrintCommonPart {
+public static void printCommonPart(Node head1, Node head2) {
+    System.out.print("Common Part: ");
+    while (head1 != null && head2 != null) {
+        if (head1.value < head2.value) {
+            head1 = head1.next;
+        } else if (head1.value > head2.value) {
+            head2 = head2.next;
+        } else {
+            System.out.print(head1.value + " ");
+            head1 = head1.next;
+            head2 = head2.next;
+        }
+    }
+    System.out.println();
+}
 
-	public static class Node {
-		public int value;
-		public Node next;
-		public Node(int data) {
-			this.value = data;
-		}
-	}
-
-	public static void printCommonPart(Node head1, Node head2) {
-		System.out.print("Common Part: ");
-		while (head1 != null && head2 != null) {
-			if (head1.value < head2.value) {
-				head1 = head1.next;
-			} else if (head1.value > head2.value) {
-				head2 = head2.next;
-			} else {
-				System.out.print(head1.value + " ");
-				head1 = head1.next;
-				head2 = head2.next;
-			}
-		}
-		System.out.println();
-	}
-
-	public static void printLinkedList(Node node) {
-		System.out.print("Linked List: ");
-		while (node != null) {
-			System.out.print(node.value + " ");
-			node = node.next;
-		}
-		System.out.println();
-	}
-
-	public static void main(String[] args) {
-		Node node1 = new Node(2);
-		node1.next = new Node(3);
-		node1.next.next = new Node(5);
-		node1.next.next.next = new Node(6);
-
-		Node node2 = new Node(1);
-		node2.next = new Node(2);
-		node2.next.next = new Node(5);
-		node2.next.next.next = new Node(7);
-		node2.next.next.next.next = new Node(8);
-
-		printLinkedList(node1);
-		printLinkedList(node2);
-		printCommonPart(node1, node2);
-
-	}
-
+public static void printLinkedList(Node node) {
+    System.out.print("Linked List: ");
+    while (node != null) {
+        System.out.print(node.value + " ");
+        node = node.next;
+    }
+    System.out.println();
 }
 ```
 
@@ -262,206 +201,95 @@ public class Code_10_PrintCommonPart {
 3. 快慢指针的解法2（空间复杂度为`O(1)`）：当慢指针走到中间的时候，将慢指针之后的所有链表逆序。然后再两边“从头”开始遍历链表，中间有任何一个不同，则返回`false`，直到最后到达慢指针的下一个位置。
 
 ```java
-package basic_class_03;
-
-import java.util.Stack;
-
-public class Code_11_IsPalindromeList {
-
-	public static class Node {
-		public int value;
-		public Node next;
-
-		public Node(int data) {
-			this.value = data;
-		}
+// need n extra space
+public static boolean isPalindrome1(Node head) {
+	Stack<Node> stack = new Stack<Node>();
+	Node cur = head;
+	while (cur != null) {
+		stack.push(cur);
+		cur = cur.next;
 	}
+	while (head != null) {
+		if (head.value != stack.pop().value) {
+			return false;
+		}
+		head = head.next;
+	}
+	return true;
+}
 
-	// need n extra space
-	public static boolean isPalindrome1(Node head) {
-		Stack<Node> stack = new Stack<Node>();
-		Node cur = head;
-		while (cur != null) {
-			stack.push(cur);
-			cur = cur.next;
-		}
-		while (head != null) {
-			if (head.value != stack.pop().value) {
-				return false;
-			}
-			head = head.next;
-		}
+// need n/2 extra space
+public static boolean isPalindrome2(Node head) {
+	if (head == null || head.next == null) {
 		return true;
 	}
+	// 注意起始值，同时注意
+	Node right = head.next;
+	Node cur = head;
+	// 快指针移动到最后，即之后只有一个位置或者已经处于末端时
+	while (cur.next != null && cur.next.next != null) {
+		right = right.next;
+		cur = cur.next.next;
+	}
+	// 从慢指针的位置开始，将数据压入栈中
+	Stack<Node> stack = new Stack<Node>();
+	while (right != null) {
+		stack.push(right);
+		right = right.next;
+	}
+	// 从栈中弹出，比较
+	while (!stack.isEmpty()) {
+		if (head.value != stack.pop().value) {
+			return false;
+		}
+		head = head.next;
+	}
+	return true;
+}
 
-	// need n/2 extra space
-	public static boolean isPalindrome2(Node head) {
-		if (head == null || head.next == null) {
-			return true;
-		}
-		Node right = head.next;
-		Node cur = head;
-		while (cur.next != null && cur.next.next != null) {
-			right = right.next;
-			cur = cur.next.next;
-		}
-		Stack<Node> stack = new Stack<Node>();
-		while (right != null) {
-			stack.push(right);
-			right = right.next;
-		}
-		while (!stack.isEmpty()) {
-			if (head.value != stack.pop().value) {
-				return false;
-			}
-			head = head.next;
-		}
+// need O(1) extra space
+public static boolean isPalindrome3(Node head) {
+	if (head == null || head.next == null) {
 		return true;
 	}
-
-	// need O(1) extra space
-	public static boolean isPalindrome3(Node head) {
-		if (head == null || head.next == null) {
-			return true;
-		}
-		Node n1 = head;
-		Node n2 = head;
-		while (n2.next != null && n2.next.next != null) { // find mid node
-			n1 = n1.next; // n1 -> mid
-			n2 = n2.next.next; // n2 -> end
-		}
-		n2 = n1.next; // n2 -> right part first node
-		n1.next = null; // mid.next -> null
-		Node n3 = null;
-		while (n2 != null) { // right part convert
-			n3 = n2.next; // n3 -> save next node
-			n2.next = n1; // next of right node convert
-			n1 = n2; // n1 move
-			n2 = n3; // n2 move
-		}
-		n3 = n1; // n3 -> save last node
-		n2 = head;// n2 -> left first node
-		boolean res = true;
-		while (n1 != null && n2 != null) { // check palindrome
-			if (n1.value != n2.value) {
-				res = false;
-				break;
-			}
-			n1 = n1.next; // left to mid
-			n2 = n2.next; // right to mid
-		}
-		n1 = n3.next;
-		n3.next = null;
-		while (n1 != null) { // recover list
-			n2 = n1.next;
-			n1.next = n3;
-			n3 = n1;
-			n1 = n2;
-		}
-		return res;
+	Node n1 = head;
+	Node n2 = head;
+	while (n2.next != null && n2.next.next != null) { // find mid node
+		n1 = n1.next; // n1 -> mid
+		n2 = n2.next.next; // n2 -> end
 	}
-
-	public static void printLinkedList(Node node) {
-		System.out.print("Linked List: ");
-		while (node != null) {
-			System.out.print(node.value + " ");
-			node = node.next;
+	// 对应取得慢指针的下一个位置
+	// 如果是基数，则对应中间的下一个位置，即中间的不需要比较了，共享
+	// 如果是偶数，则对应中间的下一个位置，从此时开始逆序
+	n2 = n1.next; // n2 -> right part first node
+	n1.next = null; // mid.next -> null
+	Node n3 = null;
+	while (n2 != null) { // right part convert
+		n3 = n2.next; // n3 -> save next node
+		n2.next = n1; // next of right node convert
+		n1 = n2; // n1 move
+		n2 = n3; // n2 move
+	}
+	n3 = n1; // n3 -> save last node
+	n2 = head;// n2 -> left first node
+	boolean res = true;
+	while (n1 != null && n2 != null) { // check palindrome
+		if (n1.value != n2.value) {
+			res = false;
+			break;
 		}
-		System.out.println();
+		n1 = n1.next; // left to mid
+		n2 = n2.next; // right to mid
 	}
-
-	public static void main(String[] args) {
-
-		Node head = null;
-		printLinkedList(head);
-		System.out.print(isPalindrome1(head) + " | ");
-		System.out.print(isPalindrome2(head) + " | ");
-		System.out.println(isPalindrome3(head) + " | ");
-		printLinkedList(head);
-		System.out.println("=========================");
-
-		head = new Node(1);
-		printLinkedList(head);
-		System.out.print(isPalindrome1(head) + " | ");
-		System.out.print(isPalindrome2(head) + " | ");
-		System.out.println(isPalindrome3(head) + " | ");
-		printLinkedList(head);
-		System.out.println("=========================");
-
-		head = new Node(1);
-		head.next = new Node(2);
-		printLinkedList(head);
-		System.out.print(isPalindrome1(head) + " | ");
-		System.out.print(isPalindrome2(head) + " | ");
-		System.out.println(isPalindrome3(head) + " | ");
-		printLinkedList(head);
-		System.out.println("=========================");
-
-		head = new Node(1);
-		head.next = new Node(1);
-		printLinkedList(head);
-		System.out.print(isPalindrome1(head) + " | ");
-		System.out.print(isPalindrome2(head) + " | ");
-		System.out.println(isPalindrome3(head) + " | ");
-		printLinkedList(head);
-		System.out.println("=========================");
-
-		head = new Node(1);
-		head.next = new Node(2);
-		head.next.next = new Node(3);
-		printLinkedList(head);
-		System.out.print(isPalindrome1(head) + " | ");
-		System.out.print(isPalindrome2(head) + " | ");
-		System.out.println(isPalindrome3(head) + " | ");
-		printLinkedList(head);
-		System.out.println("=========================");
-
-		head = new Node(1);
-		head.next = new Node(2);
-		head.next.next = new Node(1);
-		printLinkedList(head);
-		System.out.print(isPalindrome1(head) + " | ");
-		System.out.print(isPalindrome2(head) + " | ");
-		System.out.println(isPalindrome3(head) + " | ");
-		printLinkedList(head);
-		System.out.println("=========================");
-
-		head = new Node(1);
-		head.next = new Node(2);
-		head.next.next = new Node(3);
-		head.next.next.next = new Node(1);
-		printLinkedList(head);
-		System.out.print(isPalindrome1(head) + " | ");
-		System.out.print(isPalindrome2(head) + " | ");
-		System.out.println(isPalindrome3(head) + " | ");
-		printLinkedList(head);
-		System.out.println("=========================");
-
-		head = new Node(1);
-		head.next = new Node(2);
-		head.next.next = new Node(2);
-		head.next.next.next = new Node(1);
-		printLinkedList(head);
-		System.out.print(isPalindrome1(head) + " | ");
-		System.out.print(isPalindrome2(head) + " | ");
-		System.out.println(isPalindrome3(head) + " | ");
-		printLinkedList(head);
-		System.out.println("=========================");
-
-		head = new Node(1);
-		head.next = new Node(2);
-		head.next.next = new Node(3);
-		head.next.next.next = new Node(2);
-		head.next.next.next.next = new Node(1);
-		printLinkedList(head);
-		System.out.print(isPalindrome1(head) + " | ");
-		System.out.print(isPalindrome2(head) + " | ");
-		System.out.println(isPalindrome3(head) + " | ");
-		printLinkedList(head);
-		System.out.println("=========================");
-
+	n1 = n3.next;
+	n3.next = null;
+	while (n1 != null) { // recover list
+		n2 = n1.next;
+		n1.next = n3;
+		n3 = n1;
+		n1 = n2;
 	}
-
+	return res;
 }
 ```
 
@@ -469,145 +297,60 @@ public class Code_11_IsPalindromeList {
 
 ## [技巧]将单向链表按某值划分成左边小，中间相等，右边大的形式
 
-1. 将链表中的内容放入数组中，然后将数组进行一个partition过程。
+1. 将链表中的内容放入数组中，然后将数组进行一个partition过程。则外空间复杂度为O(n)。
 
 2. 不适用额外数组的过程。使用三个指针，分别表示大于，等于，小于的节点。首先遍历一次链表，然后根据与分割数比较的结果，将其接入三个对应的指针后。最后遍历完成，再将三个链表依次连接即可。**判断两个指针是否指向同一个节点，不是通过val值，而是通过内存地址是否相等。**
 
 ```java
-package basic_class_03;
-
-public class Code_12_SmallerEqualBigger {
-
-	public static class Node {
-		public int value;
-		public Node next;
-
-		public Node(int data) {
-			this.value = data;
-		}
-	}
-
-	public static Node listPartition1(Node head, int pivot) {
-		if (head == null) {
-			return head;
-		}
-		Node cur = head;
-		int i = 0;
-		while (cur != null) {
-			i++;
-			cur = cur.next;
-		}
-		Node[] nodeArr = new Node[i];
-		i = 0;
-		cur = head;
-		for (i = 0; i != nodeArr.length; i++) {
-			nodeArr[i] = cur;
-			cur = cur.next;
-		}
-		arrPartition(nodeArr, pivot);
-		for (i = 1; i != nodeArr.length; i++) {
-			nodeArr[i - 1].next = nodeArr[i];
-		}
-		nodeArr[i - 1].next = null;
-		return nodeArr[0];
-	}
-
-	public static void arrPartition(Node[] nodeArr, int pivot) {
-		int small = -1;
-		int big = nodeArr.length;
-		int index = 0;
-		while (index != big) {
-			if (nodeArr[index].value < pivot) {
-				swap(nodeArr, ++small, index++);
-			} else if (nodeArr[index].value == pivot) {
-				index++;
+public static Node listPartition2(Node head, int pivot) {
+	Node sH = null; // small head
+	Node sT = null; // small tail
+	Node eH = null; // equal head
+	Node eT = null; // equal tail
+	Node bH = null; // big head
+	Node bT = null; // big tail
+	Node next = null; // save next node
+	// every node distributed to three lists
+	while (head != null) {
+		next = head.next;
+		head.next = null;
+		if (head.value < pivot) {
+			if (sH == null) {
+				sH = head;
+				sT = head;
 			} else {
-				swap(nodeArr, --big, index);
+				sT.next = head;
+				sT = head;
+			}
+		} else if (head.value == pivot) {
+			if (eH == null) {
+				eH = head;
+				eT = head;
+			} else {
+				eT.next = head;
+				eT = head;
+			}
+		} else {
+			if (bH == null) {
+				bH = head;
+				bT = head;
+			} else {
+				bT.next = head;
+				bT = head;
 			}
 		}
+		head = next;
 	}
-
-	public static void swap(Node[] nodeArr, int a, int b) {
-		Node tmp = nodeArr[a];
-		nodeArr[a] = nodeArr[b];
-		nodeArr[b] = tmp;
+	// small and equal reconnect
+	if (sT != null) {
+		sT.next = eH;
+		eT = eT == null ? sT : eT;
 	}
-
-	public static Node listPartition2(Node head, int pivot) {
-		Node sH = null; // small head
-		Node sT = null; // small tail
-		Node eH = null; // equal head
-		Node eT = null; // equal tail
-		Node bH = null; // big head
-		Node bT = null; // big tail
-		Node next = null; // save next node
-		// every node distributed to three lists
-		while (head != null) {
-			next = head.next;
-			head.next = null;
-			if (head.value < pivot) {
-				if (sH == null) {
-					sH = head;
-					sT = head;
-				} else {
-					sT.next = head;
-					sT = head;
-				}
-			} else if (head.value == pivot) {
-				if (eH == null) {
-					eH = head;
-					eT = head;
-				} else {
-					eT.next = head;
-					eT = head;
-				}
-			} else {
-				if (bH == null) {
-					bH = head;
-					bT = head;
-				} else {
-					bT.next = head;
-					bT = head;
-				}
-			}
-			head = next;
-		}
-		// small and equal reconnect
-		if (sT != null) {
-			sT.next = eH;
-			eT = eT == null ? sT : eT;
-		}
-		// all reconnect
-		if (eT != null) {
-			eT.next = bH;
-		}
-		return sH != null ? sH : eH != null ? eH : bH;
+	// all reconnect
+	if (eT != null) {
+		eT.next = bH;
 	}
-
-	public static void printLinkedList(Node node) {
-		System.out.print("Linked List: ");
-		while (node != null) {
-			System.out.print(node.value + " ");
-			node = node.next;
-		}
-		System.out.println();
-	}
-
-	public static void main(String[] args) {
-		Node head1 = new Node(7);
-		head1.next = new Node(9);
-		head1.next.next = new Node(1);
-		head1.next.next.next = new Node(8);
-		head1.next.next.next.next = new Node(5);
-		head1.next.next.next.next.next = new Node(2);
-		head1.next.next.next.next.next.next = new Node(5);
-		printLinkedList(head1);
-		// head1 = listPartition1(head1, 4);
-		head1 = listPartition2(head1, 5);
-		printLinkedList(head1);
-
-	}
-
+	return sH != null ? sH : eH != null ? eH : bH;
 }
 ```
 
@@ -622,128 +365,58 @@ public class Code_12_SmallerEqualBigger {
 形式：`1->1'->2->2'->3->3'->null`
 
 ```java
-package basic_class_03;
-
-import java.util.HashMap;
-
-public class Code_13_CopyListWithRandom {
-
-	public static class Node {
-		public int value;
-		public Node next;
-		public Node rand;
-
-		public Node(int data) {
-			this.value = data;
-		}
+// 使用hash数据结构来解决此问题
+public static Node copyListWithRand1(Node head) {
+	HashMap<Node, Node> map = new HashMap<Node, Node>();
+	Node cur = head;
+	// map中存放老节点为key值，新节点为value值
+	while (cur != null) {
+		map.put(cur, new Node(cur.value));
+		cur = cur.next;
 	}
-	// 使用hash数据结构来解决此问题
-	public static Node copyListWithRand1(Node head) {
-		HashMap<Node, Node> map = new HashMap<Node, Node>();
-		Node cur = head;
-		// map中存放老节点为key值，新节点为value值
-		while (cur != null) {
-			map.put(cur, new Node(cur.value));
-			cur = cur.next;
-		}
-		cur = head;
-		while (cur != null) {
-			// 将创建的新节点的next与rand进行赋值
-			map.get(cur).next = map.get(cur.next);
-			map.get(cur).rand = map.get(cur.rand);
-			cur = cur.next;
-		}
-		return map.get(head);
+	cur = head;
+	while (cur != null) {
+		// 将创建的新节点的next与rand进行赋值
+		map.get(cur).next = map.get(cur.next);
+		map.get(cur).rand = map.get(cur.rand);
+		cur = cur.next;
 	}
+	return map.get(head);
+}
 
-	public static Node copyListWithRand2(Node head) {
-		if (head == null) {
-			return null;
-		}
-		Node cur = head;
-		Node next = null;
-		// copy node and link to every node
-		while (cur != null) {
-			next = cur.next;
-			cur.next = new Node(cur.value);
-			cur.next.next = next;
-			cur = next;
-		}
-		cur = head;
-		Node curCopy = null;
-		// set copy node rand
-		while (cur != null) {
-			next = cur.next.next;
-			curCopy = cur.next;
-			curCopy.rand = cur.rand != null ? cur.rand.next : null;
-			cur = next;
-		}
-		Node res = head.next;
-		cur = head;
-		// split
-		while (cur != null) {
-			next = cur.next.next;
-			curCopy = cur.next;
-			cur.next = next;
-			curCopy.next = next != null ? next.next : null;
-			cur = next;
-		}
-		return res;
+public static Node copyListWithRand2(Node head) {
+	if (head == null) {
+		return null;
 	}
-
-	public static void printRandLinkedList(Node head) {
-		Node cur = head;
-		System.out.print("order: ");
-		while (cur != null) {
-			System.out.print(cur.value + " ");
-			cur = cur.next;
-		}
-		System.out.println();
-		cur = head;
-		System.out.print("rand:  ");
-		while (cur != null) {
-			System.out.print(cur.rand == null ? "- " : cur.rand.value + " ");
-			cur = cur.next;
-		}
-		System.out.println();
+	Node cur = head;
+	Node next = null;
+	// copy node and link to every node
+	while (cur != null) {
+		next = cur.next;
+		cur.next = new Node(cur.value);
+		cur.next.next = next;
+		cur = next;
 	}
-
-	public static void main(String[] args) {
-		Node head = null;
-		Node res1 = null;
-		Node res2 = null;
-		printRandLinkedList(head);
-		res1 = copyListWithRand1(head);
-		printRandLinkedList(res1);
-		res2 = copyListWithRand2(head);
-		printRandLinkedList(res2);
-		printRandLinkedList(head);
-		System.out.println("=========================");
-
-		head = new Node(1);
-		head.next = new Node(2);
-		head.next.next = new Node(3);
-		head.next.next.next = new Node(4);
-		head.next.next.next.next = new Node(5);
-		head.next.next.next.next.next = new Node(6);
-
-		head.rand = head.next.next.next.next.next; // 1 -> 6
-		head.next.rand = head.next.next.next.next.next; // 2 -> 6
-		head.next.next.rand = head.next.next.next.next; // 3 -> 5
-		head.next.next.next.rand = head.next.next; // 4 -> 3
-		head.next.next.next.next.rand = null; // 5 -> null
-		head.next.next.next.next.next.rand = head.next.next.next; // 6 -> 4
-
-		printRandLinkedList(head);
-		res1 = copyListWithRand1(head);
-		printRandLinkedList(res1);
-		res2 = copyListWithRand2(head);
-		printRandLinkedList(res2);
-		printRandLinkedList(head);
-		System.out.println("=========================");
-
+	cur = head;
+	Node curCopy = null;
+	// set copy node rand
+	while (cur != null) {
+		next = cur.next.next;
+		curCopy = cur.next;
+		curCopy.rand = cur.rand != null ? cur.rand.next : null;
+		cur = next;
 	}
-
+	Node res = head.next;
+	cur = head;
+	// split
+	while (cur != null) {
+		next = cur.next.next;
+		curCopy = cur.next;
+		cur.next = next;
+		curCopy.next = next != null ? next.next : null;
+		cur = next;
+	}
+	return res;
 }
 ```
 
@@ -771,72 +444,88 @@ public class Code_13_CopyListWithRandom {
 (3)两个链表在环上相交(参考兔子耳朵连着兔子脑袋)：参考情况(1)。
 
 ```java
-package basic_class_03;
-
-public class Code_14_FindFirstIntersectNode {
-
-	public static class Node {
-		public int value;
-		public Node next;
-
-		public Node(int data) {
-			this.value = data;
-		}
-	}
-
-	public static Node getIntersectNode(Node head1, Node head2) {
-		if (head1 == null || head2 == null) {
-			return null;
-		}
-		Node loop1 = getLoopNode(head1);
-		Node loop2 = getLoopNode(head2);
-		if (loop1 == null && loop2 == null) {
-			return noLoop(head1, head2);
-		}
-		if (loop1 != null && loop2 != null) {
-			return bothLoop(head1, loop1, head2, loop2);
-		}
+public static Node getIntersectNode(Node head1, Node head2) {
+	if (head1 == null || head2 == null) {
 		return null;
 	}
-
-	public static Node getLoopNode(Node head) {
-		if (head == null || head.next == null || head.next.next == null) {
-			return null;
-		}
-		Node n1 = head.next; // n1 -> slow
-		Node n2 = head.next.next; // n2 -> fast
-		while (n1 != n2) {
-			if (n2.next == null || n2.next.next == null) {
-				return null;
-			}
-			n2 = n2.next.next;
-			n1 = n1.next;
-		}
-		n2 = head; // n2 -> walk again from head
-		while (n1 != n2) {
-			n1 = n1.next;
-			n2 = n2.next;
-		}
-		return n1;
+	Node loop1 = getLoopNode(head1);
+	Node loop2 = getLoopNode(head2);
+	if (loop1 == null && loop2 == null) {
+		return noLoop(head1, head2);
 	}
+	if (loop1 != null && loop2 != null) {
+		return bothLoop(head1, loop1, head2, loop2);
+	}
+	return null;
+}
 
-	public static Node noLoop(Node head1, Node head2) {
-		if (head1 == null || head2 == null) {
+public static Node getLoopNode(Node head) {
+	if (head == null || head.next == null || head.next.next == null) {
+		return null;
+	}
+	Node n1 = head.next; // n1 -> slow
+	Node n2 = head.next.next; // n2 -> fast
+	while (n1 != n2) {
+		if (n2.next == null || n2.next.next == null) {
 			return null;
 		}
-		Node cur1 = head1;
-		Node cur2 = head2;
+		n2 = n2.next.next;
+		n1 = n1.next;
+	}
+	n2 = head; // n2 -> walk again from head
+	while (n1 != n2) {
+		n1 = n1.next;
+		n2 = n2.next;
+	}
+	return n1;
+}
+
+public static Node noLoop(Node head1, Node head2) {
+	if (head1 == null || head2 == null) {
+		return null;
+	}
+	Node cur1 = head1;
+	Node cur2 = head2;
+	int n = 0;
+	while (cur1.next != null) {
+		n++;
+		cur1 = cur1.next;
+	}
+	while (cur2.next != null) {
+		n--;
+		cur2 = cur2.next;
+	}
+	if (cur1 != cur2) {
+		return null;
+	}
+	cur1 = n > 0 ? head1 : head2;
+	cur2 = cur1 == head1 ? head2 : head1;
+	n = Math.abs(n);
+	while (n != 0) {
+		n--;
+		cur1 = cur1.next;
+	}
+	while (cur1 != cur2) {
+		cur1 = cur1.next;
+		cur2 = cur2.next;
+	}
+	return cur1;
+}
+
+public static Node bothLoop(Node head1, Node loop1, Node head2, Node loop2) {
+	Node cur1 = null;
+	Node cur2 = null;
+	if (loop1 == loop2) {
+		cur1 = head1;
+		cur2 = head2;
 		int n = 0;
-		while (cur1.next != null) {
+		while (cur1 != loop1) {
 			n++;
 			cur1 = cur1.next;
 		}
-		while (cur2.next != null) {
+		while (cur2 != loop2) {
 			n--;
 			cur2 = cur2.next;
-		}
-		if (cur1 != cur2) {
-			return null;
 		}
 		cur1 = n > 0 ? head1 : head2;
 		cur2 = cur1 == head1 ? head2 : head1;
@@ -850,90 +539,16 @@ public class Code_14_FindFirstIntersectNode {
 			cur2 = cur2.next;
 		}
 		return cur1;
-	}
-
-	public static Node bothLoop(Node head1, Node loop1, Node head2, Node loop2) {
-		Node cur1 = null;
-		Node cur2 = null;
-		if (loop1 == loop2) {
-			cur1 = head1;
-			cur2 = head2;
-			int n = 0;
-			while (cur1 != loop1) {
-				n++;
-				cur1 = cur1.next;
+	} else {
+		cur1 = loop1.next;
+		while (cur1 != loop1) {
+			if (cur1 == loop2) {
+				return loop1;
 			}
-			while (cur2 != loop2) {
-				n--;
-				cur2 = cur2.next;
-			}
-			cur1 = n > 0 ? head1 : head2;
-			cur2 = cur1 == head1 ? head2 : head1;
-			n = Math.abs(n);
-			while (n != 0) {
-				n--;
-				cur1 = cur1.next;
-			}
-			while (cur1 != cur2) {
-				cur1 = cur1.next;
-				cur2 = cur2.next;
-			}
-			return cur1;
-		} else {
-			cur1 = loop1.next;
-			while (cur1 != loop1) {
-				if (cur1 == loop2) {
-					return loop1;
-				}
-				cur1 = cur1.next;
-			}
-			return null;
+			cur1 = cur1.next;
 		}
+		return null;
 	}
-
-	public static void main(String[] args) {
-		// 1->2->3->4->5->6->7->null
-		Node head1 = new Node(1);
-		head1.next = new Node(2);
-		head1.next.next = new Node(3);
-		head1.next.next.next = new Node(4);
-		head1.next.next.next.next = new Node(5);
-		head1.next.next.next.next.next = new Node(6);
-		head1.next.next.next.next.next.next = new Node(7);
-
-		// 0->9->8->6->7->null
-		Node head2 = new Node(0);
-		head2.next = new Node(9);
-		head2.next.next = new Node(8);
-		head2.next.next.next = head1.next.next.next.next.next; // 8->6
-		System.out.println(getIntersectNode(head1, head2).value);
-
-		// 1->2->3->4->5->6->7->4...
-		head1 = new Node(1);
-		head1.next = new Node(2);
-		head1.next.next = new Node(3);
-		head1.next.next.next = new Node(4);
-		head1.next.next.next.next = new Node(5);
-		head1.next.next.next.next.next = new Node(6);
-		head1.next.next.next.next.next.next = new Node(7);
-		head1.next.next.next.next.next.next = head1.next.next.next; // 7->4
-
-		// 0->9->8->2...
-		head2 = new Node(0);
-		head2.next = new Node(9);
-		head2.next.next = new Node(8);
-		head2.next.next.next = head1.next; // 8->2
-		System.out.println(getIntersectNode(head1, head2).value);
-
-		// 0->9->8->6->4->5->6..
-		head2 = new Node(0);
-		head2.next = new Node(9);
-		head2.next.next = new Node(8);
-		head2.next.next.next = head1.next.next.next.next.next; // 8->6
-		System.out.println(getIntersectNode(head1, head2).value);
-
-	}
-
 }
 ```
 
