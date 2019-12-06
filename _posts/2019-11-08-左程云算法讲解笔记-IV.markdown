@@ -12,11 +12,13 @@ tags:
 
 > 这些内容是从牛客网左程云大神的算法课程中做记录的笔记，由于内容较多，又附上源码，所以考虑一章一个模块。
 
+> 此次修改同样是增加了代码的注释，去除非必要代码，重点讲述理清逻辑思路
+
 [TOC]
 
 ----
 
-## 前缀树
+## [数据结构]前缀树
 
 ```java
 package basic_class_05;
@@ -34,7 +36,7 @@ public class Code_01_TrieTree {
 		public TrieNode() {
 			path = 0;
 			end = 0;
-			// 初始化成26的大小是因为默认只有小写字母出现
+			// 初始化成26的大小是因为默认只有小写字母出现，也可以改成其他结构
 			// [0-25]：map[0]为1，则表示a有路径，如果为0，则表示a没有路径
 			// 也可以使用map<int, TrieNode>：key表示ASCII码，value表示下一个节点
 			map = new TrieNode[26];
@@ -52,6 +54,7 @@ public class Code_01_TrieTree {
 			if (word == null) {
 				return;
 			}
+			// 先把字符串编程单个数组"abc"->['a', 'b', 'c']
 			char[] chs = word.toCharArray();
 			TrieNode node = root;
 			// 对应成需要找哪一条路，在map[26]数组中
@@ -77,6 +80,7 @@ public class Code_01_TrieTree {
 				for (int i = 0; i < chs.length; i++) {
 					index = chs[i] - 'a';
 					if (node.map[index].path-- == 1) {
+						// 直接返回，后面的数据并不共享此字符串
 						node.map[index] = null;
 						return;
 					}
@@ -141,90 +145,69 @@ public class Code_01_TrieTree {
 		trie.delete("zuoa");
 		System.out.println(trie.search("zuoa"));
 		System.out.println(trie.prefixNumber("zuo"));
-
 	}
-
 }
 ```
 
 ----
 
-## 图的宽度优先搜索
+## [图]图的宽度优先搜索
 
 ```java
-package basic_class_05;
-
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.Queue;
-
-public class Code_02_BFS {
-
-	public static void bfs(Node node) {
-		if (node == null) {
-			return;
-		}
-		Queue<Node> queue = new LinkedList<>();
-		HashSet<Node> map = new HashSet<>();
-		queue.add(node);
-		map.add(node);
-		while (!queue.isEmpty()) {
-			Node cur = queue.poll();
-			System.out.println(cur.value);
-			for (Node next : cur.nexts) {
-				// 判断是否已经添加过值队列
-				if (!map.contains(next)) {
-					map.add(next);
-					queue.add(next);
-				}
+public static void bfs(Node node) {
+	if (node == null) {
+		return;
+	}
+	Queue<Node> queue = new LinkedList<>();
+	HashSet<Node> map = new HashSet<>();
+	queue.add(node);
+	map.add(node);
+	while (!queue.isEmpty()) {
+		Node cur = queue.poll();
+		System.out.println(cur.value);
+		for (Node next : cur.nexts) {
+			// 判断是否已经添加过值队列
+			if (!map.contains(next)) {
+				map.add(next);
+				queue.add(next);
 			}
 		}
 	}
-
 }
 ```
 
 ----
 
-## 图的深度优先遍历
+## [图]图的深度优先遍历
 
 ```java
-package basic_class_05;
-
-import java.util.HashSet;
-import java.util.Stack;
-
-public class Code_03_DFS {
-
-	public static void dfs(Node node) {
-		if (node == null) {
-			return;
-		}
-		Stack<Node> stack = new Stack<>();
-		HashSet<Node> set = new HashSet<>();
-		stack.add(node);
-		set.add(node);
-		System.out.println(node.value);
-		while (!stack.isEmpty()) {
-			Node cur = stack.pop();
-			for (Node next : cur.nexts) {
-				if (!set.contains(next)) {
-					stack.push(cur);
-					stack.push(next);
-					set.add(next);
-					System.out.println(next.value);
-					break;
-				}
+public static void dfs(Node node) {
+	if (node == null) {
+		return;
+	}
+	Stack<Node> stack = new Stack<>();
+	HashSet<Node> set = new HashSet<>();
+	stack.add(node);
+	set.add(node);
+	System.out.println(node.value);
+	while (!stack.isEmpty()) {
+		Node cur = stack.pop();
+		for (Node next : cur.nexts) {
+			if (!set.contains(next)) {
+				stack.push(cur);
+				stack.push(next);
+				set.add(next);
+				System.out.println(next.value);
+				break;
 			}
 		}
 	}
-
 }
 ```
 
 ----
 
-## 图的常见算法
+## [图]图的常见算法
 
 #### 拓扑排序算法
 
@@ -233,44 +216,33 @@ public class Code_03_DFS {
 首先加入入度为0的节点，然后打印后删除（加入`zeroInQueue`中），删除后，又有入度为0的节点，重复以上步骤。
 
 ```java
-package basic_class_05;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Queue;
-
-public class Code_04_TopologySort {
-
-	// directed graph and no loop
-	public static List<Node> sortedTopology(Graph graph) {
-		HashMap<Node, Integer> inMap = new HashMap<>();
-		Queue<Node> zeroInQueue = new LinkedList<>();
-		for (Node node : graph.nodes.values()) {
-			inMap.put(node, node.in);
-			if (node.in == 0) {
-				zeroInQueue.add(node);
-			}
+// directed graph and no loop
+public static List<Node> sortedTopology(Graph graph) {
+	HashMap<Node, Integer> inMap = new HashMap<>();
+	Queue<Node> zeroInQueue = new LinkedList<>();
+	for (Node node : graph.nodes.values()) {
+		inMap.put(node, node.in);
+		if (node.in == 0) {
+			zeroInQueue.add(node);
 		}
-		List<Node> result = new ArrayList<>();
-		while (!zeroInQueue.isEmpty()) {
-			Node cur = zeroInQueue.poll();
-			result.add(cur);
-			// 把所有的后代的入度-1
-			for (Node next : cur.nexts) {
-				inMap.put(next, inMap.get(next) - 1);
-				if (inMap.get(next) == 0) {
-					zeroInQueue.add(next);
-				}
-			}
-		}
-		return result;
 	}
+	List<Node> result = new ArrayList<>();
+	while (!zeroInQueue.isEmpty()) {
+		Node cur = zeroInQueue.poll();
+		result.add(cur);
+		// 把所有的后代的入度-1
+		for (Node next : cur.nexts) {
+			inMap.put(next, inMap.get(next) - 1);
+			if (inMap.get(next) == 0) {
+				zeroInQueue.add(next);
+			}
+		}
+	}
+	return result;
 }
 ```
 
-#### [使用并查集]Kruskal算法
+#### [并查集]Kruskal算法
 
 使用范围：要求无向图
 
@@ -380,7 +352,7 @@ public class Code_05_Kruskal {
 }
 ```
 
-#### Prim算法
+#### [图]Prim算法
 
 适用范围：要求无向图
 
@@ -441,7 +413,7 @@ public class Code_06_Prim {
 }
 ```
 
-#### Dijkstra算法
+#### [图]Dijkstra算法
 
 适用范围：没有权值为负数的边
 
@@ -600,7 +572,7 @@ public class Code_07_Dijkstra {
 
 ----
 
-## 图的数据结构实现
+## [图]图的数据结构实现
 
 #### Edge
 
