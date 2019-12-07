@@ -271,6 +271,128 @@ public static void heapify(int[] arr, int index, int size) {
 }
 ```
 
+C++版本：
+
+```cpp
+/* 
+ * (最大)堆的向下调整算法
+ *
+ * 注：数组实现的堆中，第N个节点的左孩子的索引值是(2N+1)，右孩子的索引是(2N+2)。
+ *     其中，N为数组下标索引值，如数组中第1个数对应的N为0。
+ *
+ * 参数说明：
+ *     a -- 待排序的数组
+ *     start -- 被下调节点的起始位置(一般为0，表示从第1个开始)
+ *     end   -- 截至范围(一般为数组中最后一个元素的索引)
+ */
+void maxHeapDown(int* a, int start, int end)
+{
+    int c = start;            // 当前(current)节点的位置
+    int l = 2*c + 1;        // 左(left)孩子的位置
+    int tmp = a[c];            // 当前(current)节点的大小
+    for (; l <= end; c=l,l=2*l+1)
+    {
+        // "l"是左孩子，"l+1"是右孩子
+        if ( l < end && a[l] < a[l+1])
+            l++;        // 左右两孩子中选择较大者，即m_heap[l+1]
+        if (tmp >= a[l])
+            break;        // 调整结束
+        else            // 交换值
+        {
+            a[c] = a[l];
+            a[l]= tmp;
+        }
+    }
+}
+
+/*
+ * 堆排序(从小到大)
+ *
+ * 参数说明：
+ *     a -- 待排序的数组
+ *     n -- 数组的长度
+ */
+void heapSortAsc(int* a, int n)
+{
+    int i,tmp;
+
+    // 从(n/2-1) --> 0逐次遍历。遍历之后，得到的数组实际上是一个(最大)二叉堆。
+    for (i = n / 2 - 1; i >= 0; i--)
+        maxHeapDown(a, i, n-1);
+
+    // 从最后一个元素开始对序列进行调整，不断的缩小调整的范围直到第一个元素
+    for (i = n - 1; i > 0; i--)
+    {
+        // 交换a[0]和a[i]。交换后，a[i]是a[0...i]中最大的。
+        tmp = a[0];
+        a[0] = a[i];
+        a[i] = tmp;
+        // 调整a[0...i-1]，使得a[0...i-1]仍然是一个最大堆。
+        // 即，保证a[i-1]是a[0...i-1]中的最大值。
+        maxHeapDown(a, 0, i-1);
+    }
+}
+
+/* 
+ * (最小)堆的向下调整算法
+ *
+ * 注：数组实现的堆中，第N个节点的左孩子的索引值是(2N+1)，右孩子的索引是(2N+2)。
+ *     其中，N为数组下标索引值，如数组中第1个数对应的N为0。
+ *
+ * 参数说明：
+ *     a -- 待排序的数组
+ *     start -- 被下调节点的起始位置(一般为0，表示从第1个开始)
+ *     end   -- 截至范围(一般为数组中最后一个元素的索引)
+ */
+void minHeapDown(int* a, int start, int end)
+{
+    int c = start;            // 当前(current)节点的位置
+    int l = 2*c + 1;        // 左(left)孩子的位置
+    int tmp = a[c];            // 当前(current)节点的大小
+    for (; l <= end; c=l,l=2*l+1)
+    {
+        // "l"是左孩子，"l+1"是右孩子
+        if ( l < end && a[l] > a[l+1])
+            l++;        // 左右两孩子中选择较小者
+        if (tmp <= a[l])
+            break;        // 调整结束
+        else            // 交换值
+        {
+            a[c] = a[l];
+            a[l]= tmp;
+        }
+    }
+}
+
+/*
+ * 堆排序(从大到小)
+ *
+ * 参数说明：
+ *     a -- 待排序的数组
+ *     n -- 数组的长度
+ */
+void heapSortDesc(int* a, int n)
+{
+    int i,tmp;
+
+    // 从(n/2-1) --> 0逐次遍历每。遍历之后，得到的数组实际上是一个最小堆。
+    for (i = n / 2 - 1; i >= 0; i--)
+        minHeapDown(a, i, n-1);
+
+    // 从最后一个元素开始对序列进行调整，不断的缩小调整的范围直到第一个元素
+    for (i = n - 1; i > 0; i--)
+    {
+        // 交换a[0]和a[i]。交换后，a[i]是a[0...i]中最小的。
+        tmp = a[0];
+        a[0] = a[i];
+        a[i] = tmp;
+        // 调整a[0...i-1]，使得a[0...i-1]仍然是一个最小堆。
+        // 即，保证a[i-1]是a[0...i-1]中的最小值。
+        minHeapDown(a, 0, i-1);
+    }
+}
+```
+
 ----
 
 ## [桶排序]桶排序的实现
@@ -310,7 +432,47 @@ public static void bucketSort(int[] arr) {
 
 基于桶排序，记录出现的次数，最后在倒出即可。
 
+```cpp
+class Solution
+{
+public:
+    int* coutSort(int* data, int length)
+    {
+        if (data == nullptr || length <= 0)
+            return nullptr;
 
+        //确定数列最大值
+        int max = data[0];
+        int min = data[0];
+        for (int i = 1; i < length; ++i)
+        {
+            if (data[i] > max)
+                max = data[i];
+            if (data[i] < min)
+                min = data[i];
+        }
+        int d = max - min;
+        // 确定统计数组长度并进行初始化
+        int* coutData = new int[d + 1];
+        for (int i = 0; i <= d; ++i)
+            coutData[i] = 0;
+        // 遍历数组，统计每个数出现的次数
+        for (int i = 0; i < length; ++i)
+                ++coutData[data[i] - min];
+        // 统计数组做变形，后面的元素等于前面的元素之和
+        for (int i = 1; i <= d; ++i)
+            coutData[i] += coutData[i - 1];
+    // 倒序遍历原始数列，从统计数组找到正确的位置，输出到结果数组
+        int* sortedArray = new int[length];
+        for (int i = length - 1; i >= 0; i--)
+        {
+            sortedArray[coutData[data[i] - min] - 1] = data[i];        // 找到data[i]对应的coutData的值，值为多少，表示原来排序多少，（因为从1开始，所以再减1）
+            coutData[data[i] - min]--;        // 然后将相应的coutData的值减1，表示下次再遇到此值时，原来的排序是多少。
+        }
+        return sortedArray;
+    }
+};
+```
 
 -----
 
@@ -383,7 +545,7 @@ public static int bucket(long num, long len, long min, long max) {
 
 ----
 
-## 队列实现栈/栈实现队列
+## [队列/栈]队列实现栈/栈实现队列
 
 队列实现栈：
 
@@ -485,7 +647,7 @@ public class Code_01_Array_To_Stack_Queue {
 
 ----
 
-## 最小栈
+## [栈]最小栈
 
 一个`data`栈，一个`min`栈，两个栈同步压数，弹出页同步弹出。如果发现更大的，则在min栈中，重复压入栈顶元素。
 
@@ -573,7 +735,7 @@ public static class MyStack1 {
 
 ----
 
-## 哈希函数
+## [哈希]哈希函数
 
 1. 哈希函数输入域是无穷的，输出域为有限的；
 2. same input same output；
@@ -582,7 +744,7 @@ public static class MyStack1 {
 
 ----
 
-## 设计RandomPool结构
+## [哈希]设计RandomPool结构
 
 设计一种结构，在该结构中有如下三个功能：
 
