@@ -1,0 +1,411 @@
+---
+layout:      post
+title:       "左程云算法讲解笔记-VI"
+subtitle:    "Algorithm"
+author:      "Ashior"
+header-img:  "img/bg-zuo-algorithm.jpg"
+catalog:     true
+tags:
+  - 工作
+  - 算法
+  - 学习笔记
+---
+
+> 这些内容是从牛客网左程云大神的算法课程中做记录的笔记，由于内容较多，又附上源码，所以考虑一章一个模块。
+
+[TOC]
+
+----
+
+## 盛水问题
+
+给定一个数组代表一个容器， 比如`[3,1,2,4]`， 代表0位置是一个宽度为1，高度为3的直方图。 代表1位置是一个宽度为1，高度为1的直方图。 代表2位置是一个宽度为1，高度为2的直方图。 代表3位置是一个宽度为1，高度为4的直方图。 所有直方图的底部都在一条水平线上，且紧靠着。 把这个图想象成一个容器，这个容器可以装3格的水。 给定一个没有负数的数组arr，返回能装几格水？
+
+不考虑每个波谷能够盛放多少水，而是考虑每个柱子能够上面能够盛放多少水。也即：当前高度减去左边的最高高度，减去右边的最高高度，出现负值，则为0，出现正值则为可能存储的水量，取左边两边的最小值，即为当前所能存储的水量。
+
+**技巧：辅助数组**
+
+当我们需要反复查询某个数组中区间`[0, i]`或者`[i, n]`的最值时，创建两个数组helparr。
+helparr1：顺序遍历原数组，依次填入数据，如果当前数比上一个数更大，则加入数组中，否则复制上一个数填入当前位置。
+helparr2：逆序遍历原数组，依次填入数据，如果当前数比上一个数更大，则加入数组中，否则复制上一个数填入当前位置。
+
+例如：原数组为`{3, 2, 4, 5, 4, 3, 1}`
+helparr1：`{3, 3, 4, 5, 5, 5, 5}`
+helparr2：`{5, 5, 5, 5, 4, 3, 1}`
+
+高效的解法：
+
+利用两个指针，指针L，指向位置1，指针R指向位置N-2，由于位置0和位置N-1不需要考虑，必定没水。之后移动L或者R指针，根据左右两边的瓶颈情况进行移动，最后两个指针相等时，计算全部结果求和。
+
+```java
+public static int getWater1(int[] arr) {
+	if (arr == null || arr.length < 3) {
+		return 0;
+	}
+	int value = 0;
+	for (int i = 1; i < arr.length - 1; i++) {
+		int leftMax = 0;
+		int rightMax = 0;
+		for (int l = 0; l < i; l++) {
+			leftMax = Math.max(arr[l], leftMax);
+		}
+		for (int r = i + 1; r < arr.length; r++) {
+			rightMax = Math.max(arr[r], rightMax);
+		}
+		value += Math.max(0, Math.min(leftMax, rightMax) - arr[i]);
+	}
+	return value;
+}
+
+public static int getWater2(int[] arr) {
+	if (arr == null || arr.length < 3) {
+		return 0;
+	}
+	int n = arr.length - 2;
+	int[] leftMaxs = new int[n];
+	leftMaxs[0] = arr[0];
+	for (int i = 1; i < n; i++) {
+		leftMaxs[i] = Math.max(leftMaxs[i - 1], arr[i]);
+	}
+	int[] rightMaxs = new int[n];
+	rightMaxs[n - 1] = arr[n + 1];
+	for (int i = n - 2; i >= 0; i--) {
+		rightMaxs[i] = Math.max(rightMaxs[i + 1], arr[i + 2]);
+	}
+	int value = 0;
+	for (int i = 1; i <= n; i++) {
+		value += Math.max(0, Math.min(leftMaxs[i - 1], rightMaxs[i - 1]) - arr[i]);
+	}
+	return value;
+}
+
+public static int getWater3(int[] arr) {
+	if (arr == null || arr.length < 3) {
+		return 0;
+	}
+	int n = arr.length - 2;
+	int[] rightMaxs = new int[n];
+	rightMaxs[n - 1] = arr[n + 1];
+	for (int i = n - 2; i >= 0; i--) {
+		rightMaxs[i] = Math.max(rightMaxs[i + 1], arr[i + 2]);
+	}
+	int leftMax = arr[0];
+	int value = 0;
+	for (int i = 1; i <= n; i++) {
+		value += Math.max(0, Math.min(leftMax, rightMaxs[i - 1]) - arr[i]);
+		leftMax = Math.max(leftMax, arr[i]);
+	}
+	return value;
+}
+
+public static int getWater4(int[] arr) {
+	if (arr == null || arr.length < 3) {
+		return 0;
+	}
+	int value = 0;
+	int leftMax = arr[0];
+	int rightMax = arr[arr.length - 1];
+	int l = 1;
+	int r = arr.length - 2;
+	while (l <= r) {
+		if (leftMax <= rightMax) {
+			value += Math.max(0, leftMax - arr[l]);
+			leftMax = Math.max(leftMax, arr[l++]);
+		} else {
+			value += Math.max(0, rightMax - arr[r]);
+			rightMax = Math.max(rightMax, arr[r--]);
+		}
+	}
+	return value;
+}
+```
+
+----
+
+## 子数组最大和
+
+给定一个数组arr，返回所有子数组的累加和中，最大的累加和。
+
+利用两个变量，一个cur记录累加下一个元素后的取值（如果为负数，则变为0），一个max记录累加后的值的最大值。证明请参考视频第八章。
+
+```java
+public static int maxSum(int[] arr) {
+	if (arr == null || arr.length == 0) {
+		return 0;
+	}
+	int max = Integer.MIN_VALUE;
+	int cur = 0;
+	for (int i = 0; i != arr.length; i++) {
+		cur += arr[i];
+		max = Math.max(max, cur);
+		cur = cur < 0 ? 0 : cur;
+	}
+	return max;
+}
+```
+
+----
+
+## 判断循环子串
+
+想想一个字符串其实是个循环数组，可以循环右移。比如”abc”，向右循环右移一位，得到”cab”，向右循环右移两位，得到“bca”，向右循环右移三位，得到“abc”，给定两个字符串str1和str2，判断str2是不是由str1循环右移得到的。
+
+将str1自己连接自己，然后判断str2是否包含其中。
+
+```java
+public static boolean isRotation(String a, String b) {
+	if (a == null || b == null || a.length() != b.length()) {
+		return false;
+	}
+	String b2 = b + b;
+	return getIndexOf(b2, a) != -1;
+}
+
+// KMP Algorithm
+public static int getIndexOf(String s, String m) {
+	if (s.length() < m.length()) {
+		return -1;
+	}
+	char[] ss = s.toCharArray();
+	char[] ms = m.toCharArray();
+	int si = 0;
+	int mi = 0;
+	int[] next = getNextArray(ms);
+	while (si < ss.length && mi < ms.length) {
+		if (ss[si] == ms[mi]) {
+			si++;
+			mi++;
+		} else if (next[mi] == -1) {
+			si++;
+		} else {
+			mi = next[mi];
+		}
+	}
+	return mi == ms.length ? si - mi : -1;
+}
+
+public static int[] getNextArray(char[] ms) {
+	if (ms.length == 1) {
+		return new int[] { -1 };
+	}
+	int[] next = new int[ms.length];
+	next[0] = -1;
+	next[1] = 0;
+	int pos = 2;
+	int cn = 0;
+	while (pos < next.length) {
+		if (ms[pos - 1] == ms[cn]) {
+			next[pos++] = ++cn;
+		} else if (cn > 0) {
+			cn = next[cn];
+		} else {
+			next[pos++] = 0;
+		}
+	}
+	return next;
+}
+```
+
+----
+
+## 字符串移动
+
+给定一个字符串str，和一个整数k，返回str向右循环右移k位后的结果。（原地调整）
+
+左边部分逆序，右边部分逆序，最后整体逆序即可。
+
+```java
+public static void rotate1(char[] chas, int size) {
+	if (chas == null || size <= 0 || size >= chas.length) {
+		return;
+	}
+	reverse(chas, 0, size - 1);
+	reverse(chas, size, chas.length - 1);
+	reverse(chas, 0, chas.length - 1);
+}
+```
+
+----
+
+## 滑动窗口-生成窗口最大值数组
+
+有一个整型数组arr和一个大小为w的窗口从数组的最左边滑到最右边，窗口每次向右边滑一个 位置。
+
+例如，数组为`[4,3,5,4,3,3,6,7]`，窗口大小为3时：
+
+`[4  3  5] 4  3  3  6  7`       窗口中最大值为5
+`4 [3  5  4] 3  3  6  7`        窗口中最大值为5
+`4  3 [5  4  3] 3  6  7`        窗口中最大值为5
+`4  3  5 [4  3  3] 6  7`        窗口中最大值为4
+`4  3  5  4 [3  3  6] 7`        窗口中最大值为6
+`4  3  5  4  3 [3  6  7]`       窗口中最大值为7
+
+如果数组长度为n，窗口大小为w，则一共产生`n-w+1`个窗口的最大值。请实现一个函数。
+
+输入：整型数组arr，窗口大小为w。
+输出：一个长度为`n-w+1`的数组res，`res[i]`表示每一种窗口状态下的最大值。
+以本题为例，结果应该返回`{5,5,5,4,6,7}`。
+
+概念补充：**窗口**生成，利用一个L，一个R指针，初始指向-1位置，之后再移动。保证两个条件，L不超过R，L和R指针只能往右移动。**本质就是一个类双端队列，从尾部进数据，从头部出数据。**
+
+题目解析：
+
+窗口加入数据，入队列：采用双端队列来保存窗口的大小值。双端队列中的数据严格满足从大到小的顺序。当需要进入的数比双端队列末尾的数更大时（双端队列的数据小于等于待进入的数据），则弹出，否则进入队列。
+
+窗口弹出数据，出队列：当L移动时，说明有数据需要弹出，此时判断双端队列头部的数据下标是否过期，如果过期则弹出。没过期则不动。
+
+每一步的移动，则窗口的最大值就是当前双端端口的头部数据（可能会过期，所以后面要不断的保存数据）。这也是为什么窗口指针L和R只能往左移动。
+
+```java
+public static int[] getMaxWindow(int[] arr, int w) {
+	if (arr == null || w < 1 || arr.length < w) {
+		return null;
+	}
+	LinkedList<Integer> qmax = new LinkedList<Integer>();
+	int[] res = new int[arr.length - w + 1];
+	int index = 0;
+	for (int i = 0; i < arr.length; i++) {
+		while (!qmax.isEmpty() && arr[qmax.peekLast()] <= arr[i]) {
+			qmax.pollLast();
+		}
+		qmax.addLast(i);
+		if (qmax.peekFirst() == i - w) {
+			qmax.pollFirst();
+		}
+		if (i >= w - 1) {
+			res[index++] = arr[qmax.peekFirst()];
+		}
+	}
+	return res;
+}
+```
+
+----
+
+## [贪心]最低字典序
+
+给定一个字符串类型的数组strs，找到一种拼接方式，使得把所有字符串拼起来之后形成的字符串具有最低的字典序。
+
+字典序就是按照字典查找的顺序如`a<b`。
+
+采用字符串拼接后的比较方式，如str1和str2进行比较，之前是`str1<str2`，而现在采用`str1+str2 < str2+str1`的方式进行比较。
+
+```java
+public static class MyComparator implements Comparator<String> {
+	@Override
+	public int compare(String a, String b) {
+		return (a + b).compareTo(b + a);
+	}
+}
+
+public static String lowestString(String[] strs) {
+	if (strs == null || strs.length == 0) {
+		return "";
+	}
+	Arrays.sort(strs, new MyComparator());
+	String res = "";
+	for (int i = 0; i < strs.length; i++) {
+		res += strs[i];
+	}
+	return res;
+}
+```
+
+----
+
+## [贪心]会议室占用
+
+一些项目要占用一个会议室宣讲，会议室不能同时容纳两个项目的宣讲。给你每一个项目开始的时间和结束的时间(给你一个数组，里面是一个个具体的项目)，你来安排宣讲的日程，要求会议室进行的宣讲的场次最多。返回这个最多的宣讲场次。
+
+贪心策略：按照开始时间/持续时间均不可以。应该对结束时间进行贪心比较。
+
+```java
+public static class Program {
+	public int start;
+	public int end;
+
+	public Program(int start, int end) {
+		this.start = start;
+		this.end = end;
+	}
+}
+
+public static class ProgramComparator implements Comparator<Program> {
+
+	@Override
+	public int compare(Program o1, Program o2) {
+		return o1.end - o2.end;
+	}
+
+}
+
+public static int bestArrange(Program[] programs, int start) {
+	Arrays.sort(programs, new ProgramComparator());
+	int result = 0;
+	for (int i = 0; i < programs.length; i++) {
+		if (start <= programs[i].start) {
+			result++;
+			start = programs[i].end;
+		}
+	}
+	return result;
+}
+```
+
+----
+
+## 最大的leftMax与rightMax之差的绝对值 
+
+给定一个长度为`N（N>1）`的整型数组arr，可以划分成左右两个部分，左部分为`arr[0..K]`，右部分为`arr[K+1..N-1]`，K可以取值的范围是`[0,N-2]`。求这么多划分方案中，左部分中的最大值减去右部分最大值的绝对值中，最大是多少？ 
+
+例如：`[2,7,3,1,1]`，当左部分为`[2,7]`，右部分为`[3,1,1]`时， 左部分中的最大值减去右部分最大值的绝对值为4。当左部分为`[2,7,3]`，右部分为`[1,1]`时，左部分中的最大值减去右部分最大 值的绝对值为6。还有很多划分方案，但最终返回6。
+
+方法3采用很神奇的解法：
+1. 该最大值属于左部分，那怎么能使右部分的最大值最小呢，因为右部分必定包含了最后一个元素，所以右部分的`最大值肯定>=最后一个元素`，所以就把右部分切的只剩下最后一个元素，这样左部分的最大值依然使max，右部分的最大值就是最后一个元素
+2. 最大值属于右部分，同理最后即求`max-arr[0]`和`max-arr[arr.length-1]`的绝对值最大值
+
+```java
+public static int maxABS1(int[] arr) {
+	int res = Integer.MIN_VALUE;
+	int maxLeft = 0;
+	int maxRight = 0;
+	for (int i = 0; i != arr.length - 1; i++) {
+		maxLeft = Integer.MIN_VALUE;
+		for (int j = 0; j != i + 1; j++) {
+			maxLeft = Math.max(arr[j], maxLeft);
+		}
+		maxRight = Integer.MIN_VALUE;
+		for (int j = i + 1; j != arr.length; j++) {
+			maxRight = Math.max(arr[j], maxRight);
+		}
+		res = Math.max(Math.abs(maxLeft - maxRight), res);
+	}
+	return res;
+}
+
+public static int maxABS2(int[] arr) {
+	int[] lArr = new int[arr.length];
+	int[] rArr = new int[arr.length];
+	lArr[0] = arr[0];
+	rArr[arr.length - 1] = arr[arr.length - 1];
+	for (int i = 1; i < arr.length; i++) {
+		lArr[i] = Math.max(lArr[i - 1], arr[i]);
+	}
+	for (int i = arr.length - 2; i > -1; i--) {
+		rArr[i] = Math.max(rArr[i + 1], arr[i]);
+	}
+	int max = 0;
+	for (int i = 0; i < arr.length - 1; i++) {
+		max = Math.max(max, Math.abs(lArr[i] - rArr[i + 1]));
+	}
+	return max;
+}
+
+public static int maxABS3(int[] arr) {
+	int max = Integer.MIN_VALUE;
+	for (int i = 0; i < arr.length; i++) {
+		max = Math.max(arr[i], max);
+	}
+	return max - Math.min(arr[0], arr[arr.length - 1]);
+}
+```
