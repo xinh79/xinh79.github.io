@@ -1,0 +1,399 @@
+---
+layout:      post
+title:       "左程云算法讲解笔记-V"
+subtitle:    "Algorithm"
+author:      "Ashior"
+header-img:  "img/bg-zuo-algorithm.jpg"
+catalog:     true
+tags:
+  - 工作
+  - 算法
+  - 学习笔记
+---
+
+> 这些内容是从牛客网左程云大神的算法课程中做记录的笔记，由于内容较多，又附上源码，所以考虑一章一个模块。
+
+[TOC]
+
+----
+
+**介绍递归和动态规划**
+
+暴力递归： 
+
+1. 把问题转化为规模缩小了的同类问题的子问题
+2. 有明确的不需要继续进行递归的条件(base case)
+3. 有当得到了子问题的结果之后的决策过程
+4. 不记录每一个子问题的解
+
+动态规划（记录每个递归过程中子问题的解）：
+
+1. 从暴力递归中来
+2. 将每一个子问题的解记录下来，避免重复计算
+3. 把暴力递归的过程，抽象成了状态表达
+4. 并且存在化简状态表达，使其更加简洁的可能
+
+----
+
+## [递归]求!n的结果
+
+```java
+// 返回arr[L...R]的最小值，getMin(arr, 0, arr.length - 1);
+public static int getMin(int[] arr, int L, int R) {
+	if (L == R) {
+		return arr[L];
+	}
+	int mid = (L + R) / 2;
+	int leftMin = getMin(arr, L, mid);
+	int rightMin = getMin(arr, mid+1, R);
+	return Math.min(leftMin, rightMin);
+}
+
+public static long getFactorial1(int n) {
+	if (n == 1) {
+		return 1L;
+	}
+	return (long) n * getFactorial1(n - 1);
+}
+```
+
+----
+
+## [递归]左上至右下最小和
+
+给你一个二维数组，二维数组中的每个数都是正数，要求从左上角走到右下角，每一步只能向右或者向下。沿途经过的数字要累加起来。返回最小的路径和。
+
+递归的过程中，由于记录每个子状态的解，所以导致很多过程被重复计算。
+
+有一种类似于递归的方法，采用记忆化搜索。
+
+```java
+public static int minPath1(int[][] matrix) {
+	return process1(matrix, matrix.length - 1, matrix[0].length - 1);
+}
+
+// 从位置(i,j)到左上角角位置的最小路径和是什么
+public static int process1(int[][] matrix, int i, int j) {
+	int res = matrix[i][j];
+	// 到达左上角
+	if (i == 0 && j == 0) {
+		return res;
+	}
+	// 到达最左边，只能往上移动
+	if (i == 0 && j != 0) {
+		return res + process1(matrix, i, j - 1);
+	}
+	// 到达最上边，只能往左移动
+	if (i != 0 && j == 0) {
+		return res + process1(matrix, i - 1, j);
+	}
+	// 上/左都可以移动
+	return res + Math.min(process1(matrix, i, j - 1), process1(matrix, i - 1, j));
+}
+
+public static int minPath2(int[][] m) {
+	if (m == null || m.length == 0 || m[0] == null || m[0].length == 0) {
+		return 0;
+	}
+	int row = m.length;
+	int col = m[0].length;
+	int[][] dp = new int[row][col];
+	dp[0][0] = m[0][0];
+	for (int i = 1; i < row; i++) {
+		dp[i][0] = dp[i - 1][0] + m[i][0];
+	}
+	for (int j = 1; j < col; j++) {
+		dp[0][j] = dp[0][j - 1] + m[0][j];
+	}
+	for (int i = 1; i < row; i++) {
+		for (int j = 1; j < col; j++) {
+			dp[i][j] = Math.min(dp[i - 1][j], dp[i][j - 1]) + m[i][j];
+		}
+	}
+	return dp[row - 1][col - 1];
+}
+```
+
+----
+
+## [DP]给定数组求指定值
+
+给你一个数组arr，和一个整数aim。如果可以任意选择arr中的数字，能不能累加得到aim，返回true或者false
+
+```java
+public static boolean money1(int[] arr, int aim) {
+	return process1(arr, 0, 0, aim);
+}
+// 递归版本
+// 参数i表示从[0~i-1]所形成的累加和为sum
+// 之后从[i~n-1]中任意选取，最后是否可以的到目标和aim
+// 比如：arr = [3, 2, 7, 9]，aim = 11
+// 第一次为：[0, 0, 11]
+// 第二次为：[1, 3, 11]或[1, 0, 11]
+// 这表示第一次选择了3，或者没有选择3
+// 第三次为：[2, 5, 11]或[2, 3, 11]或[2, 2, 11]或[2, 0, 11]
+public static boolean process1(int[] arr, int i, int sum, int aim) {
+	/*
+	if (sum == aim) {
+		return true;
+	}
+	if (i == arr.length) {
+		return false;
+	}
+	*/
+	// 查找到数组末尾，查看当前的结果是否满足条件
+	if (i == arr.length) {
+		return sum == aim;
+	}
+	// 两种情况，第一种为选择当前值，第二种为不选择当前值
+	// 两者有一个满足，即可返回true
+	return process1(arr, i + 1, sum, aim) || process1(arr, i + 1, sum + arr[i], aim);
+}
+// 动态规划版本
+public static boolean money2(int[] arr, int aim) {
+	boolean[][] dp = new boolean[arr.length + 1][aim + 1];
+	// 将目标的值设置为true
+	// 两个变化的下标组成解空间的大小
+	for (int i = 0; i < dp.length; i++) {
+		dp[i][aim] = true;
+	}
+	for (int i = arr.length - 1; i >= 0; i--) {
+		for (int j = aim - 1; j >= 0; j--) {
+			dp[i][j] = dp[i + 1][j];
+			if (j + arr[i] <= aim) {
+				dp[i][j] = dp[i][j] || dp[i + 1][j + arr[i]];
+			}
+		}
+	}
+	return dp[0][0];
+}
+```
+
+----
+
+## [DP]背包问题
+
+给定两个数组w和v，两个数组长度相等，`w[i]`表示第i件商品的 重量，`v[i]`表示第i件商品的价值。再给定一个整数bag，要求你挑选商品的重量加起来一定不能超 过bag，返回满足这个条件下，你能获得的最大价值。
+
+1. 分析可变参数（解空间）
+2. 确定最终状态
+3. 根据base case确定初始值
+4. 分析普遍位置依赖哪些位置
+5. 根据依赖关系逆序求出整个表
+
+```java
+public static int maxValue1(int[] c, int[] p, int bag) {
+	return process1(c, p, 0, 0, bag);
+}
+
+public static int process1(int[] c, int[] p, int i, int cost, int bag) {
+	if (cost > bag) {
+		return Integer.MIN_VALUE;
+	}
+	if (i == c.length) {
+		return 0;
+	}
+	return Math.max(process1(c, p, i + 1, cost, bag), p[i] + process1(c, p, i + 1, cost + c[i], bag));
+}
+// c表示他的商品重量，p表示商品的价值
+public static int maxValue2(int[] c, int[] p, int bag) {
+	// 通过两个变量确定解空间大小
+	int[][] dp = new int[c.length + 1][bag + 1];
+	// 开始填满整个解空间
+	for (int i = c.length - 1; i >= 0; i--) {
+		for (int j = bag; j >= 0; j--) {
+			dp[i][j] = dp[i + 1][j];
+			if (j + c[i] <= bag) {
+				dp[i][j] = Math.max(dp[i][j], p[i] + dp[i + 1][j + c[i]]);
+			}
+		}
+	}
+	return dp[0][0];
+}
+```
+
+----
+
+## [递归]汉诺塔
+
+打印n层汉诺塔从最左边移动到最右边的全部过程。
+
+移动N个东西，从form移动到to，中间借用help操作。
+
+```java
+public static void hanoi(int n) {
+	if (n > 0) {
+		func(n, "left", "mid", "right");
+	}
+}
+// 移动n层高的汉诺塔，从from移动至to借助mid
+public static void func(int n, String from, String mid, String to) {
+	if (n == 1) {
+		System.out.println("move from " + from + " to " + to);
+	} else {
+		func(n - 1, from, to, mid);
+		func(1, from, mid, to);
+		func(n - 1, mid, from, to);
+	}
+}
+```
+
+----
+
+## [递归]打印全部子序列
+
+打印一个字符串的全部子序列，包括空字符串。
+
+其实就是两条路，决定是否要当前字符，或者不要当前字符
+
+```java
+public static void printAllSubsquence(String str) {
+	char[] chs = str.toCharArray();
+	process(chs, 0, "");
+}
+
+public static void process(char[] chs, int i, String pre) {
+	// 遇到字符串末尾，则直接打印之前所形成的字符串
+	if (i == chs.length) {
+		// 不等于空，则打印。
+		if (!pre.equals("") {
+			System.out.println(pre);
+		}
+		return ;
+	}
+	// 打印当前字符
+	process(chs, i + 1, pre + String.valueOf(char[i]));
+	// 不打印当前字符
+	process(chs, i + 1, pre);
+}
+```
+
+----
+
+## [递归]打印字符串的全排列
+
+打印字符串的全排列，比如字符串：`acc`就可以形成：
+
+```
+acc, acc, cac, cca, acc ,acc
+```
+
+之后更进一步，要求打印的全排列不重复。
+
+```java
+public static void printAllPermutations1(String str) {
+	char[] chs = str.toCharArray();
+	process1(chs, 0);
+}
+// 从i位置开始，之后的每个元素形成全排列
+public static void process1(char[] chs, int i) {
+	if (i == chs.length) {
+		System.out.println(String.valueOf(chs));
+	}
+	for (int j = i; j < chs.length; j++) {
+		// 字符串的顺序没有关系，最后形成的全排列无变化
+		swap(chs, i, j);
+		process1(chs, i + 1);
+		// swap(chs, i, j);
+	}
+}
+
+public static void printAllPermutations2(String str) {
+	char[] chs = str.toCharArray();
+	process2(chs, 0);
+}
+
+public static void process2(char[] chs, int i) {
+	if (i == chs.length) {
+		System.out.println(String.valueOf(chs));
+	}
+	HashSet<Character> set = new HashSet<>();
+	for (int j = i; j < chs.length; j++) {
+		// 去重，如果有一样的，则不采取行动
+		if (!set.contains(chs[j])) {
+			set.add(chs[j]);
+			swap(chs, i, j);
+			process2(chs, i + 1);
+			swap(chs, i, j);
+		}
+	}
+}
+```
+
+----
+
+## [递归]母牛
+
+母牛每年生一只母牛，新出生的母牛成长三年后也能每年生一只 母牛，假设不会死。求N年后，母牛的数量。
+
+`F(N) = F(N-1) + F(N-3)`
+
+如果牛只能活10年，则关系式变为：
+
+`F(N) = F(N-1) + F(N-3) - F(N-10)`
+
+```java
+public static int cowNumber1(int n) {
+	if (n < 1) {
+		return 0;
+	}
+	if (n == 1 || n == 2 || n == 3) {
+		return n;
+	}
+	return cowNumber1(n - 1) + cowNumber1(n - 3);
+}
+
+public static int cowNumber2(int n) {
+	if (n < 1) {
+		return 0;
+	}
+	if (n == 1 || n == 2 || n == 3) {
+		return n;
+	}
+	int res = 3;
+	int pre = 2;
+	int prepre = 1;
+	int tmp1 = 0;
+	int tmp2 = 0;
+	for (int i = 4; i <= n; i++) {
+		tmp1 = res;
+		tmp2 = pre;
+		res = res + prepre;
+		pre = tmp1;
+		prepre = tmp2;
+	}
+	return res;
+}
+```
+
+----
+
+## [递归]栈的逆序
+
+给你一个栈，请你逆序这个栈，不能申请额外的数据结构，只能 使用递归函数。如何实现?
+
+```java
+public static void reverse(Stack<Integer> stack) {
+	if (stack.isEmpty()) {
+		return;
+	}
+	int i = getAndRemoveLastElement(stack);
+	reverse(stack);
+	stack.push(i);
+}
+// 1,2,3压栈之后，会将3弹出，之后2变为栈底元素，1依旧是栈顶元素
+public static int getAndRemoveLastElement(Stack<Integer> stack) {
+	// 栈中弹出栈顶元素，存储在result中
+	int result = stack.pop();
+	// 栈如果为空，则到底，打印数据
+	if (stack.isEmpty()) {
+		return result;
+	} else {
+		// 继续这个递归过程
+		int last = getAndRemoveLastElement(stack);
+		// 获取栈低元素后，立马将之前存储的元素压入栈中
+		stack.push(result);
+		return last;
+	}
+}
+```
