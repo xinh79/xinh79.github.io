@@ -120,6 +120,8 @@ public static int minPath2(int[][] m) {
 
 给你一个数组arr，和一个整数aim。如果可以任意选择arr中的数字，能不能累加得到aim，返回true或者false
 
+动态规划的版本应该是有arr.length的行，还有arr数组的总和的列的大小，构成整个解空间。其中最后一行的第aim列的值为true，其余的最后一行的值均为false。这样我们就构成了基本情况，base case。之后需要得到的最终的目标是将位置(0,0)的结果推出并返回：查看从位置0开始，累加和为0，也就是初始状态的结果。普遍的情况是通过最后一行的结果往上推，推出上一行的情况，直至推出起始位置的值。
+
 ```java
 public static boolean money1(int[] arr, int aim) {
 	return process1(arr, 0, 0, aim);
@@ -202,8 +204,11 @@ public static int maxValue2(int[] c, int[] p, int bag) {
 	// 开始填满整个解空间
 	for (int i = c.length - 1; i >= 0; i--) {
 		for (int j = bag; j >= 0; j--) {
+			// 不选择当前货物的情况，一个初始化的解
 			dp[i][j] = dp[i + 1][j];
+			// 判断是否超出背包的大小
 			if (j + c[i] <= bag) {
+				// 不超出则更新当前循环位置的值
 				dp[i][j] = Math.max(dp[i][j], p[i] + dp[i + 1][j + c[i]]);
 			}
 		}
@@ -324,7 +329,7 @@ public static void process2(char[] chs, int i) {
 
 ## [递归]母牛
 
-母牛每年生一只母牛，新出生的母牛成长三年后也能每年生一只 母牛，假设不会死。求N年后，母牛的数量。
+母牛每年生一只母牛，新出生的母牛成长三年后也能每年生一只母牛，假设不会死。求N年后，母牛的数量。
 
 `F(N) = F(N-1) + F(N-3)`
 
@@ -370,7 +375,7 @@ public static int cowNumber2(int n) {
 
 ## [递归]栈的逆序
 
-给你一个栈，请你逆序这个栈，不能申请额外的数据结构，只能 使用递归函数。如何实现?
+给你一个栈，请你逆序这个栈，不能申请额外的数据结构，只使用递归函数。如何实现?
 
 ```java
 public static void reverse(Stack<Integer> stack) {
