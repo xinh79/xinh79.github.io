@@ -35,7 +35,7 @@ helparr2：`{5, 5, 5, 5, 4, 3, 1}`
 
 高效的解法：
 
-利用两个指针，指针L，指向位置1，指针R指向位置N-2，由于位置0和位置N-1不需要考虑，必定没水。之后移动L或者R指针，根据左右两边的瓶颈情况进行移动，最后两个指针相等时，计算全部结果求和。
+利用两个指针，指针L，指向位置1，指针R指向位置N-2，由于位置0和位置N-1不需要考虑，必定没水。之后移动L或者R指针，根据左右两边的瓶颈情况进行移动，最后两个指针相等时，计算全部结果求和。取出min(max_left, max_right)，然后减去当前值，为正数则表示可以存储的水量，如果为负值则表示不可以储水。
 
 ```java
 public static int getWater1(int[] arr) {
@@ -258,21 +258,29 @@ public static void rotate1(char[] chas, int size) {
 
 ```java
 public static int[] getMaxWindow(int[] arr, int w) {
+	// 窗口大小不满足条件
 	if (arr == null || w < 1 || arr.length < w) {
 		return null;
 	}
+	// 双端队列，诸如 deque
 	LinkedList<Integer> qmax = new LinkedList<Integer>();
+	// 一共产生`n-w+1`个窗口的最大值，所以创建相应大小的数组
 	int[] res = new int[arr.length - w + 1];
 	int index = 0;
 	for (int i = 0; i < arr.length; i++) {
+		// 双端队列不为空或者队列的值小于等于当前值，弹出
 		while (!qmax.isEmpty() && arr[qmax.peekLast()] <= arr[i]) {
 			qmax.pollLast();
 		}
+		// 将目前最大值压入双端队列中
 		qmax.addLast(i);
+		// 检查下标是否过期
 		if (qmax.peekFirst() == i - w) {
 			qmax.pollFirst();
 		}
+		// 满足起始条件，因为根据窗口大小w不同，前面的某些数据不需要进行记录
 		if (i >= w - 1) {
+			// 取出双端队列的值，存入数组中
 			res[index++] = arr[qmax.peekFirst()];
 		}
 	}
@@ -302,6 +310,7 @@ public static String lowestString(String[] strs) {
 	if (strs == null || strs.length == 0) {
 		return "";
 	}
+	// 将字符串排列后，直接连接
 	Arrays.sort(strs, new MyComparator());
 	String res = "";
 	for (int i = 0; i < strs.length; i++) {
@@ -403,9 +412,11 @@ public static int maxABS2(int[] arr) {
 
 public static int maxABS3(int[] arr) {
 	int max = Integer.MIN_VALUE;
+	// 找出其中的最大值
 	for (int i = 0; i < arr.length; i++) {
 		max = Math.max(arr[i], max);
 	}
+	// 对于数组首尾数字挑一个最小值返回
 	return max - Math.min(arr[0], arr[arr.length - 1]);
 }
 ```
