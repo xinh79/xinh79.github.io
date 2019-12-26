@@ -274,7 +274,9 @@ public class Code_03_KMP_T1SubtreeEqualsT2 {
 
 ## Manacher算法
 
-此篇博客图文并茂，建议参考：[Manacher算法详细解释](https://www.jianshu.com/p/116aa58b7d81)
+此篇博客图文并茂，建议参考：
+[Manacher算法详解及模板(求解最长回文串)](https://www.jianshu.com/p/116aa58b7d81)
+[Manacher算法](https://segmentfault.com/a/1190000008484167?utm_source=tag-newest)
 
 处理回文问题。给定一个字符串，取出其中的回文长度。一个暴力的方法就是逐个字符进行操作，往外扩，左右比较看看是否相等。这是对于奇回文的情况，如果是偶回文，则无法用此方法进行判断。需要对其进行处理，将原始字符串`122221`变为`#1#2#2#2#2#1#`，此时无论奇数偶数回文串都能够匹配成功，最大值除以2即为所获得的回文串长度。
 
