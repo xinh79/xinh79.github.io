@@ -1,0 +1,527 @@
+---
+layout:      post
+title:       "左程云算法进阶笔记-I"
+subtitle:    "Algorithm"
+author:      "Ashior"
+header-img:  "img/bg-algorithms.jpg"
+catalog:     true
+tags:
+  - 工作
+  - 算法
+  - 学习笔记
+---
+
+> 这些内容是从牛客网左程云大神的算法课程中做记录的笔记，由于内容较多，又附上源码，所以考虑一章一个模块。
+
+[TOC]
+
+----
+
+## Palindrome_Number
+
+给定一个整数，判断该数是否是回文数
+
+```java
+public static boolean isPalindrome(int n) {
+	if (n < 0) {
+		return false;
+	}
+	// 通过help数组寻找数字的最高位
+	int help = 1;
+	// 不可以通过help<=n来作为判断条件
+	// 防止help溢出
+	while (n / help >= 10) {
+		help *= 10;
+	}
+	while (n != 0) {
+		// n / help为最高位数字
+		// n % 10拿到最低位数字
+		if (n / help != n % 10) {
+			return false;
+		}
+		// n % help去除最高位
+		// 除以10去除最低位
+		n = (n % help) / 10;
+		// 缩减2位
+		help /= 100;
+	}
+	return true;
+}
+```
+
+----
+
+## Tow_Sum
+
+给定数组求aim
+
+给定一个数组arr，和一个整数aim，请返回**哪两个位置的数**可 以加出aim来。 例如`arr = {2, 7, 11, 15}`，`target = 9` 返回`{0,1}`，因为`arr[0] + arr[1] = 2 + 7 = 9`可以假设每个数组里只有一组答案。
+
+暴力解法除了逐个比较，还可以使用额外空间，将每一个数存入set中，然后把目标数减去当前数，判断在set中是否存在这个数。
+
+排好序的数组，则利用双指针解决此问题。L和R分别指向数组的第0个数与最后一个数，两数相加，如果大于目标数则R左移，如果小于目标数，则L右移。
+
+排序数组中存在重复数据，要求不打印重复的数据对。此时当满足小于等于目标值时，L指针进行右移，输出成功后，L指针右移至**下一个不与当前值相等的数据处**。
+
+```java
+public int[] twoSum(int[] nums, int target) {
+	int[] indices = new int[nums.length];
+	for (int i = 0; i < indices.length; i++) {
+		// 记录每个数组元素的初始位置，方便返回
+		indices[i] = i;
+	}
+	// 自定义的堆排序，在原数组交换时
+	// 下标数组的信息也要交换
+	sort(nums, indices);
+	int l = 0;
+	int r = nums.length - 1;
+	int sum = 0;
+	while (l < r) {
+		sum = nums[l] + nums[r];
+		if (sum > target) {
+			r--;
+		} else if (sum < target) {
+			l++;
+		} else {
+			return new int[] { indices[l], indices[r] };
+		}
+	}
+	return new int[] { -1, -1 };
+}
+
+public void sort(int[] nums, int[] indices) {
+	for (int i = 0; i < nums.length; i++) {
+		heapInsert(nums, indices, i);
+	}
+	for (int i = nums.length - 1; i >= 0; i--) {
+		swap(nums, indices, 0, i);
+		heapify(nums, indices, i);
+	}
+}
+
+public void heapInsert(int[] nums, int[] indices, int i) {
+	while (i > 0) {
+		int p = (i - 1) / 2;
+		if (nums[i] <= nums[p]) {
+			break;
+		}
+		swap(nums, indices, i, p);
+		i = p;
+	}
+}
+
+public void heapify(int[] nums, int[] indices, int size) {
+	int i = 0;
+	int left = 1;
+	int right = 2;
+	int largest;
+	while (left < size) {
+		largest = nums[left] > nums[i] ? left : i;
+		largest = right < size && nums[right] > nums[largest] ? right : largest;
+		if (largest == i) {
+			break;
+		}
+		swap(nums, indices, largest, i);
+		i = largest;
+		left = i * 2 + 1;
+		right = i * 2 + 2;
+	}
+}
+// 重点就在这里，更改一个数组时，下标数组的数据也一同变化
+public void swap(int[] nums, int[] indices, int i, int j) {
+	int tmp = nums[i];
+	nums[i] = nums[j];
+	nums[j] = tmp;
+	tmp = indices[i];
+	indices[i] = indices[j];
+	indices[j] = tmp;
+}
+```
+
+----
+
+## RelocateLinkedList
+
+链表重排序
+
+给定一个链表list，如果：
+
+```
+list = 1 调整之后1。
+list = 1->2 调整之后1->2
+list = 1->2->3 调整之后1->2->3
+list = 1->2->3->4 调整之后1->3->2->4
+list = 1->2->3->4->5 调整之后1->3->2->4->5
+list = 1->2->3->4->5->6 调整之后1->4->2->5->3->6
+list = 1->2->3->4->5->6->7 调整之后1->4->2->5->3->6->7
+```
+
+根据上面的规律，调整一个任意长度的链表。
+
+规律就是链表分为左右两边，如果为偶数，则左边和右边对半开，两边同时取数连接，如果是奇数，则找到中间位置的那个树，连接到新链表的最后即可。
+
+笔试的时候可以直接采用数组的做法。遍历链表获得整个链表的长度，然后判断奇数偶数。将整个链表中的每一个节点存入数组中，然后再对数组进行调整。比如左边的节点在数组中的位置应该存放在`2*i`处，而右边的节点应该存放在`2*(i-n/2)+1`处。
+
+面试的时候使用快慢指针进行解决。多使用辅助变量。
+
+```java
+public static void relocate(Node head) {
+	if (head == null || head.next == null) {
+		return;
+	}
+	Node mid = head;
+	Node right = head.next;
+	while (right.next != null && right.next.next != null) {
+		mid = mid.next;
+		right = right.next.next;
+	}
+	right = mid.next;
+	mid.next = null;
+	mergeLR(head, right);
+}
+
+public static void mergeLR(Node left, Node right) {
+	Node next = null;
+	while (left.next != null) {
+		next = right.next;
+		right.next = left.next;
+		left.next = right;
+		left = right.next;
+		right = next;
+	}
+	left.next = right;
+}
+```
+
+----
+
+## Word_Ladder
+
+单词变换
+
+给定两个单词beginWord和endWord，还有一本词典是list类型。
+找到所有从beginWord变到endWord的最短转换路径，变动的规则是：
+
+1. 一次只能变一个位置的字符
+2. 每一个转换后的word一定要在list中
+3. 初始时list中没有beginWord这个词
+
+比如：
+
+```
+beginWord = "hit"
+endWord = "cog"
+wordList = ["hot","dot","dog","lot","log","cog"]
+```
+
+返回：
+```
+[
+["hit","hot","dot","dog","cog"],    ["hit","hot","lot","log","cog"]
+] 
+```
+注意：
+
+1. 返回值的类型为`List<List<String>>`
+2. 如果不存在转化路径请返回空链表（不是null）
+3. 所有的词一定都是相同长度的
+4. 所有词都是小写的a~z
+5. 在list中没有重复的词
+6. beginWord和endWord都不是空字符串或者null
+
+通过判断自己的邻居，来获得路径值。
+
+根据性质，都是小写字母，则判断每一位的替换情况是否在给定的list中，如果存在，则存入自己的邻居列表中。【此方法比依次比较list中的数据在面对海量数据的时候速度更快，其速度取决于字符串本身的长度】
+
+```java
+public class Code_06_Word_Ladder {
+
+	public static List<List<String>> findLadders(String beginWord,
+			String endWord, List<String> wordList) {
+		wordList.add(beginWord);
+		HashMap<String, ArrayList<String>> nexts = getNexts(wordList);
+		// 
+		HashMap<String, Integer> distances = getDistances(beginWord, nexts);
+		LinkedList<String> pathList = new LinkedList<>();
+		List<List<String>> res = new ArrayList<>();
+		getShortestPaths(beginWord, endWord, nexts, distances, pathList, res);
+		return res;
+	}
+	// 获得他的邻居节点
+	public static HashMap<String, ArrayList<String>> getNexts(List<String> words) {
+		Set<String> dict = new HashSet<>(words);
+		HashMap<String, ArrayList<String>> nexts = new HashMap<>();
+		for (int i = 0; i < words.size(); i++) {
+			nexts.put(words.get(i), new ArrayList<>());
+		}
+		for (int i = 0; i < words.size(); i++) {
+			nexts.put(words.get(i), getNext(words.get(i), dict));
+		}
+		return nexts;
+	}
+
+	private static ArrayList<String> getNext(String word, Set<String> dict) {
+		ArrayList<String> res = new ArrayList<String>();
+		char[] chs = word.toCharArray();
+		// 逐个变换字符串的每个位置
+		for (char cur = 'a'; cur <= 'z'; cur++) {
+			for (int i = 0; i < chs.length; i++) {
+				if (chs[i] != cur) {
+					char tmp = chs[i];
+					chs[i] = cur;
+					if (dict.contains(String.valueOf(chs))) {
+						res.add(String.valueOf(chs));
+					}
+					chs[i] = tmp;
+				}
+			}
+		}
+		return res;
+	}
+	// 宽度优先遍历，计算与begin的距离
+	public static HashMap<String, Integer> getDistances(String begin,
+			HashMap<String, ArrayList<String>> nexts) {
+		HashMap<String, Integer> distances = new HashMap<>();
+		distances.put(begin, 0);
+		Queue<String> queue = new LinkedList<String>();
+		queue.add(begin);
+		// 防止重复遍历
+		HashSet<String> set = new HashSet<String>();
+		set.add(begin);
+		while (!queue.isEmpty()) {
+			String cur = queue.poll();
+			for (String str : nexts.get(cur)) {
+				if (!set.contains(str)) {
+					distances.put(str, distances.get(cur) + 1);
+					queue.add(str);
+					set.add(str);
+				}
+			}
+		}
+		return distances;
+	}
+	// 深度优先搜索
+	private static void getShortestPaths(String cur, String end,
+			HashMap<String, ArrayList<String>> nexts,
+			HashMap<String, Integer> distances, LinkedList<String> solution,
+			List<List<String>> res) {
+		solution.add(cur);
+		if (end.equals(cur)) {
+			// 负责收集答案
+			res.add(new LinkedList<String>(solution));
+		} else {
+			for (String next : nexts.get(cur)) {
+				// 只选择距离为1的节点
+				if (distances.get(next) == distances.get(cur) + 1) {
+					getShortestPaths(next, end, nexts, distances, solution, res);
+				}
+			}
+		}
+		// 复用空间
+		solution.pollLast();
+	}
+
+}
+```
+
+----
+
+## Find_the_Closest_Palindrome
+
+最接近的回文数
+
+给一个字符串str，代表一个整数，找到除了这个数之外，绝对值和这个数相差最小的回文数。 例如：`str = "123"`返回`"121"`注意：假设字符串str一定能变成long类型。
+
+不能直接拷贝，比如：`54322`转换为`54345`，但是也会出现特殊情况`199`，一个是`191`，一个是`202`。绝对值后面的更小。所以需要找到两个值，一个是比他更小的回文数，一个是比他更大的回文数。
+
+解题思路：获得数的时候，先将数变成一个硬性回文，就是直接拷贝高位字符，后面的字符逆序拷贝，形成回文，然后判断这个回文与原始数据，哪个大，如果更大，则开始寻找更小的回文，如果更小，则开始寻找更大的回文。
+
+```java
+public class Code_07_Find_the_Closest_Palindrome {
+
+	public static String nearestPalindromic(String n) {
+		Long num = Long.valueOf(n);
+		Long raw = getRawPalindrome(n);
+		Long big = raw > num ? raw : getBigPalindrome(raw);
+		Long small = raw < num ? raw : getSmallPalindrome(raw);
+		// 返回差值最小的结果
+		return String.valueOf(big - num >= num - small ? small : big);
+	}
+	// 得到最原始的那个回文
+	public static Long getRawPalindrome(String n) {
+		char[] chs = n.toCharArray();
+		int len = chs.length;
+		for (int i = 0; i < len / 2; i++) {
+			chs[len - 1 - i] = chs[i];
+		}
+		return Long.valueOf(String.valueOf(chs));
+	}
+
+	public static Long getBigPalindrome(Long raw) {
+		char[] chs = String.valueOf(raw).toCharArray();
+		// 由于是找更大的值，所以不管有没有升位，我们都多准备一位
+		char[] res = new char[chs.length + 1];
+		// 将最高位暂时设置为0，自动转为long类型，高位0会被忽略
+		res[0] = '0';
+		// 将剩下的数据拷贝至数组中
+		for (int i = 0; i < chs.length; i++) {
+			res[i + 1] = chs[i];
+		}
+		int size = chs.length;
+		// 关键位置：
+		// 如果是偶数从右边开始的第一个位置增加1
+		// 如果是奇数，则从中间的数开始增加1
+		// 循环是为了保证数据能够从9变为10
+		for (int j = (size - 1) / 2 + 1; j >= 0; j--) {
+			if (++res[j] > '9') {
+				res[j] = '0';
+			} else {
+				break;
+			}
+		}
+		int offset = res[0] == '1' ? 1 : 0;
+		size = res.length;
+		for (int i = size - 1; i >= (size + offset) / 2; i--) {
+			res[i] = res[size - i - offset];
+		}
+		return Long.valueOf(String.valueOf(res));
+	}
+
+	public static Long getSmallPalindrome(Long raw) {
+		char[] chs = String.valueOf(raw).toCharArray();
+		char[] res = new char[chs.length];
+		int size = res.length;
+		for (int i = 0; i < size; i++) {
+			res[i] = chs[i];
+		}
+		// 奇数个数从中间开始减1
+		// 偶数个数从左侧最右值开始减1
+		for (int j = (size - 1) / 2; j >= 0; j--) {
+			if (--res[j] < '0') {
+				res[j] = '9';
+			} else {
+				break;
+			}
+		}
+		// 如果最高位被减为0
+		if (res[0] == '0') {
+			res = new char[size - 1];
+			for (int i = 0; i < res.length; i++) {
+				res[i] = '9';
+			}
+			// 为了防止其不是空字符串，所以返回一个0
+			return size == 1 ? 0 : Long.parseLong(String.valueOf(res));
+		}
+		for (int k = 0; k < size / 2; k++) {
+			res[size - 1 - k] = res[k];
+		}
+		return Long.valueOf(String.valueOf(res));
+	}
+
+}
+```
+
+----
+
+## AllLessNumSubArray
+
+给定数组arr和整数num，共返回有多少个子数组满足如下情况：`max(arr[i..j]) - min(arr[i..j]) <= num`
+
+`max(arr[i..j])`表示子数组`arr[i..j]`中的最大值，`min(arr[i..j])`表示子数组`arr[i..j]`中的最小值。
+
+【要求】如果数组长度为N，请实现时间复杂度为O(N)的解法。
+
+首先需要了解，如果在区间`[i...j]`满足`max(arr[i..j]) - min(arr[i..j]) <= num`，则其子区间肯定满足这个条件，因为如果`max-min<=num`成立，则在区间缩小时，max的值肯定在减少，而min的值肯定在增大，这就导致整个表示式成立。同理，如果区间扩大，则此表达式将会不达标，因为max可能增大，min可能更小，导致max和min之间的差距越来越大。
+
+解题思路：
+
+准备两个双端队列，分别记录窗口中的最大值与最小值。从0位置开始，依次扩充，如果出现了不满足的情况，停止操作，并且记录满足条件的区间：`[0,0]`、`[0,1]`、`[0,2]`、`[0,R]`。然后L开始右移一位，将0号位置的值移除，移动到1号位置。此时，再判断R是否能够右移。重复操作。
+
+```java
+public static int getNum(int[] arr, int num) {
+	if (arr == null || arr.length == 0) {
+		return 0;
+	}
+	// 存放窗口最大/小值的下标
+	LinkedList<Integer> qmin = new LinkedList<Integer>();
+	LinkedList<Integer> qmax = new LinkedList<Integer>();
+	// i代表左
+	// j代表右
+	int i = 0;
+	int j = 0;
+	int res = 0;
+	while (i < arr.length) {
+		while (j < arr.length) {
+			while (!qmin.isEmpty() && arr[qmin.peekLast()] >= arr[j]) {
+				qmin.pollLast();
+			}
+			qmin.addLast(j);
+			while (!qmax.isEmpty() && arr[qmax.peekLast()] <= arr[j]) {
+				qmax.pollLast();
+			}
+			qmax.addLast(j);
+			if (arr[qmax.getFirst()] - arr[qmin.getFirst()] > num) {
+				break;
+			}
+			j++;
+		}
+		// 弹出过期的下标
+		if (qmin.peekFirst() == i) {
+			qmin.pollFirst();
+		}
+		if (qmax.peekFirst() == i) {
+			qmax.pollFirst();
+		}
+		res += j - i;
+		i++;
+	}
+	return res;
+}
+```
+
+----
+
+## BSTtoDoubleLinkedList
+
+把一棵搜索二叉树，转化成有序的双向链表。
+
+一个递归过程，把左子树，右子树，传入，然后让他返回链表，再将两个链表和中间的节点连接起来。
+
+为了节省开销，让递归返回为当前转换后的链表的头和尾节点。
+
+```java
+public static Node generateTree(int[] sortArr) {
+	if (sortArr == null) {
+		return null;
+	}
+	return generate(sortArr, 0, sortArr.length - 1);
+}
+
+public static Node generate(int[]sortArr, int L, int R) {
+	if (L > R) {
+		return null;
+	}
+	int mid = (L+R) / 2;
+	Node head = new Node(sortArr[mid]);
+	head.left = generate(sortArr, L, mid-1);
+	head.right = generate(sortArr, mid+1, R);
+	return head;
+}
+
+public static void printBSTInOrder(Node head) {
+	System.out.print("BST in-order: ");
+	if (head != null) {
+		inOrderPrint(head);
+	}
+	System.out.println();
+}
+
+public static void inOrderPrint(Node head) {
+	if (head == null) {
+		return;
+	}
+	inOrderPrint(head.left);
+	System.out.print(head.value + " ");
+	inOrderPrint(head.right);
+}
+```
