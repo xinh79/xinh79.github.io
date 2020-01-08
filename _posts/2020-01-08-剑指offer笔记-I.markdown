@@ -1,0 +1,878 @@
+---
+layout:      post
+title:       "剑指offer笔记-I"
+subtitle:    "CodingInterview"
+author:      "Ashior"
+header-img:  "img/bg-CodingInterview.jpg"
+catalog:     true
+tags:
+  - 读书笔记
+  - 算法
+  - 工作
+---
+
+> 剑指offer第二版的源码请参考作者的[Github项目](https://github.com/zhedahht/CodingInterviewChinese2) 。为保证准确性，绝大部分的源码为作者所提供的源码，部分为笔者从网上寻得的源码
+
+----
+
+## 面试题1：赋值运算符函数
+
+1. 运算符重载的形式为：`CMyString& CMyString::operator = (const CMyString& str)`；
+2. 函数的返回值必须为其引用，以保证可以进行**连续复制**；
+3. 传入的参数为该类的常量**引用类型**；
+4. 一定要判断传入的值是否为其自己，避免**自赋值操作**；
+5. **释放**被赋值实例的**原有空间**；
+
+```cpp
+CMyString& CMyString::operator = (const CMyString& str) {
+    if(this == &str)
+        return *this;
+
+    delete []m_pData;
+    m_pData = nullptr;
+
+    m_pData = new char[strlen(str.m_pData) + 1];
+    strcpy(m_pData, str.m_pData);
+
+    return *this;
+}
+// 高阶用法
+CMyString& CMyString::operator = (const CMyString& str) {
+    if(this != &str) {
+		CMyString strTmp(str);
+		char* pTmp = strTmp.m_pData;
+		strTmp.m_pData = m_pData;
+		m_pData = pTmp;
+	}
+    return *this;
+}
+```
+
+----
+
+## 面试题2：实现Singleton模式
+
+**懒汉式：**懒汉式的特点是延迟加载，比如配置文件，采用懒汉式的方法，配置文件的实例直到用到的时候才会加载。
+
+```cpp
+class CSingleton {  
+public:  
+	static CSingleton* GetInstance() {  
+		if ( m_pInstance == NULL )    
+			m_pInstance = new CSingleton();  
+		return m_pInstance;  
+	}  
+private:  
+    CSingleton(){};  
+    static CSingleton * m_pInstance;  
+};
+```
+
+GetInstance()使用懒惰初始化，也就是说它的返回值是当这个函数首次被访问时被创建的。
+
+**饿汉式：**饿汉式的特点是一开始就加载了，如果说懒汉式是“时间换空间”，那么饿汉式就是“空间换时间”，因为一开始就创建了实例，所以每次用到的之后直接返回就好了。
+
+```cpp
+class CSingleton    
+{    
+private:    
+    CSingleton() {};
+public:    
+    static CSingleton * GetInstance() {    
+        static CSingleton instance;
+        return &instance;
+    }
+};    
+```
+
+**需要考虑多线程情况**
+
+----
+
+## 面试题3：数组中重复的数字
+
+暴力解法：
+
+1. 排序后进行查找
+2. 利用set，查看是否存在重复值
+
+#### 题目1
+
+在一个长度为n的数组里的所有数字都在**0到n-1的范围**内。数组中某些数字是重复的，但不知道有几个数字重复了，也不知道每个数字重复了几次。请找出数组中任意一个重复的数字。例如，如果输入长度为7的数组{2, 3, 1, 0, 2, 5, 3}，那么对应的输出是重复的数字2或者3。
+
+如果没有重复，则下标应该与对应的数值相等，即`i==vec[i]`。如果不相等，则把当前位置的值放在其应在的位置，诸如位置0的值为2，则与1进行交换，然后继续比较1，之后继续判断0位置。如果相等则继续往后移动。直到要交换的值与对应位置的值相等，则说明出现重复的值。
+
+```cpp
+// 参数:
+//        numbers:     一个整数数组
+//        length:      数组的长度
+//        duplication: (输出) 数组中的一个重复的数字
+// 返回值:             
+//        true  - 输入有效，并且数组中存在重复的数字
+//        false - 输入无效，或者数组中没有重复的数字
+bool duplicate(int numbers[], int length, int* duplication)
+{
+    if(numbers == nullptr || length <= 0)
+        return false;
+
+    for(int i = 0; i < length; ++i)
+    {
+        if(numbers[i] < 0 || numbers[i] > length - 1)
+            return false;
+    }
+
+    for(int i = 0; i < length; ++i)
+    {
+        while(numbers[i] != i)
+        {
+            if(numbers[i] == numbers[numbers[i]])
+            {
+                *duplication = numbers[i];
+                return true;
+            }
+
+            // 交换numbers[i]和numbers[numbers[i]]             
+            int temp = numbers[i];
+            numbers[i] = numbers[temp];
+            numbers[temp] = temp;
+        }
+    }
+
+    return false;
+}
+```
+
+#### 题目2
+
+题目：在一个**长度为n+1**的数组里的所有数字都在**1到n的范围内**，所以数组中至少有一个数字是重复的。请找出数组中任意一个重复的数字，但**不能修改输入的数组**。例如，如果输入长度为8的数组{2, 3, 5, 4, 3, 2, 6, 7}，那么对应的输出是重复的数字2或者3。
+
+很讲究技巧，同样需要注意数值范围，对数组进行统计，然后二分查找其中的数据。
+
+```cpp
+// 参数:
+//        numbers:     一个整数数组
+//        length:      数组的长度
+// 返回值:             
+//        正数  - 输入有效，并且数组中存在重复的数字，返回值为重复的数字
+//        负数  - 输入无效，或者数组中没有重复的数字
+int getDuplication(const int* numbers, int length)
+{
+    if(numbers == nullptr || length <= 0)
+        return -1;
+
+    int start = 1;
+    int end = length - 1;
+    while(end >= start)
+    {
+        int middle = ((end - start) >> 1) + start;
+        int count = countRange(numbers, length, start, middle);
+        if(end == start)
+        {
+            if(count > 1)
+                return start;
+            else
+                break;
+        }
+
+        if(count > (middle - start + 1))
+            end = middle;
+        else
+            start = middle + 1;
+    }
+    return -1;
+}
+
+int countRange(const int* numbers, int length, int start, int end)
+{
+    if(numbers == nullptr)
+        return 0;
+
+    int count = 0;
+    for(int i = 0; i < length; i++)
+        if(numbers[i] >= start && numbers[i] <= end)
+            ++count;
+    return count;
+}
+```
+
+----
+
+## 面试题4：二维数组中的查找
+
+题目：在一个二维数组中，每一行都按照从左到右递增的顺序排序，每一列都按照从上到下递增的顺序排序。请完成一个函数，输入这样的一个二维数组和一个整数，判断数组中是否含有该整数。
+
+参考之前左神的讲解。从右上角或者左下角开始遍历查找。
+
+```cpp
+bool Find(int* matrix, int rows, int columns, int number)
+{
+    bool found = false;
+
+    if(matrix != nullptr && rows > 0 && columns > 0)
+    {
+        int row = 0;
+        int column = columns - 1;
+        while(row < rows && column >=0)
+        {
+            if(matrix[row * columns + column] == number)
+            {
+                found = true;
+                break;
+            }
+            else if(matrix[row * columns + column] > number)
+                -- column;
+            else
+                ++ row;
+        }
+    }
+
+    return found;
+}
+```
+
+----
+
+## 面试题5：替换空格
+
+请实现一个函数，把字符串中的每个空格替换成"%20"。例如输入“We are happy.”，则输出“We%20are%20happy.”。
+
+1. 需要确定是否是在原始的字符串上面进行处理，原始字符串应该给予足够大的空间用于数据的填充
+2. 首先扫描一遍，统计字符串中空格的个数
+3. 创建两个指针，一个指向字符串末尾，一个指向字符串末尾后的一段距离（`空格数*2`）
+
+```cpp
+/*length 为字符数组str的总容量，大于或等于字符串str的实际长度*/
+void ReplaceBlank(char str[], int length)
+{
+    if(str == nullptr && length <= 0)
+        return;
+
+    /*originalLength 为字符串str的实际长度*/
+    int originalLength = 0;
+    int numberOfBlank = 0;
+    int i = 0;
+    while(str[i] != '\0')
+    {
+        ++ originalLength;
+
+        if(str[i] == ' ')
+            ++ numberOfBlank;
+
+        ++ i;
+    }
+
+    /*newLength 为把空格替换成'%20'之后的长度*/
+    int newLength = originalLength + numberOfBlank * 2;
+    if(newLength > length)
+        return;
+
+    int indexOfOriginal = originalLength;
+    int indexOfNew = newLength;
+    while(indexOfOriginal >= 0 && indexOfNew > indexOfOriginal)
+    {
+        if(str[indexOfOriginal] == ' ')
+        {
+            str[indexOfNew --] = '0';
+            str[indexOfNew --] = '2';
+            str[indexOfNew --] = '%';
+        }
+        else
+        {
+            str[indexOfNew --] = str[indexOfOriginal];
+        }
+
+        -- indexOfOriginal;
+    }
+}
+```
+
+如果从前到后需要多次、重复移动数字，则可以考虑从后往前移动。
+
+----
+
+## 面试题6：从尾到头打印链表
+
+题目：输入一个链表的头结点，从尾到头反过来打印出每个结点的值。
+
+```cpp
+void PrintListReversingly_Recursively(ListNode* pHead)
+{
+    if(pHead != nullptr)
+    {
+        if (pHead->m_pNext != nullptr)
+        {
+            PrintListReversingly_Recursively(pHead->m_pNext);
+        }
+ 
+        printf("%d\t", pHead->m_nValue);
+    }
+}
+```
+
+需要注意的是当链表非常长的时候，就会导致函数调用的层级很深。
+
+----
+
+## 面试题7：重建二叉树
+
+题目：输入某二叉树的前序遍历和中序遍历的结果，请重建出该二叉树。假设输入的前序遍历和中序遍历的结果中都不含重复的数字。例如输入前序遍历序列{1,2, 4, 7, 3, 5, 6, 8}和中序遍历序列{4, 7, 2, 1, 5, 3, 8, 6}。
+
+递归计算，前序遍历获得根节点，通过变量中序遍历序列，分割序列，然后继续寻找其左右节点的头结点。
+
+方便理解的代码：
+
+```cpp
+TreeNode* reConstructBinaryTree(vector<int> pre,vector<int> vin)
+{
+	// 递归出口
+	if(pre.empty()||vin.empty())
+		return nullptr;
+	 
+	// 建立根节点
+	TreeNode *head = new TreeNode(pre[0]);
+	 
+	// 查找中序遍历中根节点的索引值
+	int root=0;
+	for(int i = 0;i<pre.size();++i)
+	{
+		if(vin[i] == pre[0])
+		{
+			root = i;
+			break;
+		}
+	}
+	// 先序遍历和中序遍历的左右子树vector
+	vector<int> pre_left,pre_right,vin_left,vin_right;
+	 
+	for(int i =0;i<root;++i)
+	{
+		pre_left.push_back(pre[i+1]);
+		vin_left.push_back(vin[i]);
+	}
+	 
+	for(int i = root+1;i<pre.size();++i)
+	{
+		pre_right.push_back(pre[i]);
+		vin_right.push_back(vin[i]);
+	}
+	 
+	// 根节点的左右节点
+	head->left = reConstructBinaryTree(pre_left,vin_left);
+	head->right = reConstructBinaryTree(pre_right,vin_right);
+	 
+	return head;
+}
+```
+
+剑指offer提供的代码：
+
+```cpp
+BinaryTreeNode* Construct(int* preorder, int* inorder, int length)
+{
+    if(preorder == nullptr || inorder == nullptr || length <= 0)
+        return nullptr;
+
+    return ConstructCore(preorder, preorder + length - 1,
+        inorder, inorder + length - 1);
+}
+
+BinaryTreeNode* ConstructCore
+(
+    int* startPreorder, int* endPreorder, 
+    int* startInorder, int* endInorder
+)
+{
+    // 前序遍历序列的第一个数字是根结点的值
+    int rootValue = startPreorder[0];
+    BinaryTreeNode* root = new BinaryTreeNode();
+    root->m_nValue = rootValue;
+    root->m_pLeft = root->m_pRight = nullptr;
+
+    if(startPreorder == endPreorder)
+    {
+        if(startInorder == endInorder && *startPreorder == *startInorder)
+            return root;
+        else
+            throw std::exception("Invalid input.");
+    }
+
+    // 在中序遍历中找到根结点的值
+    int* rootInorder = startInorder;
+    while(rootInorder <= endInorder && *rootInorder != rootValue)
+        ++ rootInorder;
+
+    if(rootInorder == endInorder && *rootInorder != rootValue)
+        throw std::exception("Invalid input.");
+
+    int leftLength = rootInorder - startInorder;
+    int* leftPreorderEnd = startPreorder + leftLength;
+    if(leftLength > 0)
+    {
+        // 构建左子树
+        root->m_pLeft = ConstructCore(startPreorder + 1, leftPreorderEnd, 
+            startInorder, rootInorder - 1);
+    }
+    if(leftLength < endPreorder - startPreorder)
+    {
+        // 构建右子树
+        root->m_pRight = ConstructCore(leftPreorderEnd + 1, endPreorder,
+            rootInorder + 1, endInorder);
+    }
+
+    return root;
+}
+```
+
+----
+
+## 面试题8：二叉树的下一个结点
+
+题目：给定一棵二叉树和其中的一个结点，如何找出中序遍历顺序的下一个结点？树中的结点除了有两个分别指向左右子结点的指针以外，还有一个指向父结点的指针。
+
+判断以下两种情况：
+
+1. 判断其是否有右子树，如果有，则右子树的最左的孩子即为其后继节点
+2. 如果不存在右子树，沿着父节点向上查找，找到第一个是它父节点的左孩子的节点。
+
+```cpp
+BinaryTreeNode* GetNext(BinaryTreeNode* pNode)
+{
+    if(pNode == nullptr)
+        return nullptr;
+    BinaryTreeNode* pNext = nullptr;
+	// 如果有右子树
+    if(pNode->m_pRight != nullptr)
+    {
+        BinaryTreeNode* pRight = pNode->m_pRight;
+        while(pRight->m_pLeft != nullptr)
+            pRight = pRight->m_pLeft;
+
+        pNext = pRight;
+    }
+	// 右子树为空，父节点不为空
+    else if(pNode->m_pParent != nullptr)
+    {
+        BinaryTreeNode* pCurrent = pNode;
+        BinaryTreeNode* pParent = pNode->m_pParent;
+        while(pParent != nullptr && pCurrent == pParent->m_pRight)
+        {
+            pCurrent = pParent;
+            pParent = pParent->m_pParent;
+        }
+
+        pNext = pParent;
+    }
+	// 没有右子树，父节点为空。
+    return pNext;
+}
+```
+
+----
+
+## 面试题9：用两个栈实现队列
+
+题目：用两个栈实现一个队列。队列的声明如下，请实现它的两个函数appendTail和deleteHead，分别完成在队列尾部插入结点和在队列头部删除结点的功能。
+
+取数据就从stack2中进行取。如果为空，则从stack1倒入数据，如果不为空则继续取数据。
+
+```cpp
+template <typename T> class CQueue
+{
+public:
+    CQueue(void);
+    ~CQueue(void);
+    
+    // 在队列末尾添加一个结点
+    void appendTail(const T& node);
+
+    // 删除队列的头结点
+    T deleteHead();
+
+private:
+    stack<T> stack1;
+    stack<T> stack2;
+};
+
+template <typename T> CQueue<T>::CQueue(void){}
+
+template <typename T> CQueue<T>::~CQueue(void){}
+
+template<typename T> void CQueue<T>::appendTail(const T& element)
+{
+    stack1.push(element);
+} 
+
+template<typename T> T CQueue<T>::deleteHead()
+{
+    if(stack2.size()<= 0)
+    {
+        while(stack1.size()>0)
+        {
+            T& data = stack1.top();
+            stack1.pop();
+            stack2.push(data);
+        }
+    }
+
+    if(stack2.size() == 0)
+        throw new exception("queue is empty");
+
+    T head = stack2.top();
+    stack2.pop();
+
+    return head;
+}
+```
+
+----
+
+## 面试题10：斐波那契数列
+
+题目：写一个函数，输入n，求斐波那契（Fibonacci）数列的第n项。
+
+表达式为：`f(n) = f(n-1) + f(n-2)`。使用递归开销太大，多了很多重复计算。应该使用循环的方式。此问题也等同于青蛙跳台阶（一次跳1或者2级台阶）问题。如果是一次可以跳1至n级台阶，则有`f(n)=2^(n-1)`种跳法。
+
+```cpp
+// ====================方法1：递归====================
+long long Fibonacci_Solution1(unsigned int n)
+{
+    if(n <= 0)
+        return 0;
+
+    if(n == 1)
+        return 1;
+
+    return Fibonacci_Solution1(n - 1) + Fibonacci_Solution1(n - 2);
+}
+
+// ====================方法2：循环====================
+long long Fibonacci_Solution2(unsigned n)
+{
+    int result[2] = {0, 1};
+    if(n < 2)
+        return result[n];
+
+    long long  fibNMinusOne = 1;
+    long long  fibNMinusTwo = 0;
+    long long  fibN = 0;
+    for(unsigned int i = 2; i <= n; ++ i)
+    {
+        fibN = fibNMinusOne + fibNMinusTwo;
+
+        fibNMinusTwo = fibNMinusOne;
+        fibNMinusOne = fibN;
+    }
+
+     return fibN;
+}
+```
+
+----
+
+## 面试题11：旋转数组的最小数字
+
+题目：把一个数组最开始的若干个元素搬到数组的末尾，我们称之为数组的旋转。输入一个递增排序的数组的一个旋转，输出旋转数组的最小元素。例如数组{3, 4, 5, 1, 2}为{1, 2, 3, 4, 5}的一个旋转，该数组的最小值为1。
+
+利用二分查找旋转数组的最小数字。如果允许重复的数组存在，此时应该考虑当情况相等时，进行顺序查找。
+
+```cpp
+int Min(int* numbers, int length)
+{
+    if(numbers == nullptr || length <= 0)
+        throw new std::exception("Invalid parameters");
+ 
+    int index1 = 0;
+    int index2 = length - 1;
+    int indexMid = index1;
+    while(numbers[index1] >= numbers[index2])
+    {
+        // 如果index1和index2指向相邻的两个数，
+        // 则index1指向第一个递增子数组的最后一个数字，
+        // index2指向第二个子数组的第一个数字，也就是数组中的最小数字
+        if(index2 - index1 == 1)
+        {
+            indexMid = index2;
+            break;
+        }
+ 
+        // 如果下标为index1、index2和indexMid指向的三个数字相等，
+        // 则只能顺序查找
+        indexMid = (index1 + index2) / 2;
+        if(numbers[index1] == numbers[index2] && numbers[indexMid] == numbers[index1])
+            return MinInOrder(numbers, index1, index2);
+
+        // 缩小查找范围
+        if(numbers[indexMid] >= numbers[index1])
+            index1 = indexMid;
+        else if(numbers[indexMid] <= numbers[index2])
+            index2 = indexMid;
+    }
+ 
+    return numbers[indexMid];
+}
+
+int MinInOrder(int* numbers, int index1, int index2)
+{
+    int result = numbers[index1]; 
+    for(int i = index1 + 1; i <= index2; ++i)
+    {
+        if(result > numbers[i])
+            result = numbers[i];
+    }
+
+    return result;
+}
+```
+
+----
+
+## 面试题12：矩阵中的路径
+
+题目：请设计一个函数，用来判断在一个矩阵中是否存在一条包含某字符串所有字符的路径。路径可以从矩阵中任意一格开始，每一步可以在矩阵中向左、右、上、下移动一格。如果一条路径经过了矩阵的某一格，那么该路径不能再次进入该格子。例如在下面的3×4的矩阵中包含一条字符串“bfce”的路径（路径中的字母用下划线标出）。但矩阵中不包含字符串“abfb”的路径，因为字符串的第一个字符b占据了矩阵中的第一行第二个格子之后，路径不能再次进入这个格子。
+
+```
+A B T G
+C F C S
+J D E H
+```
+
+A B C
+E S F
+C S A
+D E E
+
+```cpp
+bool hasPath(const char* matrix, int rows, int cols, const char* str)
+{
+    if(matrix == nullptr || rows < 1 || cols < 1 || str == nullptr)
+        return false;
+
+    bool *visited = new bool[rows * cols];
+    memset(visited, 0, rows * cols);
+
+    int pathLength = 0;
+    for(int row = 0; row < rows; ++row)
+    {
+        for(int col = 0; col < cols; ++col)
+        {
+            if(hasPathCore(matrix, rows, cols, row, col, str,
+                pathLength, visited))
+            {
+                return true;
+            }
+        }
+    }
+
+    delete[] visited;
+
+    return false;
+}
+
+bool hasPathCore(const char* matrix, int rows, int cols, int row,
+    int col, const char* str, int& pathLength, bool* visited)
+{
+    if(str[pathLength] == '\0')
+        return true;
+
+    bool hasPath = false;
+    if(row >= 0 && row < rows && col >= 0 && col < cols
+        && matrix[row * cols + col] == str[pathLength]
+        && !visited[row * cols + col])
+    {
+        ++pathLength;
+        visited[row * cols + col] = true;
+
+        hasPath = hasPathCore(matrix, rows, cols, row, col - 1,
+            str, pathLength, visited)
+            || hasPathCore(matrix, rows, cols, row - 1, col,
+                str, pathLength, visited)
+            || hasPathCore(matrix, rows, cols, row, col + 1,
+                str, pathLength, visited)
+            || hasPathCore(matrix, rows, cols, row + 1, col,
+                str, pathLength, visited);
+
+        if(!hasPath)
+        {
+            --pathLength;
+            visited[row * cols + col] = false;
+        }
+    }
+
+    return hasPath;
+}
+```
+
+----
+
+## 面试题13：机器人的运动范围
+
+题目：地上有一个m行n列的方格。一个机器人从坐标(0, 0)的格子开始移动，它每一次可以向左、右、上、下移动一格，但不能进入行坐标和列坐标的数位之和大于k的格子。例如，当k为18时，机器人能够进入方格(35, 37)，因为3+5+3+7=18。但它不能进入方格(35, 38)，因为3+5+3+8=19。请问该机器人能够到达多少个格子？
+
+```cpp
+int movingCount(int threshold, int rows, int cols)
+{
+    if(threshold < 0 || rows <= 0 || cols <= 0)
+        return 0;
+
+    bool *visited = new bool[rows * cols];
+    for(int i = 0; i < rows * cols; ++i)
+        visited[i] = false;
+
+    int count = movingCountCore(threshold, rows, cols,
+        0, 0, visited);
+
+    delete[] visited;
+
+    return count;
+}
+
+int movingCountCore(int threshold, int rows, int cols, int row,
+    int col, bool* visited)
+{
+    int count = 0;
+    if(check(threshold, rows, cols, row, col, visited))
+    {
+        visited[row * cols + col] = true;
+
+        count = 1 + movingCountCore(threshold, rows, cols,
+            row - 1, col, visited)
+            + movingCountCore(threshold, rows, cols,
+                row, col - 1, visited)
+            + movingCountCore(threshold, rows, cols,
+                row + 1, col, visited)
+            + movingCountCore(threshold, rows, cols,
+                row, col + 1, visited);
+    }
+
+    return count;
+}
+
+bool check(int threshold, int rows, int cols, int row, int col,
+    bool* visited)
+{
+    if(row >= 0 && row < rows && col >= 0 && col < cols
+        && getDigitSum(row) + getDigitSum(col) <= threshold
+        && !visited[row* cols + col])
+        return true;
+
+    return false;
+}
+
+int getDigitSum(int number)
+{
+    int sum = 0;
+    while(number > 0)
+    {
+        sum += number % 10;
+        number /= 10;
+    }
+
+    return sum;
+}
+```
+
+----
+
+## 面试题14：剪绳子
+
+题目：给你一根长度为n绳子，请把绳子剪成m段（`m`、`n`都是整数，`n>1`并且`m≥1`）。每段的绳子的长度记为`k[0]、k[1]、……、k[m]`。`k[0]*k[1]*…*k[m]`可能的最大乘积是多少？例如当绳子的长度是8时，我们把它剪成长度分别为2、3、3的三段，此时得到最大的乘积18。
+
+```cpp
+// ====================动态规划====================
+int maxProductAfterCutting_solution1(int length)
+{
+    if(length < 2)
+        return 0;
+    if(length == 2)
+        return 1;
+    if(length == 3)
+        return 2;
+
+    int* products = new int[length + 1];
+    products[0] = 0;
+    products[1] = 1;
+    products[2] = 2;
+    products[3] = 3;
+
+    int max = 0;
+    for(int i = 4; i <= length; ++i)
+    {
+        max = 0;
+        for(int j = 1; j <= i / 2; ++j)
+        {
+            int product = products[j] * products[i - j];
+            if(max < product)
+                max = product;
+
+            products[i] = max;
+        }
+    }
+
+    max = products[length];
+    delete[] products;
+
+    return max;
+}
+
+// ====================贪婪算法====================
+int maxProductAfterCutting_solution2(int length)
+{
+    if(length < 2)
+        return 0;
+    if(length == 2)
+        return 1;
+    if(length == 3)
+        return 2;
+
+    // 尽可能多地减去长度为3的绳子段
+    int timesOf3 = length / 3;
+
+    // 当绳子最后剩下的长度为4的时候，不能再剪去长度为3的绳子段。
+    // 此时更好的方法是把绳子剪成长度为2的两段，因为2*2 > 3*1。
+    if(length - timesOf3 * 3 == 1)
+        timesOf3 -= 1;
+
+    int timesOf2 = (length - timesOf3 * 3) / 2;
+
+    return (int) (pow(3, timesOf3)) * (int) (pow(2, timesOf2));
+}
+```
+
+----
+
+## 面试题15：二进制中1的个数
+
+题目：请实现一个函数，输入一个整数，输出该数二进制表示中1的个数。例如把9表示成二进制是1001，有2位是1。因此如果输入9，该函数输出2。
+
+第一种解法可以避免死循环，因为移动变量n可能导致死循环。
+第二种解法采用一个规律：把一个整数减去1，再和原来的整数做与运算，会把改整数最右边的1变成0。那么一个整数的二进制中有多少个1，就可以进行多少次这样的操作。
+
+```cpp
+int NumberOf1_Solution1(int n)
+{
+    int count = 0;
+    unsigned int flag = 1;
+    while (flag)
+    {
+        if (n & flag)
+            count++;
+
+        flag = flag << 1;
+    }
+
+    return count;
+}
+
+int NumberOf1_Solution2(int n)
+{
+    int count = 0;
+
+    while (n)
+    {
+        ++count;
+        n = (n - 1) & n;
+    }
+
+    return count;
+}
+```
