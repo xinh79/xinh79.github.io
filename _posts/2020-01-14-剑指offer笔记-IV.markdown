@@ -1,6 +1,6 @@
 ---
 layout:      post
-title:       "剑指offer笔记-IV"
+title:       "剑指offer笔记-V"
 subtitle:    "CodingInterview"
 author:      "Ashior"
 header-img:  "img/bg-CodingInterview.jpg"
@@ -21,912 +21,1124 @@ tags:
 
 [剑指offer笔记-IV](https://xinh79.github.io/2020/01/12/%E5%89%91%E6%8C%87offer%E7%AC%94%E8%AE%B0-IV/)
 
+[剑指offer笔记-V](https://xinh79.github.io/2020/01/12/%E5%89%91%E6%8C%87offer%E7%AC%94%E8%AE%B0-V/)
+
 ----
 
-## 面试题39：数组中出现次数超过一半的数字
+## 面试题53（一）：数字在排序数组中出现的次数
 
-题目：数组中有一个数字出现的次数超过数组长度的一半，请找出这个数字。例如输入一个长度为9的数组{1, 2, 3, 2, 2, 2, 5, 4, 2}。由于数字2在数组中出现了5次，超过数组长度的一半，因此输出2。
+题目：统计一个数字在排序数组中出现的次数。例如输入排序数组{1, 2, 3, 3, 3, 3, 4, 5}和数字3，由于3在这个数组中出现了4次，因此输出4。
 
 ```cpp
-bool CheckInvalidArray(int* numbers, int length)
+int GetNumberOfK(const int* data, int length, int k)
 {
-    g_bInputInvalid = false;
-    if(numbers == nullptr && length <= 0)
-        g_bInputInvalid = true;
+    int number = 0;
 
-    return g_bInputInvalid;
+    if(data != nullptr && length > 0)
+    {
+        int first = GetFirstK(data, length, k, 0, length - 1);
+        int last = GetLastK(data, length, k, 0, length - 1);
+        
+        if(first > -1 && last > -1)
+            number = last - first + 1;
+    }
+
+    return number;
 }
 
-bool CheckMoreThanHalf(int* numbers, int length, int number)
+// 找到数组中第一个k的下标。如果数组中不存在k，返回-1
+int GetFirstK(const int* data, int length, int k, int start, int end)
 {
-    int times = 0;
+    if(start > end)
+        return -1;
+
+    int middleIndex = (start + end) / 2;
+    int middleData = data[middleIndex];
+
+    if(middleData == k)
+    {
+        if((middleIndex > 0 && data[middleIndex - 1] != k) 
+            || middleIndex == 0)
+            return middleIndex;
+        else
+            end  = middleIndex - 1;
+    }
+    else if(middleData > k)
+        end = middleIndex - 1;
+    else
+        start = middleIndex + 1;
+
+    return GetFirstK(data, length, k, start, end);
+}
+
+// 找到数组中最后一个k的下标。如果数组中不存在k，返回-1
+int GetLastK(const int* data, int length, int k, int start, int end)
+{
+    if(start > end)
+        return -1;
+
+    int middleIndex = (start + end) / 2;
+    int middleData = data[middleIndex];
+
+    if(middleData == k)
+    {
+        if((middleIndex < length - 1 && data[middleIndex + 1] != k) 
+            || middleIndex == length - 1)
+            return middleIndex;
+        else
+            start  = middleIndex + 1;
+    }
+    else if(middleData < k)
+        start = middleIndex + 1;
+    else
+        end = middleIndex - 1;
+
+    return GetLastK(data, length, k, start, end);
+}
+```
+
+----
+
+## 面试题53（二）：0到n-1中缺失的数字
+
+题目：一个长度为n-1的递增排序数组中的所有数字都是唯一的，并且每个数字都在范围0到n-1之内。在范围0到n-1的n个数字中有且只有一个数字不在该数组中，请找出这个数字。
+
+```cpp
+int GetMissingNumber(const int* numbers, int length)
+{
+    if(numbers == nullptr || length <= 0)
+        return -1;
+
+    int left = 0;
+    int right = length - 1;
+    while(left <= right)
+    {
+        int middle = (right + left) >> 1;
+        if(numbers[middle] != middle)
+        {
+            if(middle == 0 || numbers[middle - 1] == middle - 1)
+                return middle;
+            right = middle - 1;
+        }
+        else
+            left = middle + 1;
+    }
+
+    if(left == length)
+        return length;
+
+    // 无效的输入，比如数组不是按要求排序的，
+    // 或者有数字不在0到n-1范围之内
+    return -1;
+}
+```
+
+----
+
+## 面试题53（三）：数组中数值和下标相等的元素
+
+题目：假设一个单调递增的数组里的每个元素都是整数并且是唯一的。请编程实现一个函数找出数组中任意一个数值等于其下标的元素。例如，在数组{-3, -1, 1, 3, 5}中，数字3和它的下标相等。
+
+```cpp
+int GetNumberSameAsIndex(const int* numbers, int length)
+{
+    if(numbers == nullptr || length <= 0)
+        return -1;
+
+    int left = 0;
+    int right = length - 1;
+    while(left <= right)
+    {
+        int middle = left + ((right - left) >> 1);
+        if(numbers[middle] == middle)
+            return middle;
+
+        if(numbers[middle] > middle)
+            right = middle - 1;
+        else
+            left = middle + 1;
+    }
+
+    return -1;
+}
+```
+
+----
+
+## 面试题54：二叉搜索树的第k个结点
+
+题目：给定一棵二叉搜索树，请找出其中的第k大的结点。
+
+```cpp
+const BinaryTreeNode* KthNode(const BinaryTreeNode* pRoot, unsigned int k)
+{
+    if(pRoot == nullptr || k == 0)
+        return nullptr;
+
+    return KthNodeCore(pRoot, k);
+}
+
+const BinaryTreeNode* KthNodeCore(const BinaryTreeNode* pRoot, unsigned int& k)
+{
+    const BinaryTreeNode* target = nullptr;
+
+    if(pRoot->m_pLeft != nullptr)
+        target = KthNodeCore(pRoot->m_pLeft, k);
+
+    if(target == nullptr)
+    {
+        if(k == 1)
+            target = pRoot;
+
+        k--;
+    }
+
+    if(target == nullptr && pRoot->m_pRight != nullptr)
+        target = KthNodeCore(pRoot->m_pRight, k);
+
+    return target;
+}
+```
+
+----
+
+## 面试题55（一）：二叉树的深度
+
+题目：输入一棵二叉树的根结点，求该树的深度。从根结点到叶结点依次经过的结点（含根、叶结点）形成树的一条路径，最长路径的长度为树的深度。
+
+```cpp
+int TreeDepth(const BinaryTreeNode* pRoot)
+{
+    if(pRoot == nullptr)
+        return 0;
+
+    int nLeft = TreeDepth(pRoot->m_pLeft);
+    int nRight = TreeDepth(pRoot->m_pRight);
+
+    return (nLeft > nRight) ? (nLeft + 1) : (nRight + 1);
+}
+```
+
+----
+
+## 面试题55（二）：平衡二叉树
+
+题目：输入一棵二叉树的根结点，判断该树是不是平衡二叉树。如果某二叉树中任意结点的左右子树的深度相差不超过1，那么它就是一棵平衡二叉树。
+
+```cpp
+// ====================方法1====================
+int TreeDepth(const BinaryTreeNode* pRoot)
+{
+    if(pRoot == nullptr)
+        return 0;
+
+    int nLeft = TreeDepth(pRoot->m_pLeft);
+    int nRight = TreeDepth(pRoot->m_pRight);
+
+    return (nLeft > nRight) ? (nLeft + 1) : (nRight + 1);
+}
+
+bool IsBalanced_Solution1(const BinaryTreeNode* pRoot)
+{
+    if(pRoot == nullptr)
+        return true;
+
+    int left = TreeDepth(pRoot->m_pLeft);
+    int right = TreeDepth(pRoot->m_pRight);
+    int diff = left - right;
+    if(diff > 1 || diff < -1)
+        return false;
+
+    return IsBalanced_Solution1(pRoot->m_pLeft) 
+        && IsBalanced_Solution1(pRoot->m_pRight);
+}
+
+// ====================方法2====================
+bool IsBalanced(const BinaryTreeNode* pRoot, int* pDepth);
+
+bool IsBalanced_Solution2(const BinaryTreeNode* pRoot)
+{
+    int depth = 0;
+    return IsBalanced(pRoot, &depth);
+}
+
+bool IsBalanced(const BinaryTreeNode* pRoot, int* pDepth)
+{
+    if(pRoot == nullptr)
+    {
+        *pDepth = 0;
+        return true;
+    }
+
+    int left, right;
+    if(IsBalanced(pRoot->m_pLeft, &left) 
+        && IsBalanced(pRoot->m_pRight, &right))
+    {
+        int diff = left - right;
+        if(diff <= 1 && diff >= -1)
+        {
+            *pDepth = 1 + (left > right ? left : right);
+            return true;
+        }
+    }
+
+    return false;
+}
+```
+
+----
+
+## 面试题56（一）：数组中只出现一次的两个数字
+
+题目：一个整型数组里除了两个数字之外，其他的数字都出现了两次。请写程序找出这两个只出现一次的数字。要求时间复杂度是O(n)，空间复杂度是O(1)。
+
+```cpp
+void FindNumsAppearOnce(int data[], int length, int* num1, int* num2)
+{
+    if(data == nullptr || length < 2)
+        return;
+
+    int resultExclusiveOR = 0;
+    for(int i = 0; i < length; ++i)
+        resultExclusiveOR ^= data[i];
+
+    unsigned int indexOf1 = FindFirstBitIs1(resultExclusiveOR);
+
+    *num1 = *num2 = 0;
+    for(int j = 0; j < length; ++j)
+    {
+        if(IsBit1(data[j], indexOf1))
+            *num1 ^= data[j];
+        else
+            *num2 ^= data[j];
+    }
+}
+
+// 找到num从右边数起第一个是1的位
+unsigned int FindFirstBitIs1(int num)
+{
+    int indexBit = 0;
+    while(((num & 1) == 0) && (indexBit < 8 * sizeof(int)))
+    {
+        num = num >> 1;
+        ++indexBit;
+    }
+
+    return indexBit;
+}
+
+// 判断数字num的第indexBit位是不是1
+bool IsBit1(int num, unsigned int indexBit)
+{
+    num = num >> indexBit;
+    return (num & 1);
+}
+```
+
+----
+
+## 面试题56（二）：数组中唯一只出现一次的数字
+
+题目：在一个数组中除了一个数字只出现一次之外，其他数字都出现了三次。请找出那个吃出现一次的数字。
+
+```cpp
+int FindNumberAppearingOnce(int numbers[], int length)
+{
+    if(numbers == nullptr || length <= 0)
+        throw new std::exception("Invalid input.");
+
+    int bitSum[32] = {0};
     for(int i = 0; i < length; ++i)
     {
-        if(numbers[i] == number)
-            times++;
-    }
- 
-    bool isMoreThanHalf = true;
-    if(times * 2 <= length)
-    {
-        g_bInputInvalid = true;
-        isMoreThanHalf = false;
-    }
-
-    return isMoreThanHalf;
-}
-
-// ====================方法1====================
-int MoreThanHalfNum_Solution1(int* numbers, int length)
-{
-    if(CheckInvalidArray(numbers, length))
-        return 0;
- 
-    int middle = length >> 1;
-    int start = 0;
-    int end = length - 1;
-    int index = Partition(numbers, length, start, end);
-    while(index != middle)
-    {
-        if(index > middle)
+        int bitMask = 1;
+        for(int j = 31; j >= 0; --j)
         {
-            end = index - 1;
-            index = Partition(numbers, length, start, end);
-        }
-        else
-        {
-            start = index + 1;
-            index = Partition(numbers, length, start, end);
+            int bit = numbers[i] & bitMask;
+            if(bit != 0)
+                bitSum[j] += 1;
+
+            bitMask = bitMask << 1;
         }
     }
- 
-    int result = numbers[middle];
-    if(!CheckMoreThanHalf(numbers, length, result))
-        result = 0;
+
+    int result = 0;
+    for(int i = 0; i < 32; ++i)
+    {
+        result = result << 1;
+        result += bitSum[i] % 3;
+    }
 
     return result;
-}
-
-// ====================方法2====================
-int MoreThanHalfNum_Solution2(int* numbers, int length)
-{
-    if(CheckInvalidArray(numbers, length))
-        return 0;
- 
-    int result = numbers[0];
-    int times = 1;
-    for(int i = 1; i < length; ++i)
-    {
-        if(times == 0)
-        {
-            result = numbers[i];
-            times = 1;
-        }
-        else if(numbers[i] == result)
-            times++;
-        else
-            times--;
-    }
- 
-    if(!CheckMoreThanHalf(numbers, length, result))
-        result = 0;
- 
-    return result;
-}
-```
-
-## 面试题40：最小的k个数
-
-题目：输入n个整数，找出其中最小的k个数。例如输入4、5、1、6、2、7、3、8这8个数字，则最小的4个数字是1、2、3、4。
-
-```cpp
-// ====================方法1====================
-void GetLeastNumbers_Solution1(int* input, int n, int* output, int k)
-{
-    if(input == nullptr || output == nullptr || k > n || n <= 0 || k <= 0)
-        return;
-
-    int start = 0;
-    int end = n - 1;
-    int index = Partition(input, n, start, end);
-    while(index != k - 1)
-    {
-        if(index > k - 1)
-        {
-            end = index - 1;
-            index = Partition(input, n, start, end);
-        }
-        else
-        {
-            start = index + 1;
-            index = Partition(input, n, start, end);
-        }
-    }
-
-    for(int i = 0; i < k; ++i)
-        output[i] = input[i];
-}
-
-// ====================方法2====================
-typedef multiset<int, std::greater<int> >            intSet;
-typedef multiset<int, std::greater<int> >::iterator  setIterator;
-
-void GetLeastNumbers_Solution2(const vector<int>& data, intSet& leastNumbers, int k)
-{
-    leastNumbers.clear();
-
-    if(k < 1 || data.size() < k)
-        return;
-
-    vector<int>::const_iterator iter = data.begin();
-    for(; iter != data.end(); ++ iter)
-    {
-        if((leastNumbers.size()) < k)
-            leastNumbers.insert(*iter);
-
-        else
-        {
-            setIterator iterGreatest = leastNumbers.begin();
-
-            if(*iter < *(leastNumbers.begin()))
-            {
-                leastNumbers.erase(iterGreatest);
-                leastNumbers.insert(*iter);
-            }
-        }
-    }
 }
 ```
 
 ----
 
-## 面试题41：数据流中的中位数
+## 面试题57（一）：和为s的两个数字
 
-题目：如何得到一个数据流中的中位数？如果从数据流中读出奇数个数值，那么中位数就是所有数值排序之后位于中间的数值。如果从数据流中读出偶数个数值，那么中位数就是所有数值排序之后中间两个数的平均值。
+题目：输入一个递增排序的数组和一个数字s，在数组中查找两个数，使得它们的和正好是s。如果有多对数字的和等于s，输出任意一对即可。
 
 ```cpp
-template<typename T> class DynamicArray
+bool FindNumbersWithSum(int data[], int length, int sum, 
+                        int* num1, int* num2)
 {
-public:
-    void Insert(T num)
+    bool found = false;
+    if(length < 1 || num1 == nullptr || num2 == nullptr)
+        return found;
+
+    int ahead = length - 1;
+    int behind = 0;
+
+    while(ahead > behind)
     {
-        if(((min.size() + max.size()) & 1) == 0)
+        long long curSum = data[ahead] + data[behind];
+
+        if(curSum == sum)
         {
-            if(max.size() > 0 && num < max[0])
-            {
-                max.push_back(num);
-                push_heap(max.begin(), max.end(), less<T>());
+            *num1 = data[behind];
+            *num2 = data[ahead];
+            found = true;
+            break;
+        }
+        else if(curSum > sum)
+            ahead --;
+        else
+            behind ++;
+    }
 
-                num = max[0];
+    return found;
+}
+```
 
-                pop_heap(max.begin(), max.end(), less<T>());
-                max.pop_back();
-            }
+----
 
-            min.push_back(num);
-            push_heap(min.begin(), min.end(), greater<T>());
+## 面试题57（二）：为s的连续正数序列
+
+题目：输入一个正数s，打印出所有和为s的连续正数序列（至少含有两个数）。例如输入15，由于1+2+3+4+5=4+5+6=7+8=15，所以结果打印出3个连续序列1～5、4～6和7～8。
+
+```cpp
+void FindContinuousSequence(int sum)
+{
+    if(sum < 3)
+        return;
+
+    int small = 1; 
+    int big = 2;
+    int middle = (1 + sum) / 2;
+    int curSum = small + big;
+
+    while(small < middle)
+    {
+        if(curSum == sum)
+            PrintContinuousSequence(small, big);
+
+        while(curSum > sum && small < middle)
+        {
+            curSum -= small;
+            small ++;
+
+            if(curSum == sum)
+                PrintContinuousSequence(small, big);
+        }
+
+        big ++;
+        curSum += big;
+    }
+}
+
+void PrintContinuousSequence(int small, int big)
+{
+    for(int i = small; i <= big; ++ i)
+        printf("%d ", i);
+
+    printf("\n");
+}
+```
+
+----
+
+## 面试题58（一）：翻转单词顺序
+
+题目：输入一个英文句子，翻转句子中单词的顺序，但单词内字符的顺序不变。为简单起见，标点符号和普通字母一样处理。例如输入字符串"I am a student. "，则输出"student. a am I"。
+
+```cpp
+char* ReverseSentence(char *pData)
+{
+    if(pData == nullptr)
+        return nullptr;
+
+    char *pBegin = pData;
+
+    char *pEnd = pData;
+    while(*pEnd != '\0')
+        pEnd ++;
+    pEnd--;
+
+    // 翻转整个句子
+    Reverse(pBegin, pEnd);
+
+    // 翻转句子中的每个单词
+    pBegin = pEnd = pData;
+    while(*pBegin != '\0')
+    {
+        if(*pBegin == ' ')
+        {
+            pBegin ++;
+            pEnd ++;
+        }
+        else if(*pEnd == ' ' || *pEnd == '\0')
+        {
+            Reverse(pBegin, --pEnd);
+            pBegin = ++pEnd;
         }
         else
+            pEnd ++;
+    }
+
+    return pData;
+}
+```
+
+----
+
+## 面试题58（二）：左旋转字符串
+
+题目：字符串的左旋转操作是把字符串前面的若干个字符转移到字符串的尾部。请定义一个函数实现字符串左旋转操作的功能。比如输入字符串"abcdefg"和数字2，该函数将返回左旋转2位得到的结果"cdefgab"。
+
+```cpp
+char* LeftRotateString(char* pStr, int n)
+{
+    if(pStr != nullptr)
+    {
+        int nLength = static_cast<int>(strlen(pStr));
+        if(nLength > 0 && n > 0 && n < nLength)
         {
-            if(min.size() > 0 && min[0] < num)
-            {
-                min.push_back(num);
-                push_heap(min.begin(), min.end(), greater<T>());
+            char* pFirstStart = pStr;
+            char* pFirstEnd = pStr + n - 1;
+            char* pSecondStart = pStr + n;
+            char* pSecondEnd = pStr + nLength - 1;
 
-                num = min[0];
-
-                pop_heap(min.begin(), min.end(), greater<T>());
-                min.pop_back();
-            }
-
-            max.push_back(num);
-            push_heap(max.begin(), max.end(), less<T>());
+            // 翻转字符串的前面n个字符
+            Reverse(pFirstStart, pFirstEnd);
+            // 翻转字符串的后面部分
+            Reverse(pSecondStart, pSecondEnd);
+            // 翻转整个字符串
+            Reverse(pFirstStart, pSecondEnd);
         }
     }
 
-    T GetMedian()
+    return pStr;
+}
+```
+
+----
+
+## 面试题59（一）：滑动窗口的最大值
+
+题目：给定一个数组和滑动窗口的大小，请找出所有滑动窗口里的最大值。例如，如果输入数组{2, 3, 4, 2, 6, 2, 5, 1}及滑动窗口的大小3，那么一共存在6个滑动窗口，它们的最大值分别为{4, 4, 6, 6, 6, 5}。
+
+```cpp
+vector<int> maxInWindows(const vector<int>& num, unsigned int size)
+{
+    vector<int> maxInWindows;
+    if(num.size() >= size && size >= 1)
     {
-        int size = min.size() + max.size();
-        if(size == 0)
-            throw exception("No numbers are available");
+        deque<int> index;
 
-        T median = 0;
-        if((size & 1) == 1)
-            median = min[0];
-        else
-            median = (min[0] + max[0]) / 2;
+        for(unsigned int i = 0; i < size; ++i)
+        {
+            while(!index.empty() && num[i] >= num[index.back()])
+                index.pop_back();
 
-        return median;
+            index.push_back(i);
+        }
+
+        for(unsigned int i = size; i < num.size(); ++i)
+        {
+            maxInWindows.push_back(num[index.front()]);
+
+            while(!index.empty() && num[i] >= num[index.back()])
+                index.pop_back();
+            if(!index.empty() && index.front() <= (int) (i - size))
+                index.pop_front();
+
+            index.push_back(i);
+        }
+        maxInWindows.push_back(num[index.front()]);
+    }
+
+    return maxInWindows;
+}
+```
+
+----
+
+## 面试题59（二）：队列的最大值
+
+题目：给定一个数组和滑动窗口的大小，请找出所有滑动窗口里的最大值。例如，如果输入数组{2, 3, 4, 2, 6, 2, 5, 1}及滑动窗口的大小3，那么一共存在6个滑动窗口，它们的最大值分别为{4, 4, 6, 6, 6, 5}
+
+```cpp
+template<typename T> class QueueWithMax
+{
+public:
+    QueueWithMax() : currentIndex(0)
+    {
+    }
+
+    void push_back(T number)
+    {
+        while(!maximums.empty() && number >= maximums.back().number)
+            maximums.pop_back();
+
+        InternalData internalData = { number, currentIndex };
+        data.push_back(internalData);
+        maximums.push_back(internalData);
+
+        ++currentIndex;
+    }
+
+    void pop_front()
+    {
+        if(maximums.empty())
+            throw new exception("queue is empty");
+
+        if(maximums.front().index == data.front().index)
+            maximums.pop_front();
+
+        data.pop_front();
+    }
+
+    T max() const
+    {
+        if(maximums.empty())
+            throw new exception("queue is empty");
+
+        return maximums.front().number;
     }
 
 private:
-    vector<T> min;
-    vector<T> max;
+    struct InternalData
+    {
+        T number;
+        int index;
+    };
+
+    deque<InternalData> data;
+    deque<InternalData> maximums;
+    int currentIndex;
 };
 ```
 
 ----
 
-## 面试题42：连续子数组的最大和
+## 面试题60：n个骰子的点数
 
-题目：输入一个整型数组，数组里有正数也有负数。数组中一个或连续的多个整数组成一个子数组。求所有子数组的和的最大值。要求时间复杂度为O(n)。
-
-```cpp
-int FindGreatestSumOfSubArray(int *pData, int nLength)
-{
-    if((pData == nullptr) || (nLength <= 0))
-    {
-        g_InvalidInput = true;
-        return 0;
-    }
-
-    g_InvalidInput = false;
-
-    int nCurSum = 0;
-    int nGreatestSum = 0x80000000;
-    for(int i = 0; i < nLength; ++i)
-    {
-        if(nCurSum <= 0)
-            nCurSum = pData[i];
-        else
-            nCurSum += pData[i];
-
-        if(nCurSum > nGreatestSum)
-            nGreatestSum = nCurSum;
-    }
-
-    return nGreatestSum;
-} 
-```
-
-----
-
-## 面试题43：从1到n整数中1出现的次数
-
-题目：输入一个整数n，求从1到n这n个整数的十进制表示中1出现的次数。例如输入12，从1到12这些整数中包含1 的数字有1，10，11和12，1一共出现了5次。
+题目：把n个骰子扔在地上，所有骰子朝上一面的点数之和为s。输入n，打印出s的所有可能的值出现的概率。
 
 ```cpp
 // ====================方法一====================
-int NumberOf1(unsigned int n);
+void Probability(int number, int* pProbabilities);
+void Probability(int original, int current, int sum, int* pProbabilities);
 
-int NumberOf1Between1AndN_Solution1(unsigned int n)
+void PrintProbability_Solution1(int number)
 {
-    int number = 0;
-
-    for(unsigned int i = 1; i <= n; ++ i)
-        number += NumberOf1(i);
-
-    return number;
-}
-
-int NumberOf1(unsigned int n)
-{
-    int number = 0;
-    while(n)
+    if(number < 1)
+        return;
+ 
+    int maxSum = number * g_maxValue;
+    int* pProbabilities = new int[maxSum - number + 1];
+    for(int i = number; i <= maxSum; ++i)
+        pProbabilities[i - number] = 0;
+ 
+    Probability(number, pProbabilities);
+ 
+    int total = pow((double)g_maxValue, number);
+    for(int i = number; i <= maxSum; ++i)
     {
-        if(n % 10 == 1)
-            number ++;
+        double ratio = (double)pProbabilities[i - number] / total;
+        printf("%d: %e\n", i, ratio);
+    }
+ 
+    delete[] pProbabilities;
+}
+ 
+void Probability(int number, int* pProbabilities)
+{
+    for(int i = 1; i <= g_maxValue; ++i)
+        Probability(number, number, i, pProbabilities);
+}
+ 
+void Probability(int original, int current, int sum, 
+                 int* pProbabilities)
+{
+    if(current == 1)
+    {
+        pProbabilities[sum - original]++;
+    }
+    else
+    {
+        for(int i = 1; i <= g_maxValue; ++i)
+        {
+            Probability(original, current - 1, i + sum, pProbabilities);
+        }
+    }
+} 
 
-        n = n / 10;
+// ====================方法二====================
+void PrintProbability_Solution2(int number)
+{
+    if(number < 1)
+        return;
+
+    int* pProbabilities[2];
+    pProbabilities[0] = new int[g_maxValue * number + 1];
+    pProbabilities[1] = new int[g_maxValue * number + 1];
+    for(int i = 0; i < g_maxValue * number + 1; ++i)
+    {
+        pProbabilities[0][i] = 0;
+        pProbabilities[1][i] = 0;
+    }
+ 
+    int flag = 0;
+    for (int i = 1; i <= g_maxValue; ++i) 
+        pProbabilities[flag][i] = 1; 
+    
+    for (int k = 2; k <= number; ++k) 
+    {
+        for(int i = 0; i < k; ++i)
+            pProbabilities[1 - flag][i] = 0;
+
+        for (int i = k; i <= g_maxValue * k; ++i) 
+        {
+            pProbabilities[1 - flag][i] = 0;
+            for(int j = 1; j <= i && j <= g_maxValue; ++j) 
+                pProbabilities[1 - flag][i] += pProbabilities[flag][i - j];
+        }
+ 
+        flag = 1 - flag;
+    }
+ 
+    double total = pow((double)g_maxValue, number);
+    for(int i = number; i <= g_maxValue * number; ++i)
+    {
+        double ratio = (double)pProbabilities[flag][i] / total;
+        printf("%d: %e\n", i, ratio);
+    }
+ 
+    delete[] pProbabilities[0];
+    delete[] pProbabilities[1];
+}
+```
+
+----
+
+## 面试题61：扑克牌的顺子
+
+题目：从扑克牌中随机抽5张牌，判断是不是一个顺子，即这5张牌是不是连续的。2～10为数字本身，A为1，J为11，Q为12，K为13，而大、小王可以看成任意数字。
+
+```cpp
+bool IsContinuous(int* numbers, int length)
+{
+    if(numbers == nullptr || length < 1)
+        return false;
+
+    qsort(numbers, length, sizeof(int), Compare);
+
+    int numberOfZero = 0;
+    int numberOfGap = 0;
+
+    // 统计数组中0的个数
+    for(int i = 0; i < length && numbers[i] == 0; ++i)
+        ++numberOfZero;
+
+    // 统计数组中的间隔数目
+    int small = numberOfZero;
+    int big = small + 1;
+    while(big < length)
+    {
+        // 两个数相等，有对子，不可能是顺子
+        if(numbers[small] == numbers[big])
+            return false;
+
+        numberOfGap += numbers[big] - numbers[small] - 1;
+        small = big;
+        ++big;
     }
 
-    return number;
+    return (numberOfGap > numberOfZero) ? false : true;
+}
+
+int Compare(const void *arg1, const void *arg2)
+{
+    return *(int*) arg1 - *(int*) arg2;
+}
+```
+
+----
+
+## 面试题62：圆圈中最后剩下的数字
+
+题目：0, 1, …, n-1这n个数字排成一个圆圈，从数字0开始每次从这个圆圈里删除第m个数字。求出这个圆圈里剩下的最后一个数字。
+
+```cpp
+// ====================方法1====================
+int LastRemaining_Solution1(unsigned int n, unsigned int m)
+{
+    if(n < 1 || m < 1)
+        return -1;
+
+    unsigned int i = 0;
+
+    list<int> numbers;
+    for(i = 0; i < n; ++ i)
+        numbers.push_back(i);
+
+    list<int>::iterator current = numbers.begin();
+    while(numbers.size() > 1)
+    {
+        for(int i = 1; i < m; ++ i)
+        {
+            current ++;
+            if(current == numbers.end())
+                current = numbers.begin();
+        }
+
+        list<int>::iterator next = ++ current;
+        if(next == numbers.end())
+            next = numbers.begin();
+
+        -- current;
+        numbers.erase(current);
+        current = next;
+    }
+
+    return *(current);
+}
+
+// ====================方法2====================
+int LastRemaining_Solution2(unsigned int n, unsigned int m)
+{
+    if(n < 1 || m < 1)
+        return -1;
+
+    int last = 0;
+    for (int i = 2; i <= n; i ++) 
+        last = (last + m) % i;
+
+    return last;
+}
+```
+
+----
+
+## 面试题63：股票的最大利润
+
+题目：假设把某股票的价格按照时间先后顺序存储在数组中，请问买卖交易该股票可能获得的利润是多少？例如一只股票在某些时间节点的价格为{9, 11, 8, 5, 7, 12, 16, 14}。如果我们能在价格为5的时候买入并在价格为16时卖出，则能收获最大的利润11。
+
+```cpp
+int MaxDiff(const int* numbers, unsigned length)
+{
+    if(numbers == nullptr && length < 2)
+        return 0;
+
+    int min = numbers[0];
+    int maxDiff = numbers[1] - min;
+
+    for(int i = 2; i < length; ++i)
+    {
+        if(numbers[i - 1] < min)
+            min = numbers[i - 1];
+
+        int currentDiff = numbers[i] - min;
+        if(currentDiff > maxDiff)
+            maxDiff = currentDiff;
+    }
+
+    return maxDiff;
+}
+```
+
+----
+
+## 面试题64：求1+2+…+n
+
+题目：求1+2+…+n，要求不能使用乘除法、for、while、if、else、switch、case等关键字及条件判断语句（A?B:C）。
+
+```cpp
+// ====================方法一====================
+class Temp
+{
+public:
+    Temp() { ++ N; Sum += N; }
+
+    static void Reset() { N = 0; Sum = 0; }
+    static unsigned int GetSum() { return Sum; }
+
+private:
+    static unsigned int N;
+    static unsigned int Sum;
+};
+
+unsigned int Temp::N = 0;
+unsigned int Temp::Sum = 0;
+
+unsigned int Sum_Solution1(unsigned int n)
+{
+    Temp::Reset();
+
+    Temp *a = new Temp[n];
+    delete []a;
+    a = NULL;
+
+    return Temp::GetSum();
 }
 
 // ====================方法二====================
-int NumberOf1(const char* strN);
-int PowerBase10(unsigned int n);
+class A;
+A* Array[2];
 
-int NumberOf1Between1AndN_Solution2(int n)
-{
-    if(n <= 0)
-        return 0;
-
-    char strN[50];
-    sprintf(strN, "%d", n);
-
-    return NumberOf1(strN);
-}
-
-int NumberOf1(const char* strN)
-{
-    if(!strN || *strN < '0' || *strN > '9' || *strN == '\0')
-        return 0;
-
-    int first = *strN - '0';
-    unsigned int length = static_cast<unsigned int>(strlen(strN));
-
-    if(length == 1 && first == 0)
-        return 0;
-
-    if(length == 1 && first > 0)
-        return 1;
-
-    // 假设strN是"21345"
-    // numFirstDigit是数字10000-19999的第一个位中1的数目
-    int numFirstDigit = 0;
-    if(first > 1)
-        numFirstDigit = PowerBase10(length - 1);
-    else if(first == 1)
-        numFirstDigit = atoi(strN + 1) + 1;
-
-    // numOtherDigits是01346-21345除了第一位之外的数位中1的数目
-    int numOtherDigits = first * (length - 1) * PowerBase10(length - 2);
-    // numRecursive是1-1345中1的数目
-    int numRecursive = NumberOf1(strN + 1);
-
-    return numFirstDigit + numOtherDigits + numRecursive;
-}
-
-int PowerBase10(unsigned int n)
-{
-    int result = 1;
-    for(unsigned int i = 0; i < n; ++ i)
-        result *= 10;
-
-    return result;
-}
-```
-
-----
-
-## 面试题44：数字序列中某一位的数字
-
-题目：数字以0123456789101112131415…的格式序列化到一个字符序列中。在这个序列中，第5位（从0开始计数）是5，第13位是1，第19位是4，等等。请写一个函数求任意位对应的数字。
-
-```cpp
-int digitAtIndex(int index)
-{
-	if(index < 0)
-		return -1;
-
-	int digits = 1;
-	while(true)
-	{
-		int numbers = countOfIntegers(digits);
-		if(index < numbers * digits)
-			return digitAtIndex(index, digits);
-
-		index -= digits * numbers;
-		digits++;
-	}
-
-	return -1;
-}
-
-int countOfIntegers(int digits)
-{
-	if(digits == 1)
-		return 10;
-
-	int count = (int) std::pow(10, digits - 1);
-	return 9 * count;
-}
-
-int digitAtIndex(int index, int digits)
-{
-	int number = beginNumber(digits) + index / digits;
-	int indexFromRight = digits - index % digits;
-	for(int i = 1; i < indexFromRight; ++i)
-		number /= 10;
-	return number % 10;
-}
-
-int beginNumber(int digits)
-{
-	if(digits == 1)
-		return 0;
-
-	return (int) std::pow(10, digits - 1);
-}
-```
-
-----
-
-## 面试题45：把数组排成最小的数
-
-题目：输入一个正整数数组，把数组里所有数字拼接起来排成一个数，打印能拼接出的所有数字中最小的一个。例如输入数组{3, 32, 321}，则打印出这3个数字能排成的最小数字321323。
-
-```cpp
-// int型整数用十进制表示最多只有10位
-const int g_MaxNumberLength = 10;
- 
-char* g_StrCombine1 = new char[g_MaxNumberLength * 2 + 1];
-char* g_StrCombine2 = new char[g_MaxNumberLength * 2 + 1];
- 
-void PrintMinNumber(const int* numbers, int length)
-{
-    if(numbers == nullptr || length <= 0)
-        return;
- 
-    char** strNumbers = (char**)(new int[length]);
-    for(int i = 0; i < length; ++i)
-    {
-        strNumbers[i] = new char[g_MaxNumberLength + 1];
-        sprintf(strNumbers[i], "%d", numbers[i]);
-    }
- 
-    qsort(strNumbers, length, sizeof(char*), compare);
- 
-    for(int i = 0; i < length; ++i)
-        printf("%s", strNumbers[i]);
-    printf("\n");
- 
-    for(int i = 0; i < length; ++i)
-        delete[] strNumbers[i];
-    delete[] strNumbers;
-}
- 
-// 如果[strNumber1][strNumber2] > [strNumber2][strNumber1], 返回值大于0
-// 如果[strNumber1][strNumber2] = [strNumber2][strNumber1], 返回值等于0
-// 如果[strNumber1][strNumber2] < [strNumber2][strNumber1], 返回值小于0
-int compare(const void* strNumber1, const void* strNumber2)
-{
-    // [strNumber1][strNumber2]
-    strcpy(g_StrCombine1, *(const char**)strNumber1);
-    strcat(g_StrCombine1, *(const char**)strNumber2);
- 
-    // [strNumber2][strNumber1]
-    strcpy(g_StrCombine2, *(const char**)strNumber2);
-    strcat(g_StrCombine2, *(const char**)strNumber1);
- 
-    return strcmp(g_StrCombine1, g_StrCombine2);
-}
-```
-
-----
-
-## 面试题46：把数字翻译成字符串
-
-题目：给定一个数字，我们按照如下规则把它翻译为字符串：0翻译成"a"，1翻译成"b"，……，11翻译成"l"，……，25翻译成"z"。一个数字可能有多个翻译。例如12258有5种不同的翻译，它们分别是"bccfi"、"bwfi"、"bczi"、"mcfi"和"mzi"。请编程实现一个函数用来计算一个数字有多少种不同的翻译方法。
-
-```cpp
-int GetTranslationCount(const string& number);
-
-int GetTranslationCount(int number)
-{
-    if(number < 0)
-        return 0;
-
-    string numberInString = to_string(number);
-    return GetTranslationCount(numberInString);
-}
-
-int GetTranslationCount(const string& number)
-{
-    int length = number.length();
-    int* counts = new int[length];
-    int count = 0;
-
-    for(int i = length - 1; i >= 0; --i)
-    {
-        count = 0;
-         if(i < length - 1)
-               count = counts[i + 1];
-         else
-               count = 1;
-
-        if(i < length - 1)
-        {
-            int digit1 = number[i] - '0';
-            int digit2 = number[i + 1] - '0';
-            int converted = digit1 * 10 + digit2;
-            if(converted >= 10 && converted <= 25)
-            {
-                if(i < length - 2)
-                    count += counts[i + 2];
-                else
-                    count += 1;
-            }
-        }
-
-        counts[i] = count;
-    }
-
-    count = counts[0];
-    delete[] counts;
-
-    return count;
-}
-```
-
-----
-
-## 面试题47：礼物的最大价值
-
-题目：在一个m×n的棋盘的每一格都放有一个礼物，每个礼物都有一定的价值（价值大于0）。你可以从棋盘的左上角开始拿格子里的礼物，并每次向左或者向下移动一格直到到达棋盘的右下角。给定一个棋盘及其上面的礼物，请计算你最多能拿到多少价值的礼物？
-
-```cpp
-int getMaxValue_solution1(const int* values, int rows, int cols)
-{
-    if(values == nullptr || rows <= 0 || cols <= 0)
-        return 0;
-
-    int** maxValues = new int*[rows];
-    for(int i = 0; i < rows; ++i)
-        maxValues[i] = new int[cols];
-
-    for(int i = 0; i < rows; ++i)
-    {
-        for(int j = 0; j < cols; ++j)
-        {
-            int left = 0;
-            int up = 0;
-
-            if(i > 0)
-                up = maxValues[i - 1][j];
-
-            if(j > 0)
-                left = maxValues[i][j - 1];
-
-            maxValues[i][j] = std::max(left, up) + values[i * cols + j];
-        }
-    }
-
-    int maxValue = maxValues[rows - 1][cols - 1];
-
-    for(int i = 0; i < rows; ++i)
-        delete[] maxValues[i];
-    delete[] maxValues;
-
-    return maxValue;
-}
-
-int getMaxValue_solution2(const int* values, int rows, int cols)
-{
-    if(values == nullptr || rows <= 0 || cols <= 0)
-        return 0;
-
-    int* maxValues = new int[cols];
-    for(int i = 0; i < rows; ++i)
-    {
-        for(int j = 0; j < cols; ++j)
-        {
-            int left = 0;
-            int up = 0;
-
-            if(i > 0)
-                up = maxValues[j];
-
-            if(j > 0)
-                left = maxValues[j - 1];
-
-            maxValues[j] = std::max(left, up) + values[i * cols + j];
-        }
-    }
-
-    int maxValue = maxValues[cols - 1];
-
-    delete[] maxValues;
-
-    return maxValue;
-}
-```
-
-----
-
-## 面试题48：最长不含重复字符的子字符串
-
-题目：请从字符串中找出一个最长的不包含重复字符的子字符串，计算该最长子字符串的长度。假设字符串中只包含从'a'到'z'的字符。
-
-```cpp
-// 方法一：动态规划
-int longestSubstringWithoutDuplication_2(const std::string& str)
-{
-    int curLength = 0;
-    int maxLength = 0;
-
-    int* position = new int[26];
-    for(int i = 0; i < 26; ++i)
-        position[i] = -1;
-
-    for(int i = 0; i < str.length(); ++i)
-    {
-        int prevIndex = position[str[i] - 'a'];
-        if(prevIndex < 0 || i - prevIndex > curLength)
-            ++curLength;
-        else
-        {
-            if(curLength > maxLength)
-                maxLength = curLength;
-
-            curLength = i - prevIndex;
-        }
-        position[str[i] - 'a'] = i;
-    }
-
-    if(curLength > maxLength)
-        maxLength = curLength;
-
-    delete[] position;
-    return maxLength;
-}
-```
-
-----
-
-## 面试题49：丑数
-
-题目：我们把只包含因子2、3和5的数称作丑数（Ugly Number）。求按从小到大的顺序的第1500个丑数。例如6、8都是丑数，但14不是，因为它包含因子7。习惯上我们把1当做第一个丑数。
-
-```cpp
-// ====================算法1的代码====================
-bool IsUgly(int number)
-{
-    while(number % 2 == 0)
-        number /= 2;
-    while(number % 3 == 0)
-        number /= 3;
-    while(number % 5 == 0)
-        number /= 5;
-
-    return (number == 1) ? true : false;
-}
-
-int GetUglyNumber_Solution1(int index)
-{
-    if(index <= 0)
-        return 0;
-
-    int number = 0;
-    int uglyFound = 0;
-    while(uglyFound < index)
-    {
-        ++number;
-
-        if(IsUgly(number))
-            ++uglyFound;
-    }
-
-    return number;
-}
-
-// ====================算法2的代码====================
-int Min(int number1, int number2, int number3);
-
-int GetUglyNumber_Solution2(int index)
-{
-    if(index <= 0)
-        return 0;
-
-    int *pUglyNumbers = new int[index];
-    pUglyNumbers[0] = 1;
-    int nextUglyIndex = 1;
-
-    int *pMultiply2 = pUglyNumbers;
-    int *pMultiply3 = pUglyNumbers;
-    int *pMultiply5 = pUglyNumbers;
-
-    while(nextUglyIndex < index)
-    {
-        int min = Min(*pMultiply2 * 2, *pMultiply3 * 3, *pMultiply5 * 5);
-        pUglyNumbers[nextUglyIndex] = min;
-
-        while(*pMultiply2 * 2 <= pUglyNumbers[nextUglyIndex])
-            ++pMultiply2;
-        while(*pMultiply3 * 3 <= pUglyNumbers[nextUglyIndex])
-            ++pMultiply3;
-        while(*pMultiply5 * 5 <= pUglyNumbers[nextUglyIndex])
-            ++pMultiply5;
-
-        ++nextUglyIndex;
-    }
-
-    int ugly = pUglyNumbers[nextUglyIndex - 1];
-    delete[] pUglyNumbers;
-    return ugly;
-}
-
-int Min(int number1, int number2, int number3)
-{
-    int min = (number1 < number2) ? number1 : number2;
-    min = (min < number3) ? min : number3;
-
-    return min;
-}
-```
-
-----
-
-## 面试题50（一）：字符串中第一个只出现一次的字符
-
-题目：在字符串中找出第一个只出现一次的字符。如输入"abaccdeff"，则输出'b'。
-
-```cpp
-char FirstNotRepeatingChar(const char* pString)
-{
-    if(pString == nullptr)
-        return '\0';
-
-    const int tableSize = 256;
-    unsigned int hashTable[tableSize];
-    for(unsigned int i = 0; i < tableSize; ++i)
-        hashTable[i] = 0;
-
-    const char* pHashKey = pString;
-    while(*(pHashKey) != '\0')
-        hashTable[*(pHashKey++)] ++;
-
-    pHashKey = pString;
-    while(*pHashKey != '\0')
-    {
-        if(hashTable[*pHashKey] == 1)
-            return *pHashKey;
-
-        pHashKey++;
-    }
-
-    return '\0';
-}
-```
-
-----
-
-## 面试题50（二）：字符流中第一个只出现一次的字符
-
-题目：请实现一个函数用来找出字符流中第一个只出现一次的字符。例如，当从字符流中只读出前两个字符"go"时，第一个只出现一次的字符是'g'。当从该字符流中读出前六个字符"google"时，第一个只出现一次的字符是'l'。
-
-```cpp
-class CharStatistics
+class A
 {
 public:
-    CharStatistics() : index(0)
-    {
-        for(int i = 0; i < 256; ++i)
-            occurrence[i] = -1;
+    virtual unsigned int Sum (unsigned int n) 
+    { 
+        return 0; 
     }
+};
 
-    void Insert(char ch)
-    {
-        if(occurrence[ch] == -1)
-            occurrence[ch] = index;
-        else if(occurrence[ch] >= 0)
-            occurrence[ch] = -2;
-
-        index++;
+class B: public A
+{
+public:
+    virtual unsigned int Sum (unsigned int n) 
+    { 
+        return Array[!!n]->Sum(n-1) + n; 
     }
+};
 
-    char FirstAppearingOnce()
-    {
-        char ch = '\0';
-        int minIndex = numeric_limits<int>::max();
-        for(int i = 0; i < 256; ++i)
-        {
-            if(occurrence[i] >= 0 && occurrence[i] < minIndex)
-            {
-                ch = (char) i;
-                minIndex = occurrence[i];
-            }
-        }
+int Sum_Solution2(int n)
+{
+    A a;
+    B b;
+    Array[0] = &a;
+    Array[1] = &b;
 
-        return ch;
-    }
+    int value = Array[1]->Sum(n);
 
-private:
-    // occurrence[i]: A character with ASCII value i;
-    // occurrence[i] = -1: The character has not found;
-    // occurrence[i] = -2: The character has been found for mutlple times
-    // occurrence[i] >= 0: The character has been found only once
-    int occurrence[256];
-    int index;
+    return value;
+}
+
+// ====================方法三====================
+typedef unsigned int (*fun)(unsigned int);
+
+unsigned int Solution3_Teminator(unsigned int n) 
+{
+    return 0;
+}
+
+unsigned int Sum_Solution3(unsigned int n)
+{
+    static fun f[2] = {Solution3_Teminator, Sum_Solution3}; 
+    return n + f[!!n](n - 1);
+}
+
+// ====================方法四====================
+template <unsigned int n> struct Sum_Solution4
+{
+    enum Value { N = Sum_Solution4<n - 1>::N + n};
+};
+
+template <> struct Sum_Solution4<1>
+{
+    enum Value { N = 1};
+};
+
+template <> struct Sum_Solution4<0>
+{
+    enum Value { N = 0};
 };
 ```
 
 ----
 
-## 面试题51：数组中的逆序对
+## 面试题65：不用加减乘除做加法
 
-题目：在数组中的两个数字如果前面一个数字大于后面的数字，则这两个数字组成一个逆序对。输入一个数组，求出这个数组中的逆序对的总数。
+题目：写一个函数，求两个整数之和，要求在函数体内不得使用＋、－、×、÷四则运算符号。
 
 ```cpp
-int InversePairs(int* data, int length)
+int Add(int num1, int num2)
 {
-    if(data == nullptr || length < 0)
-        return 0;
-
-    int* copy = new int[length];
-    for(int i = 0; i < length; ++i)
-        copy[i] = data[i];
-
-    int count = InversePairsCore(data, copy, 0, length - 1);
-    delete[] copy;
-
-    return count;
-}
-
-int InversePairsCore(int* data, int* copy, int start, int end)
-{
-    if(start == end)
+    int sum, carry;
+    do
     {
-        copy[start] = data[start];
-        return 0;
+        sum = num1 ^ num2;
+        carry = (num1 & num2) << 1;
+
+        num1 = sum;
+        num2 = carry;
     }
+    while(num2 != 0);
 
-    int length = (end - start) / 2;
-
-    int left = InversePairsCore(copy, data, start, start + length);
-    int right = InversePairsCore(copy, data, start + length + 1, end);
-
-    // i初始化为前半段最后一个数字的下标
-    int i = start + length;
-    // j初始化为后半段最后一个数字的下标
-    int j = end;
-    int indexCopy = end;
-    int count = 0;
-    while(i >= start && j >= start + length + 1)
-    {
-        if(data[i] > data[j])
-        {
-            copy[indexCopy--] = data[i--];
-            count += j - start - length;
-        }
-        else
-        {
-            copy[indexCopy--] = data[j--];
-        }
-    }
-
-    for(; i >= start; --i)
-        copy[indexCopy--] = data[i];
-
-    for(; j >= start + length + 1; --j)
-        copy[indexCopy--] = data[j];
-
-    return left + right + count;
+    return num1;
 }
 ```
 
 ----
 
-## 面试题52：两个链表的第一个公共结点
+## 面试题66：构建乘积数组
 
-题目：输入两个链表，找出它们的第一个公共结点。
+题目：给定一个数组`A[0, 1, …, n-1]`，请构建一个数组`B[0, 1, …, n-1]`，其中B中的元素`B[i] =A[0]×A[1]×… ×A[i-1]×A[i+1]×…×A[n-1]`。不能使用除法。
 
 ```cpp
-ListNode* FindFirstCommonNode(ListNode *pHead1, ListNode *pHead2)
+void BuildProductionArray(const vector<double>& input, vector<double>& output)
 {
-    // 得到两个链表的长度
-    unsigned int nLength1 = GetListLength(pHead1);
-    unsigned int nLength2 = GetListLength(pHead2);
-    int nLengthDif = nLength1 - nLength2;
+    int length1 = input.size();
+    int length2 = output.size();
 
-    ListNode* pListHeadLong = pHead1;
-    ListNode* pListHeadShort = pHead2;
-    if(nLength2 > nLength1)
+    if(length1 == length2 && length2 > 1)
     {
-        pListHeadLong = pHead2;
-        pListHeadShort = pHead1;
-        nLengthDif = nLength2 - nLength1;
+        output[0] = 1;
+        for(int i = 1; i < length1; ++i)
+        {
+            output[i] = output[i - 1] * input[i - 1];
+        }
+
+        double temp = 1;
+        for(int i = length1 - 2; i >= 0; --i)
+        {
+            temp *= input[i + 1];
+            output[i] *= temp;
+        }
+    }
+}
+```
+
+----
+
+## 面试题67：把字符串转换成整数
+
+题目：请你写一个函数StrToInt，实现把字符串转换成整数这个功能。当然，不能使用atoi或者其他类似的库函数。
+
+```cpp
+int StrToInt(const char* str)
+{
+    g_nStatus = kInvalid;
+    long long num = 0;
+
+    if(str != nullptr && *str != '\0') 
+    {
+        bool minus = false;
+        if(*str == '+')
+            str ++;
+        else if(*str == '-') 
+        {
+            str ++;
+            minus = true;
+        }
+
+        if(*str != '\0') 
+            num = StrToIntCore(str, minus);
     }
 
-    // 先在长链表上走几步，再同时在两个链表上遍历
-    for(int i = 0; i < nLengthDif; ++i)
-        pListHeadLong = pListHeadLong->m_pNext;
-
-    while((pListHeadLong != nullptr) &&
-        (pListHeadShort != nullptr) &&
-        (pListHeadLong != pListHeadShort))
-    {
-        pListHeadLong = pListHeadLong->m_pNext;
-        pListHeadShort = pListHeadShort->m_pNext;
-    }
-
-    // 得到第一个公共结点
-    ListNode* pFisrtCommonNode = pListHeadLong;
-
-    return pFisrtCommonNode;
+    return (int)num;
 }
 
-unsigned int GetListLength(ListNode* pHead)
+long long StrToIntCore(const char* digit, bool minus)
 {
-    unsigned int nLength = 0;
-    ListNode* pNode = pHead;
-    while(pNode != nullptr)
+    long long num = 0;
+
+    while(*digit != '\0') 
     {
-        ++nLength;
-        pNode = pNode->m_pNext;
+        if(*digit >= '0' && *digit <= '9') 
+        {
+            int flag = minus ? -1 : 1;
+            num = num * 10 + flag * (*digit - '0');
+
+            if((!minus && num > 0x7FFFFFFF) 
+                || (minus && num < (signed int)0x80000000))
+            {
+                num = 0;
+                break;
+            }
+
+            digit++;
+        }
+        else 
+        {
+            num = 0;
+            break;
+        }
     }
 
-    return nLength;
+    if(*digit == '\0') 
+        g_nStatus = kValid;
+
+    return num;
+}
+```
+
+----
+
+## 面试题68：树中两个结点的最低公共祖先
+
+题目：输入两个树结点，求它们的最低公共祖先。
+
+```cpp
+bool GetNodePath(const TreeNode* pRoot, const TreeNode* pNode, list<const TreeNode*>& path)
+{
+    if(pRoot == pNode)
+        return true;
+ 
+    path.push_back(pRoot);
+ 
+    bool found = false;
+
+    vector<TreeNode*>::const_iterator i = pRoot->m_vChildren.begin();
+    while(!found && i < pRoot->m_vChildren.end())
+    {
+        found = GetNodePath(*i, pNode, path);
+        ++i;
+    }
+ 
+    if(!found)
+        path.pop_back();
+ 
+    return found;
+}
+
+const TreeNode* GetLastCommonNode
+(
+    const list<const TreeNode*>& path1, 
+    const list<const TreeNode*>& path2
+)
+{
+    list<const TreeNode*>::const_iterator iterator1 = path1.begin();
+    list<const TreeNode*>::const_iterator iterator2 = path2.begin();
+    
+    const TreeNode* pLast = nullptr;
+ 
+    while(iterator1 != path1.end() && iterator2 != path2.end())
+    {
+        if(*iterator1 == *iterator2)
+            pLast = *iterator1;
+ 
+        iterator1++;
+        iterator2++;
+    }
+ 
+    return pLast;
+}
+
+const TreeNode* GetLastCommonParent(const TreeNode* pRoot, const TreeNode* pNode1, const TreeNode* pNode2)
+{
+    if(pRoot == nullptr || pNode1 == nullptr || pNode2 == nullptr)
+        return nullptr;
+ 
+    list<const TreeNode*> path1;
+    GetNodePath(pRoot, pNode1, path1);
+ 
+    list<const TreeNode*> path2;
+    GetNodePath(pRoot, pNode2, path2);
+ 
+    return GetLastCommonNode(path1, path2);
 }
 ```
