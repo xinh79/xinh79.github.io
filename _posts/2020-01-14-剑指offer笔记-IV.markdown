@@ -1,6 +1,6 @@
 ---
 layout:      post
-title:       "剑指offer笔记-V"
+title:       "剑指offer笔记-IV"
 subtitle:    "CodingInterview"
 author:      "Ashior"
 header-img:  "img/bg-CodingInterview.jpg"
