@@ -23,15 +23,16 @@ tags:
 4. 生成ssh密钥命令：`ssh-keygen -t rsa -C "ashior@qq.com"`
 5. 连接github命令：`ssh -T git@github.com`
 6. 连接github命令：`git remote add origin git@github.com:ashior/Server4C.git`
-7. 创建dev分支：`git branch dev`
-8. 切换至dev分支：`git checkout dev`
-9. 切换至主分支：`git checkout master`
-10. 合并指定分支到当前分支：`git merge dev`
-11. 删除dev分支：`git branch -d dev`
-12. 查看branch：`git branch`
-13. 创建并切换到新的dev分支：`git switch -c dev`
-14. 直接切换到已有的master分支：`git switch master`
-15. --no-ff参数，表示禁用Fast forward：`git merge --no-ff -m "merge with no-ff" dev`
+7. 推送master分支的所有内容：`git push -u origin master`
+8. 创建dev分支：`git branch dev`
+9. 切换至dev分支：`git checkout dev`
+10. 切换至主分支：`git checkout master`
+11. 合并指定分支到当前分支：`git merge dev`
+12. 删除dev分支：`git branch -d dev`
+13. 查看branch：`git branch`
+14. 创建并切换到新的dev分支：`git switch -c dev`
+15. 直接切换到已有的master分支：`git switch master`
+16. --no-ff参数，表示禁用Fast forward：`git merge --no-ff -m "merge with no-ff" dev`
 
 [gdb 调试利器](https://linuxtools-rst.readthedocs.io/zh_CN/latest/tool/gdb.html#id3)
 
