@@ -116,6 +116,36 @@
 
 ----
 
+[Linux常用命令-I](https://xinh79.github.io/2020/01/20/Linux%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4-I/)
+
+- 详细信息
+- 查看依赖库：ldd
+- 文件查找：find
+- 文本搜索：grep
+- 排序：sort
+- 转换：tr
+- 按列切分文本：cut
+- 按列拼接文本：paste
+- 统计行和字符：wc
+- 进程查询：ps
+- 进程监控：top
+- 打开文件查询：lsof
+- 内存使用量：free
+- 监控性能指标：sar
+- 网卡配置：ifconfig
+- 查看当前网络连接：netstat
+- 查看路由表：route
+- 检查网络连通性：ping
+- 转发路径：traceroute
+- 终止进程：kill
+- 修改文件权限：chmod
+- 修改文件权限：chmod
+- 创建链接：ln
+- 显示文件尾：tail
+- 设置别名：alias
+
+----
+
 [Linux学习之HTTP项目](https://xinh79.github.io/2020/01/05/Linux%E5%AD%A6%E4%B9%A0%E4%B9%8BHTTP%E9%A1%B9%E7%9B%AE/)
 
 - XML与json
