@@ -35,6 +35,13 @@ tags:
 14. 创建并切换到新的dev分支：`git switch -c dev`
 15. 直接切换到已有的master分支：`git switch master`
 16. --no-ff参数，表示禁用Fast forward：`git merge --no-ff -m "merge with no-ff" dev`
+17. 在push之前需要先 pull一下，让本地库与远程库同步：`git pull origin master`
+
+使用以下命令查看origin使用的是https还是ssh
+`git remote -v`
+如果使用的是https替换为ssh方式即可
+`git remote set-url origin git@github.com:name/repo`
+重新进行git push/pull 不再需要输入账号密码
 
 [gdb 调试利器](https://linuxtools-rst.readthedocs.io/zh_CN/latest/tool/gdb.html#id3)
 
