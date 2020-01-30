@@ -107,6 +107,8 @@ public static int getIndexOf(String s, String m) {
 }
 ```
 
+[最长公共子序列、最长连续公共子序列、最长递增子序列](https://blog.csdn.net/Irving_zhang/article/details/79820595)
+
 ----
 
 ## [KMP]京东笔试题
