@@ -30,15 +30,23 @@
 
 ## 感情随笔
 
-[我为什么不愿意「读博」？](https://xinh79.github.io/2019/07/25/difficult-to-pursue-a-doctorate/)
+均以过时，写的时候“年代较早”
 
-[感情随想录-I](https://xinh79.github.io/2019/10/07/%E6%84%9F%E6%83%85%E9%9A%8F%E6%83%B3%E5%BD%95-I/)
+[我为什么不愿意「读博」？](https://xinh79.github.io/2019/07/25/difficult-to-pursue-a-doctorate-/#)
 
-[感情随想录-II](https://xinh79.github.io/2019/10/08/%E6%84%9F%E6%83%85%E9%9A%8F%E6%83%B3%E5%BD%95-II/)
+![T-ITS](https://github.com/xinh79/xinh79.github.io/blob/master/img/emotion/T-ITS%20reviewer.png)
 
-[感情随想录-III](https://xinh79.github.io/2019/11/28/%E6%84%9F%E6%83%85%E9%9A%8F%E6%83%B3%E5%BD%95-III/)
+八月份在学校，可能是审稿审多了，导师作为T-ITS的AE让我成为了一名正式的审稿人。是CCF推荐的[交叉/综合/新兴](https://www.ccf.org.cn/xspj/jc/zh/xx/) B类学术刊物。
 
-[感情随想录-IV](https://xinh79.github.io/2019/12/13/%E6%84%9F%E6%83%85%E9%9A%8F%E6%83%B3%E5%BD%95-IV/)
+现在看来不过是一种不负责任的表现罢了。。。
+
+[感情随想录-I](https://xinh79.github.io/2019/10/07/%E6%84%9F%E6%83%85%E9%9A%8F%E6%83%B3%E5%BD%95-I-/#)
+
+[感情随想录-II](https://xinh79.github.io/2019/10/08/%E6%84%9F%E6%83%85%E9%9A%8F%E6%83%B3%E5%BD%95-II-/#)
+
+[感情随想录-III](https://xinh79.github.io/2019/11/28/%E6%84%9F%E6%83%85%E9%9A%8F%E6%83%B3%E5%BD%95-III-/#)
+
+[感情随想录-IV](https://xinh79.github.io/2019/12/13/%E6%84%9F%E6%83%85%E9%9A%8F%E6%83%B3%E5%BD%95-IV-/#)
 
 ----
 
@@ -113,6 +121,36 @@
 - 高级I/O
 - 进程间通信
 - 网络套接字
+
+----
+
+[Linux常用命令-I](https://xinh79.github.io/2020/01/20/Linux%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4-I/)
+
+- 详细信息
+- 查看依赖库：ldd
+- 文件查找：find
+- 文本搜索：grep
+- 排序：sort
+- 转换：tr
+- 按列切分文本：cut
+- 按列拼接文本：paste
+- 统计行和字符：wc
+- 进程查询：ps
+- 进程监控：top
+- 打开文件查询：lsof
+- 内存使用量：free
+- 监控性能指标：sar
+- 网卡配置：ifconfig
+- 查看当前网络连接：netstat
+- 查看路由表：route
+- 检查网络连通性：ping
+- 转发路径：traceroute
+- 终止进程：kill
+- 修改文件权限：chmod
+- 修改文件权限：chmod
+- 创建链接：ln
+- 显示文件尾：tail
+- 设置别名：alias
 
 ----
 
@@ -418,7 +456,7 @@
 
 ## 研一研究相关
 
-由于时间原因与个人原因，此章节信息并未补全，以后也很可能不会再更新，或许会增加TMC论文讲解与Lyapunov讲解
+由于时间原因与个人原因，此章节信息并未补全，以后也很可能不会再更新，因为很多东西都要二刷，但是可能会增加TMC论文的讲解与Lyapunov讲解。
 
 #### 读书笔记
 
