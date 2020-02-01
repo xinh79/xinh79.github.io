@@ -1,7 +1,5 @@
 # 关于我  
 
-> 重构过一次，哭死，所有的contribution都没了。。。
-
 更多关于我的信息请查看[我的博客](https://xinh79.github.io/about/)
 
 ![home_page](https://raw.githubusercontent.com/xinh79/xinh79.github.io/master/img/home_page.png)
