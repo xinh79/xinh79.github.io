@@ -1,4 +1,4 @@
-# 关于我  
+# 关于我
 
 更多关于我的信息请查看[我的博客](https://xinh79.github.io/about/)
 
@@ -30,21 +30,21 @@
 
 均以过时，写的时候“年代较早”
 
-[我为什么不愿意「读博」？](https://xinh79.github.io/2019/07/25/difficult-to-pursue-a-doctorate-/#)
+~~[我为什么不愿意「读博」？](https://xinh79.github.io/2019/07/25/difficult-to-pursue-a-doctorate-/#)~~
 
 ![T-ITS](https://github.com/xinh79/xinh79.github.io/blob/master/img/emotion/T-ITS%20reviewer.png)
 
 八月份在学校，可能是审稿审多了，导师作为T-ITS的AE让我成为了一名正式的审稿人。是CCF推荐的[交叉/综合/新兴](https://www.ccf.org.cn/xspj/jc/zh/xx/) B类学术刊物。
 
-**现在看来不过是一种不负责任的表现罢了。。。**
+科研其实是现代文明的死角，其最底层的生产逻辑还停滞在手工业时代，可无奈的是目前这种生产逻辑确实是最适配高校科研发展的。所以你很难在社会道德上去批判老师，因为这种学阀资本主义是为社会大众所普遍认同的。培养出来的学生更多的是“高学历厂工”。
 
-[感情随想录-I](https://xinh79.github.io/2019/10/07/%E6%84%9F%E6%83%85%E9%9A%8F%E6%83%B3%E5%BD%95-I-/#)
+~~[感情随想录-I](https://xinh79.github.io/2019/10/07/%E6%84%9F%E6%83%85%E9%9A%8F%E6%83%B3%E5%BD%95-I-/#)~~
 
-[感情随想录-II](https://xinh79.github.io/2019/10/08/%E6%84%9F%E6%83%85%E9%9A%8F%E6%83%B3%E5%BD%95-II-/#)
+~~[感情随想录-II](https://xinh79.github.io/2019/10/08/%E6%84%9F%E6%83%85%E9%9A%8F%E6%83%B3%E5%BD%95-II-/#)~~
 
-[感情随想录-III](https://xinh79.github.io/2019/11/28/%E6%84%9F%E6%83%85%E9%9A%8F%E6%83%B3%E5%BD%95-III-/#)
+~~[感情随想录-III](https://xinh79.github.io/2019/11/28/%E6%84%9F%E6%83%85%E9%9A%8F%E6%83%B3%E5%BD%95-III-/#)~~
 
-[感情随想录-IV](https://xinh79.github.io/2019/12/13/%E6%84%9F%E6%83%85%E9%9A%8F%E6%83%B3%E5%BD%95-IV-/#)
+~~[感情随想录-IV](https://xinh79.github.io/2019/12/13/%E6%84%9F%E6%83%85%E9%9A%8F%E6%83%B3%E5%BD%95-IV-/#)~~
 
 ----
 
@@ -470,6 +470,6 @@
 
 ----
 
-# 致谢  
+# 致谢
 
-本博客模板动画来源于黄玄，更多详细的信息请查看->[黄玄的模板](https://github.com/Huxpro/huxpro.github.io)  
+本博客模板动画来源于黄玄，更多详细的信息请查看->[黄玄的模板](https://github.com/Huxpro/huxpro.github.io)
