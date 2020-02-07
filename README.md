@@ -8,15 +8,11 @@
 
 ![my_CV](https://raw.githubusercontent.com/xinh79/xinh79.github.io/master/img/my_CV.png)
 
-----
+More Project: 
 
-# 你能得到什么
-
-在这里我将会记录我整个准备春招的学习历程，阅读计算机相关的书记所做的笔记，部署SDN的学习过程等~
-
-2019年10月20日：出现了巨变，不知道是否会停更，不过应该不会。碰到这样子的神仙，怪自己点背吧，加油挺过这段时间！
-
-整个过程持续更新哦~
+1. 基于epoll边沿非阻塞触发模式的HTTP网络服务器: https://github.com/xinh79/Server4C
+2. 程序代码相似度检测方法研究及应用: https://github.com/xinh79/PlagiarismDetection4C
+3. Application of Lyapunov optimization theory with OMNnepp5.4.1 in LEDGE: https://github.com/xinh79/Lyapunov4OMNetpp
 
 ----
 
