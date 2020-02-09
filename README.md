@@ -6,13 +6,16 @@
 
 我的[个人简历](https://xinh79.github.io/my_CV.html)
 
-![my_CV](https://raw.githubusercontent.com/xinh79/xinh79.github.io/master/img/my_CV.png)
+![my_CV1](https://raw.githubusercontent.com/xinh79/xinh79.github.io/master/img/my_CV.png)
+
+![my_CV2](https://github.com/xinh79/xinh79.github.io/blob/master/img/my_CV.jpg)
 
 More Project: 
 
-1. 基于epoll边沿非阻塞触发模式的HTTP网络服务器: https://github.com/xinh79/Server4C
-2. 程序代码相似度检测方法研究及应用: https://github.com/xinh79/PlagiarismDetection4C
-3. Application of Lyapunov optimization theory with OMNnepp5.4.1 in LEDGE: https://github.com/xinh79/Lyapunov4OMNetpp
+1. [Application of Lyapunov optimization theory with OMNnepp5.4.1 in LEDGE](https://github.com/xinh79/Lyapunov4OMNetpp)
+2. [Github Blog](https://xinh79.github.io/)
+3. [基于epoll边沿非阻塞触发模式的HTTP网络服务器](https://github.com/xinh79/Server4C)
+4. [程序代码相似度检测方法研究及应用](https://github.com/xinh79/PlagiarismDetection4C)
 
 ----
 
