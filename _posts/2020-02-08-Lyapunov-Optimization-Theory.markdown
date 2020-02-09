@@ -48,7 +48,7 @@ $$\lim_{T \to \infty} \frac{\mathbb{E}(Q(t))}{T}=0$$
 |----:|:----|
 | $subject:$ | $\lim_{T \to \infty} \frac{\mathbb{E}(Q(t))}{T}=0$ |
 
-有了优化目标和限制条件，现在我们来做优化。我们假设$L(t)=\frac{{Q(t)}^2}{2}$，则$L$随时间变化的表达式为：$\Delta L(t)=L(t+1)-L(t)$。$\Delta L(t)$在论文中称为Lyapunov漂移(Lyapunov Drift)。
+有了优化目标和限制条件，现在我们来做优化。我们假设$L(t)=\frac{Q(t)^2}{2}$，则$L$随时间变化的表达式为：$\Delta L(t)=L(t+1)-L(t)$。$\Delta L(t)$在论文中称为Lyapunov漂移(Lyapunov Drift)。
 
 | ${Q(t+1)}^2$ | $=$ | ${\{max[Q(t)-\mu(t),0]+\lambda(t)\}}^2$ |
 |----:|:----:|:----  |
