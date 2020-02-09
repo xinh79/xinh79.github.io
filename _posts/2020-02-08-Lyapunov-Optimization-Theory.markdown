@@ -3,7 +3,7 @@ layout:      post
 title:       "Lyapunov优化理论"
 subtitle:    "Lyapunov Optimization Theory"
 author:      "Ashior"
-header-img:  "img/post-bg-ubuntu.jpg"
+header-img:  "img/bg-paper.jpg"
 catalog:     true
 tags:
   - 科研
