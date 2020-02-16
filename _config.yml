@@ -111,6 +111,18 @@ friends: [
         title: "个人简历",
         href: "https://xinh79.github.io/cv.html"
     },{
+        title: "酷壳",
+        href: "https://coolshell.cn/"
+    },{
+        title: "阿里中间件团队博客",
+        href: "http://jm.taobao.org/"
+    },{
+        title: "美团技术团队博客 ",
+        href: "https://tech.meituan.com/"
+    },{
+        title: "阮一峰的网络日志",
+        href: "http://www.ruanyifeng.com/blog/"
+    },{
         title: "可以放你的主页哦~",
         href: "https://xinh79.github.io"
     },{
